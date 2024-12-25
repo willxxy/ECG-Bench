@@ -169,3 +169,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Extra
+ecg_bench/data
+ecg_bench/runs
+ecg_bench/wandb
+.huggingface/
