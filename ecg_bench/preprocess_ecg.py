@@ -1,4 +1,6 @@
 import argparse
+from ecg_bench.utils.dir_file_utils import FileManager  # Updated import path
+from ecg_bench.utils.preprocess_utils import PreprocessECG
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)
@@ -7,7 +9,7 @@ def get_args():
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
-    pass
+    PreprocessECG(args, FileManager)
 
 if __name__ == '__main__':
     main(get_args())
