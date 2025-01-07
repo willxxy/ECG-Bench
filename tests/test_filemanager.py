@@ -129,11 +129,10 @@ def test_sample_N_percent_from_lists_unequal():
     with pytest.raises(ValueError):
         FileManager.sample_N_percent_from_lists([1, 2], [1, 2, 3])
 
-def test_open_ecg(sample_ecg_file):
-    # This is a mock test - in real testing, you'd need actual WFDB format files
-    try:
-        signal, fs = FileManager.open_ecg(sample_ecg_file)
-    except Exception as e:
-        # Since we don't have real WFDB files, this will fail
-        # In real testing, you'd want to test with actual ECG files
-        pass
+def test_open_ecg():
+    signal, fs = FileManager.open_ecg('./ecg_bench/data/ptb/records500/00000/00001_hr')
+    
+    assert isinstance(signal, np.ndarray)
+    assert isinstance(fs, (int, float))
+    assert fs > 0
+    assert len(signal.shape) == 2   
