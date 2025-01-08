@@ -1,2 +1,2 @@
 python preprocess_ecg.py --data=mimic
-python preprocess_ecg.py --data=ptb
+CUDA_VISIBLE_DEVICES=1 python preprocess_ecg.py --data=ptb

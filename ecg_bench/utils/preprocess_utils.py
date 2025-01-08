@@ -9,33 +9,10 @@ class PreprocessECG:
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
-        if self.args.data == 'ptb':
-            ptbxl_database = pd.read_csv('./data/ptb/ptbxl_database.csv', index_col='ecg_id')
-            scp_statements = pd.read_csv('./data/ptb/scp_statements.csv')
-            ptbxl_database = ptbxl_database.rename(columns={'filename_hr': 'path'})
-            self.df = ptbxl_database[['path', 'report']]
-            
-        elif self.args.data == 'mimic':
-            record_list = pd.read_csv('./data/mimic/record_list.csv')
-            machine_measurements = pd.read_csv('./data/mimic/machine_measurements.csv')
-            waveform_note_links = pd.read_csv('./data/mimic/waveform_note_links.csv')
-            
-            report_columns = [f'report_{i}' for i in range(18)]
-            
-            machine_measurements['report'] = machine_measurements[report_columns].apply(
-                lambda x: ' '.join([str(val) for val in x if pd.notna(val)]), axis=1)
-            
-            mm_columns = ['subject_id', 'study_id'] + report_columns + ['report']
-            
-            merged_df = pd.merge(
-                record_list[['subject_id', 'study_id', 'file_name', 'path']],
-                machine_measurements[mm_columns],
-                on=['subject_id', 'study_id'],
-                how='inner'
-            )
-            merged_df = merged_df.dropna(subset=report_columns, how='all')
-            self.df = merged_df[['path', 'report']]
         
+        if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
+            self.prepare_df()
+        self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
         print(self.df.head())
     
     def _check_nan_inf(self, signal, step_name):
@@ -51,7 +28,7 @@ class PreprocessECG:
         new_indices = [order_mapping[lead] for lead in desired_order]
         return signal[:, new_indices]
     
-    def translate_german_to_english_batch(df):
+    def translate_german_to_english(self, df):
         texts = df['report'].values
         try:
             if isinstance(texts, list):
@@ -70,11 +47,11 @@ class PreprocessECG:
             if len(valid_texts) == 0:
                 raise ValueError("All input texts are empty")
                 
-            device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-de-en", cache_dir='./../.huggingface')
             model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-de-en", cache_dir='./../.huggingface').to(device)
             
-            batch_size = 32
+            batch_size = 64
             translations = []
             
             for i in tqdm(range(0, len(valid_texts), batch_size), desc = 'Translating files'):
@@ -105,3 +82,35 @@ class PreprocessECG:
             raise e
         except Exception as e:
             raise Exception(f"Translation error: {str(e)}")
+        
+    def prepare_df(self):
+        if self.args.data == 'ptb':
+            ptbxl_database = pd.read_csv('./data/ptb/ptbxl_database.csv', index_col='ecg_id')
+            scp_statements = pd.read_csv('./data/ptb/scp_statements.csv')
+            ptbxl_database = ptbxl_database.rename(columns={'filename_hr': 'path'})
+            df = ptbxl_database[['path', 'report']]
+            df = self.translate_german_to_english(df)
+            
+        elif self.args.data == 'mimic':
+            record_list = pd.read_csv('./data/mimic/record_list.csv')
+            machine_measurements = pd.read_csv('./data/mimic/machine_measurements.csv')
+            waveform_note_links = pd.read_csv('./data/mimic/waveform_note_links.csv')
+            
+            report_columns = [f'report_{i}' for i in range(18)]
+            
+            machine_measurements['report'] = machine_measurements[report_columns].apply(
+                lambda x: ' '.join([str(val) for val in x if pd.notna(val)]), axis=1)
+            
+            mm_columns = ['subject_id', 'study_id'] + report_columns + ['report']
+            
+            merged_df = pd.merge(
+                record_list[['subject_id', 'study_id', 'file_name', 'path']],
+                machine_measurements[mm_columns],
+                on=['subject_id', 'study_id'],
+                how='inner'
+            )
+            merged_df = merged_df.dropna(subset=report_columns, how='all')
+            df = merged_df[['path', 'report']]
+        
+        df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
+        

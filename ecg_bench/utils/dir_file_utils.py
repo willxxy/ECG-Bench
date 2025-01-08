@@ -35,9 +35,26 @@ class FileManager:
             return pickle.load(f)
     
     @staticmethod
-    def ensure_directory_exists(path: Union[str, Path]) -> None:
-        """Create directory if it doesn't exist."""
-        os.makedirs(path, exist_ok=True)
+    def ensure_directory_exists(path: Union[str, Path]) -> bool:
+        """
+        Check if path exists and create directory if needed.
+        Returns True if path exists (file or dir), False otherwise.
+        """
+        path = Path(path)
+        if path.exists():
+            if path.is_file():
+                print(f"File exists: {path}")
+                return True
+            print(f"Directory exists: {path}")
+            return True
+        
+        if path.suffix:  # Has file extension
+            print(f"File does not exist: {path}")
+            return False
+            
+        path.mkdir(parents=True, exist_ok=True)
+        print(f"Created directory: {path}")
+        return True
     
     @staticmethod
     def align_signal_text_files(signal_dir: Union[str, Path], text_dir: Union[str, Path]) -> Tuple[List[str], List[str]]:

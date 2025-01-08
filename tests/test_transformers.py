@@ -30,7 +30,7 @@ def test_transformers_installation():
     
     try:
         from transformers import BertTokenizer
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', cache_dir='../.huggingface')
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', cache_dir='./.huggingface')
         test_text = "Testing BERT tokenizer"
         tokens = tokenizer(test_text)
         print("✓ Tokenizer loading and tokenization successful")
@@ -41,7 +41,7 @@ def test_transformers_installation():
     
     try:
         from transformers import BertModel
-        model = BertModel.from_pretrained('bert-base-uncased', cache_dir='../.huggingface')
+        model = BertModel.from_pretrained('bert-base-uncased', cache_dir='./.huggingface')
         print("✓ Model loading successful")
     except Exception as e:
         print("✗ Failed to load model:", e)
