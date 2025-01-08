@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import torch
+from tqdm import tqdm
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 class PreprocessECG:
     
@@ -32,6 +35,7 @@ class PreprocessECG:
             )
             merged_df = merged_df.dropna(subset=report_columns, how='all')
             self.df = merged_df[['path', 'report']]
+        
         print(self.df.head())
     
     def _check_nan_inf(self, signal, step_name):
@@ -46,3 +50,58 @@ class PreprocessECG:
         order_mapping = {lead: index for index, lead in enumerate(current_order)}
         new_indices = [order_mapping[lead] for lead in desired_order]
         return signal[:, new_indices]
+    
+    def translate_german_to_english_batch(df):
+        texts = df['report'].values
+        try:
+            if isinstance(texts, list):
+                texts = np.array(texts)
+            
+            if not isinstance(texts, np.ndarray):
+                raise ValueError("Input must be a numpy array or list")
+            if texts.ndim != 1:
+                raise ValueError(f"Expected 1D array, got shape {texts.shape}")
+            if len(texts) == 0:
+                raise ValueError("Input array cannot be empty")
+                
+            valid_mask = np.array([bool(text and str(text).strip()) for text in texts])
+            valid_texts = texts[valid_mask]
+            
+            if len(valid_texts) == 0:
+                raise ValueError("All input texts are empty")
+                
+            device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+            tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-de-en", cache_dir='./../.huggingface')
+            model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-de-en", cache_dir='./../.huggingface').to(device)
+            
+            batch_size = 32
+            translations = []
+            
+            for i in tqdm(range(0, len(valid_texts), batch_size), desc = 'Translating files'):
+                batch_texts = valid_texts[i:i + batch_size]
+                
+                encoded = tokenizer(list(batch_texts), return_tensors="pt", padding=True, truncation=True)
+                encoded = {key: tensor.to(device) for key, tensor in encoded.items()}
+                
+                with torch.no_grad():
+                    outputs = model.generate(
+                        **encoded,
+                        max_length=128,
+                    )
+                
+                batch_translations = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+                translations.extend(batch_translations)
+            
+            result = np.empty_like(texts, dtype=object)
+            result[valid_mask] = translations
+            result[~valid_mask] = ''
+            
+            translated_df = df.copy()
+            translated_df['report'] = result
+            
+            return translated_df
+        
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Translation error: {str(e)}")
