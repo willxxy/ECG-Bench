@@ -21,7 +21,7 @@ class FileManager:
     @staticmethod
     def open_npy(path: Union[str, Path]) -> np.ndarray:
         """Load a NumPy array from a .npy file."""
-        return np.load(path)
+        return np.load(path, allow_pickle=True).item()
     
     @staticmethod
     def open_ecg(path: Union[str, Path]):

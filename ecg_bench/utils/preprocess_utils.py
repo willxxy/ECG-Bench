@@ -5,6 +5,7 @@ from tqdm import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from scipy import signal
 import pywt
+from scipy import interpolate
 
 class PreprocessECG:
     
@@ -50,25 +51,64 @@ class PreprocessECG:
         
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
-    def preprocess(self):
-        self.fm.ensure_directory_exists(f'./data/{self.args.data}/preprocessed')
+    def preprocess_instance(self):
+        self.fm.ensure_directory_exists(f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}')
         if self.args.data == 'mimic':
             add_path = './data/mimic'
         elif self.args.data == 'ptb':
             add_path = './data/ptb'
         count = 0
         for i in tqdm(range(len(self.df)), desc = 'Preprocessing ECGs...'):
+            save_dic = {}
             file_path = f"{add_path}/{self.df.iloc[i]['path']}"
             report = self.df.iloc[i]['report']
-            ecg, sf = self.fm.open_ecg(file_path)
-            assert sf == 500 and ecg.shape == (5000, 12)
-            if self.args.data == 'mimic':
-                ecg = self._reorder_indices(ecg)
-            
-            print(ecg.shape, sf)
-            count +=1
-            if count == 5:
-                break
+            try:
+                ecg, sf = self.fm.open_ecg(file_path)
+                assert sf == 500 and ecg.shape == (5000, 12)
+                if self.args.data == 'mimic':
+                    ecg = self._reorder_indices(ecg)
+                filtered_ecg = self.advanced_ecg_filter(ecg, fs = sf)
+                denoised_ecg = self.wavelet_denoise(filtered_ecg)
+                if sf != self.args.target_sf:
+                    downsampled_ecg = self.nsample_ecg(denoised_ecg, orig_fs = sf, target_fs = self.args.target_sf)
+                else:
+                    downsampled_ecg = denoised_ecg
+                orig_dur = downsampled_ecg.shape[0] / self.args.target_sf
+                segmented_ecg, segmented_text = self.segment_ecg(downsampled_ecg, report, seg_len = self.args.seg_len)
+                seg_dur = self.args.seg_len / self.args.target_sf
+                
+                assert len(segmented_text) == segmented_ecg.shape[0]
+                
+                self._check_nan_inf(segmented_ecg, 'preprocessing')
+                
+                if np.any(np.isnan(segmented_ecg)) or np.any(np.isinf(segmented_ecg)):
+                    # Additional check for NaN values
+                    print(f"Warning: NaN values detected in {file_path}. Skipping this instance.")
+                    return None, None
+                else:
+                    if orig_dur != seg_dur:
+                        for j in range(len(segmented_text)):
+                            save_dic['ecg'] = segmented_ecg[j]
+                            save_dic['report'] = segmented_text[j]
+                            save_dic['path'] = self.df.iloc[i]['path']
+                            save_dic['orig_sf'] = sf
+                            save_dic['target_sf'] = self.args.target_sf
+                            save_dic['seg_len'] = self.args.seg_len
+                            np.save(f"./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}/{'_'.join(self.df.iloc[i]['path'].split('/'))}_{j}.npy", save_dic)
+                    else:
+                        save_dic['ecg'] = segmented_ecg[0]
+                        save_dic['report'] = segmented_text[0]
+                        save_dic['path'] = self.df.iloc[i]['path']
+                        save_dic['orig_sf'] = sf
+                        save_dic['target_sf'] = self.args.target_sf
+                        save_dic['seg_len'] = self.args.seg_len
+                        np.save(f"./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}/{'_'.join(self.df.iloc[i]['path'].split('/'))}.npy", save_dic)
+                count +=1
+                if count == 5:
+                    break
+            except Exception as e:
+                print(f"Error processing {file_path}: {str(e)}. Skipping this instance.")
+                
 
     ### HELPER FUNCTIONS
     def _check_nan_inf(self, ecg, step_name):
@@ -183,3 +223,30 @@ class PreprocessECG:
         filtered_ecg = signal.filtfilt(b_baseline, a_baseline, filtered_ecg, axis=0)
 
         return filtered_ecg
+    
+    def nsample_ecg(self, ecg, orig_fs, target_fs):
+        num_samples, num_leads = ecg.shape
+        duration = num_samples / orig_fs
+        t_original = np.linspace(0, duration, num_samples, endpoint=True)
+        t_target = np.linspace(0, duration, int(num_samples * target_fs / orig_fs), endpoint=True)
+        
+        downsampled_data = np.zeros((len(t_target), num_leads))
+        for lead in range(num_leads):
+            f = interpolate.interp1d(t_original, ecg[:, lead], kind='cubic', bounds_error=False, fill_value="extrapolate")
+            downsampled_data[:, lead] = f(t_target)
+        return downsampled_data
+    
+    def segment_ecg(self, ecg, report, seg_len):
+        time_length, _ = ecg.shape
+        num_segments = time_length // seg_len
+        
+        ecg_data_segmented = []
+        text_data_segmented = []
+        
+        for i in range(num_segments):
+            start_idx = i * seg_len
+            end_idx = (i + 1) * seg_len
+            ecg_data_segmented.append(ecg[start_idx:end_idx, :])
+            text_data_segmented.append(report)
+        
+        return np.array(ecg_data_segmented), text_data_segmented
