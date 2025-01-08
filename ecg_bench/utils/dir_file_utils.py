@@ -97,15 +97,6 @@ class FileManager:
     def clean_dataframe(df: "pandas.DataFrame") -> Tuple["pandas.DataFrame", bool, int]:
         """
         Check for NaN values in DataFrame and remove rows containing NaN.
-        
-        Args:
-            df (pandas.DataFrame): Input DataFrame
-            
-        Returns:
-            Tuple[pandas.DataFrame, bool, int]: 
-                - cleaned DataFrame
-                - boolean indicating if NaN was found
-                - number of rows dropped
         """
         has_nan = df.isna().any().any()
         

@@ -9,7 +9,7 @@ def get_args():
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
-    PreprocessECG(args, FileManager)
+    PreprocessECG(args, FileManager).preprocess()
 
 if __name__ == '__main__':
     main(get_args())
