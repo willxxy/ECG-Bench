@@ -13,6 +13,7 @@ class PreprocessECG:
         if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
             self.prepare_df()
         self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
+        self.df = fm.clean_dataframe(self.df)
         print(self.df.head())
     
     def _check_nan_inf(self, signal, step_name):

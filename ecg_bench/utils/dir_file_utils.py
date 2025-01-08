@@ -92,3 +92,34 @@ class FileManager:
         indices = cls.sample_N_percent(range(len(list1)), N)
         result1 = [list1[i] for i in indices]
         return (result1, [list2[i] for i in indices]) if list2 else result1
+    
+    @staticmethod
+    def clean_dataframe(df: "pandas.DataFrame") -> Tuple["pandas.DataFrame", bool, int]:
+        """
+        Check for NaN values in DataFrame and remove rows containing NaN.
+        
+        Args:
+            df (pandas.DataFrame): Input DataFrame
+            
+        Returns:
+            Tuple[pandas.DataFrame, bool, int]: 
+                - cleaned DataFrame
+                - boolean indicating if NaN was found
+                - number of rows dropped
+        """
+        has_nan = df.isna().any().any()
+        
+        if has_nan:
+            rows_before = len(df)
+            
+            cleaned_df = df.dropna()
+            
+            dropped_rows = rows_before - len(cleaned_df)
+            
+            print(f"Found and removed {dropped_rows} rows containing NaN values")
+            print(f"Remaining rows: {len(cleaned_df)}")
+            
+            return cleaned_df
+        else:
+            print("No NaN values found in DataFrame")
+            return df
