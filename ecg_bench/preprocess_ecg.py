@@ -10,13 +10,20 @@ def get_args():
     parser.add_argument('--seg_len', type = int, default = 500, help = 'Please choose the segment length')
     parser.add_argument('--target_sf', type = int, default = 250, help = 'Please choose the target sampling frequency')
     parser.add_argument('--num_cores', type = int, default = 6, help = 'Please choose the number of cores, usually 4-6 is enough')
-    parser.add_argument('--num_percentiles', type = int, default = 300000, help = 'Please choose the number of samples for calculating percentiles')
+    parser.add_argument('--num_percentiles', type = int, default = 2000, help = 'Please choose the number of samples for calculating percentiles')
+    parser.add_argument('--num_tok_samples', type = int, default = 2000, help = 'Please choose the number of samples for training the tokenizer')
+    parser.add_argument('--max_clusters', type = int, default = 10, help = 'Please choose the maximum number of clusters to consider during sampling for training tokenizer')
     parser.add_argument('--dev', action = 'store_true', default = False, help = 'Use this flag to run the script in development mode')
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
     PreprocessECG(args, FileManager).preprocess_batch()
-    PreprocessECG(args, FileManager).get_percentiles()
+    
+    if args.data == 'mimic' and args.seg_len == 2500:
+        # Perform sampling and calculate percentiles for mimic unsegmented data
+        PreprocessECG(args, FileManager).get_percentiles()
+        PreprocessECG(args, FileManager).stratified_sampling()
+        
     ## NOW ADD SAMPLING AND PERCENTILES
     np_file = FileManager.open_npy(f"./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}/{os.listdir(f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}')[0]}")
     print(np_file)
