@@ -175,4 +175,5 @@ cython_debug/
 ecg_bench/data
 ecg_bench/runs
 ecg_bench/wandb
+ecg_bench/pngs
 .huggingface/
