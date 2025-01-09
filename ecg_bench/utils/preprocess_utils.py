@@ -35,7 +35,9 @@ class PreprocessECG:
         self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
         self.df = self.fm.clean_dataframe(self.df)
         if self.args.dev:
-            self.df = self.df.iloc[:10000]
+            self.df = self.df.iloc[:1000]
+        if self.args.toy:
+            self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
         print(self.df.head())
     
     ### MAIN FUNCTIONS

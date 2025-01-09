@@ -14,6 +14,7 @@ def get_args():
     parser.add_argument('--num_tok_samples', type = int, default = 300000, help = 'Please choose the number of samples for training the tokenizer')
     parser.add_argument('--max_clusters', type = int, default = 200, help = 'Please choose the maximum number of clusters to consider during sampling for training tokenizer')
     parser.add_argument('--dev', action = 'store_true', default = False, help = 'Use this flag to run the script in development mode')
+    parser.add_argument('--toy', action = 'store_true', default = False, help = 'Use this flag to create a toy dataset')
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
