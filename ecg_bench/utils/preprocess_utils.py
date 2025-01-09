@@ -28,6 +28,8 @@ class PreprocessECG:
         self.fm = fm
         self.preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
         
+        fm.ensure_directory_exists(f'./pngs')
+        
         if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
             self.prepare_df()
         self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
