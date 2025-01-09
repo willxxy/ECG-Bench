@@ -10,7 +10,13 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
 
 class PreprocessECG:
-    
+    ''' 
+    Main class for preprocessing ECG data. In this class, we do the following:
+        1. Prepare the PTB and MIMIC dataframes by getting the ECG paths and reports.
+        2. Preprocess the ECG data by applying filters, denoising, and segmenting.
+        3. Get the percentiles of the preprocessed ECG data.
+        4. Implement clustering based sampling for N percent of the preprocessed ECG data to train tokenizer.
+    '''
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
@@ -55,66 +61,6 @@ class PreprocessECG:
         
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
-    def _process_single_instance(self, idx):
-        save_dic = {}
-        file_path = f"{self.add_path}/{self.df.iloc[idx]['path']}"
-        report = self.df.iloc[idx]['report']
-        
-        try:
-            ecg, sf = self.fm.open_ecg(file_path)
-            assert sf == 500 and ecg.shape == (5000, 12)
-            
-            if self.args.data == 'mimic':
-                ecg = self._reorder_indices(ecg)
-                
-            filtered_ecg = self.advanced_ecg_filter(ecg, fs=sf)
-            denoised_ecg = self.wavelet_denoise(filtered_ecg)
-            
-            if sf != self.args.target_sf:
-                downsampled_ecg = self.nsample_ecg(denoised_ecg, orig_fs=sf, target_fs=self.args.target_sf)
-            else:
-                downsampled_ecg = denoised_ecg
-                
-            orig_dur = downsampled_ecg.shape[0] / self.args.target_sf
-            segmented_ecg, segmented_text = self.segment_ecg(downsampled_ecg, report, seg_len=self.args.seg_len)
-            seg_dur = self.args.seg_len / self.args.target_sf
-            
-            assert len(segmented_text) == segmented_ecg.shape[0]
-            self._check_nan_inf(segmented_ecg, 'preprocessing')
-            
-            if np.any(np.isnan(segmented_ecg)) or np.any(np.isinf(segmented_ecg)):
-                print(f"Warning: NaN values detected in {file_path}. Skipping this instance.")
-                return None
-            
-            if orig_dur != seg_dur:
-                for j in range(len(segmented_text)):
-                    save_dic = {
-                        'ecg': segmented_ecg[j],
-                        'report': segmented_text[j],
-                        'path': self.df.iloc[idx]['path'],
-                        'orig_sf': sf,
-                        'target_sf': self.args.target_sf,
-                        'seg_len': self.args.seg_len
-                    }
-                    save_path = f"./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_{j}.npy"
-                    np.save(save_path, save_dic)
-            else:
-                save_dic = {
-                    'ecg': segmented_ecg[0],
-                    'report': segmented_text[0],
-                    'path': self.df.iloc[idx]['path'],
-                    'orig_sf': sf,
-                    'target_sf': self.args.target_sf,
-                    'seg_len': self.args.seg_len
-                }
-                save_path = f"./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}.npy"
-                np.save(save_path, save_dic)
-                
-            return True
-            
-        except Exception as e:
-            print(f"Error processing {file_path}: {str(e)}. Skipping this instance.")
-            return None
 
     def preprocess_batch(self):
         self.fm.ensure_directory_exists(f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}')
@@ -149,33 +95,6 @@ class PreprocessECG:
         finally:
             print(f"Total instances skipped: {skipped_count}")
             
-    def _process_file_chunk(self, args):
-        file_paths, samples_per_chunk = args
-        values = []
-        total_values = 0
-        
-        for file_path in file_paths:
-            try:
-                data = np.load(file_path, allow_pickle=True).item()
-                ecg_data = data['ecg']
-                flat_data = ecg_data.flatten()
-                total_values += len(flat_data)
-                values.append(flat_data)
-            except Exception as e:
-                print(f"Error processing {file_path}: {str(e)}")
-                continue
-                
-        if not values:
-            return np.array([])
-            
-        concatenated = np.concatenate(values)
-        
-        if len(concatenated) > samples_per_chunk:
-            indices = np.random.choice(len(concatenated), 
-                                    size=samples_per_chunk, 
-                                    replace=False)
-            return concatenated[indices]
-        return concatenated
 
     def get_percentiles(self):
         preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
@@ -245,6 +164,95 @@ class PreprocessECG:
             return None
 
     ### HELPER FUNCTIONS
+    def _process_single_instance(self, idx):
+        save_dic = {}
+        file_path = f"{self.add_path}/{self.df.iloc[idx]['path']}"
+        report = self.df.iloc[idx]['report']
+        
+        try:
+            ecg, sf = self.fm.open_ecg(file_path)
+            assert sf == 500 and ecg.shape == (5000, 12)
+            
+            if self.args.data == 'mimic':
+                ecg = self._reorder_indices(ecg)
+                
+            filtered_ecg = self.advanced_ecg_filter(ecg, fs=sf)
+            denoised_ecg = self.wavelet_denoise(filtered_ecg)
+            
+            if sf != self.args.target_sf:
+                downsampled_ecg = self.nsample_ecg(denoised_ecg, orig_fs=sf, target_fs=self.args.target_sf)
+            else:
+                downsampled_ecg = denoised_ecg
+                
+            orig_dur = downsampled_ecg.shape[0] / self.args.target_sf
+            segmented_ecg, segmented_text = self.segment_ecg(downsampled_ecg, report, seg_len=self.args.seg_len)
+            seg_dur = self.args.seg_len / self.args.target_sf
+            
+            assert len(segmented_text) == segmented_ecg.shape[0]
+            self._check_nan_inf(segmented_ecg, 'preprocessing')
+            
+            if np.any(np.isnan(segmented_ecg)) or np.any(np.isinf(segmented_ecg)):
+                print(f"Warning: NaN values detected in {file_path}. Skipping this instance.")
+                return None
+            
+            if orig_dur != seg_dur:
+                for j in range(len(segmented_text)):
+                    save_dic = {
+                        'ecg': segmented_ecg[j],
+                        'report': segmented_text[j],
+                        'path': self.df.iloc[idx]['path'],
+                        'orig_sf': sf,
+                        'target_sf': self.args.target_sf,
+                        'seg_len': self.args.seg_len
+                    }
+                    save_path = f"./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_{j}.npy"
+                    np.save(save_path, save_dic)
+            else:
+                save_dic = {
+                    'ecg': segmented_ecg[0],
+                    'report': segmented_text[0],
+                    'path': self.df.iloc[idx]['path'],
+                    'orig_sf': sf,
+                    'target_sf': self.args.target_sf,
+                    'seg_len': self.args.seg_len
+                }
+                save_path = f"./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}.npy"
+                np.save(save_path, save_dic)
+                
+            return True
+            
+        except Exception as e:
+            print(f"Error processing {file_path}: {str(e)}. Skipping this instance.")
+            return None
+        
+    def _process_file_chunk(self, args):
+        file_paths, samples_per_chunk = args
+        values = []
+        total_values = 0
+        
+        for file_path in file_paths:
+            try:
+                data = np.load(file_path, allow_pickle=True).item()
+                ecg_data = data['ecg']
+                flat_data = ecg_data.flatten()
+                total_values += len(flat_data)
+                values.append(flat_data)
+            except Exception as e:
+                print(f"Error processing {file_path}: {str(e)}")
+                continue
+                
+        if not values:
+            return np.array([])
+            
+        concatenated = np.concatenate(values)
+        
+        if len(concatenated) > samples_per_chunk:
+            indices = np.random.choice(len(concatenated), 
+                                    size=samples_per_chunk, 
+                                    replace=False)
+            return concatenated[indices]
+        return concatenated
+    
     def _check_nan_inf(self, ecg, step_name):
         if np.any(np.isnan(ecg)) or np.any(np.isinf(ecg)):
             print(f"Warning: NaN or inf values detected after {step_name}")
