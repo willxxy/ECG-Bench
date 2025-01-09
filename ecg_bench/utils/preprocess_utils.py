@@ -7,6 +7,7 @@ from scipy import signal
 import pywt
 from scipy import interpolate
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import os
 
 class PreprocessECG:
     
@@ -18,6 +19,8 @@ class PreprocessECG:
             self.prepare_df()
         self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
         self.df = self.fm.clean_dataframe(self.df)
+        if self.args.dev:
+            self.df = self.df.iloc[:1000]
         print(self.df.head())
     
     ### MAIN FUNCTIONS
@@ -53,7 +56,6 @@ class PreprocessECG:
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
     def _process_single_instance(self, idx):
-        """Process a single ECG instance"""
         save_dic = {}
         file_path = f"{self.add_path}/{self.df.iloc[idx]['path']}"
         report = self.df.iloc[idx]['report']
@@ -115,7 +117,6 @@ class PreprocessECG:
             return None
 
     def preprocess_batch(self):
-        """Parallel preprocessing of ECG instances"""
         self.fm.ensure_directory_exists(f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}')
         
         if self.args.data == 'mimic':
@@ -126,13 +127,11 @@ class PreprocessECG:
         skipped_count = 0        
         try:
             with ProcessPoolExecutor(max_workers=self.args.num_cores) as executor:
-                # Submit all instances for processing
                 futures = [
                     executor.submit(self._process_single_instance, idx)
                     for idx in range(len(self.df))
                 ]
                 
-                # Process results as they complete
                 for future in tqdm(as_completed(futures), 
                                  total=len(futures), 
                                  desc='Preprocessing ECGs...'):
@@ -149,7 +148,101 @@ class PreprocessECG:
         
         finally:
             print(f"Total instances skipped: {skipped_count}")
+            
+    def _process_file_chunk(self, args):
+        file_paths, samples_per_chunk = args
+        values = []
+        total_values = 0
+        
+        for file_path in file_paths:
+            try:
+                data = np.load(file_path, allow_pickle=True).item()
+                ecg_data = data['ecg']
+                flat_data = ecg_data.flatten()
+                total_values += len(flat_data)
+                values.append(flat_data)
+            except Exception as e:
+                print(f"Error processing {file_path}: {str(e)}")
+                continue
                 
+        if not values:
+            return np.array([])
+            
+        concatenated = np.concatenate(values)
+        
+        if len(concatenated) > samples_per_chunk:
+            indices = np.random.choice(len(concatenated), 
+                                    size=samples_per_chunk, 
+                                    replace=False)
+            return concatenated[indices]
+        return concatenated
+
+    def get_percentiles(self):
+        preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
+        
+        all_files = [os.path.join(preprocessed_dir, f) for f in os.listdir(preprocessed_dir) 
+                    if f.endswith('.npy')]
+        
+        if not all_files:
+            raise ValueError(f"No .npy files found in {preprocessed_dir}")
+
+        num_files = len(all_files)
+        num_chunks = self.args.num_cores * 4
+        chunk_size = max(1, num_files // num_chunks)
+        samples_per_chunk = max(1, self.args.num_percentiles // num_chunks)
+        
+        file_chunks = [all_files[i:i + chunk_size] for i in range(0, num_files, chunk_size)]
+        
+        chunk_args = [(chunk, samples_per_chunk) for chunk in file_chunks]
+
+        all_values = []
+        percentiles_to_compute = [1, 99]
+        total_samples = 0
+        
+        try:
+            with ProcessPoolExecutor(max_workers=self.args.num_cores) as executor:
+                futures = [executor.submit(self._process_file_chunk, args) 
+                        for args in chunk_args]
+                
+                for future in tqdm(as_completed(futures), 
+                                total=len(futures), 
+                                desc='Processing files for percentiles'):
+                    chunk_values = future.result()
+                    if len(chunk_values) > 0:
+                        all_values.append(chunk_values)
+                        total_samples += len(chunk_values)
+                    
+                    if total_samples >= self.args.num_percentiles:
+                        for f in futures:
+                            if not f.done():
+                                f.cancel()
+                        break
+
+            if all_values:
+                final_values = np.concatenate(all_values)
+                
+                if len(final_values) > self.args.num_percentiles:
+                    indices = np.random.choice(len(final_values), 
+                                            size=self.args.num_percentiles, 
+                                            replace=False)
+                    final_values = final_values[indices]
+                
+                final_percentiles = np.percentile(final_values, percentiles_to_compute)
+                
+                print(f"\nFinal percentiles (calculated from {len(final_values)} samples):")
+                percentile_dict = {}
+                for p, v in zip(percentiles_to_compute, final_percentiles):
+                    percentile_dict[f'p{p}'] = v
+                    print(f"{p}th percentile: {v:.2f}")
+                
+                save_path = f'./data/{self.args.data}_percentiles_{self.args.seg_len}_{self.args.target_sf}_{self.args.num_percentiles}.npy'
+                np.save(save_path, percentile_dict)
+                
+                return percentile_dict
+                
+        except Exception as e:
+            print(f"Error in get_percentiles: {str(e)}")
+            return None
 
     ### HELPER FUNCTIONS
     def _check_nan_inf(self, ecg, step_name):
