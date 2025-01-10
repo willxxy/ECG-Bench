@@ -3,6 +3,7 @@ import multiprocessing as mp
 import time
 from tqdm import tqdm
 from collections import Counter
+import os
 
 import ecg_bench.representation.bpe as bpe
 
@@ -45,6 +46,28 @@ class ECGByteTokenizer:
         self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{self.num_sample_files}.pkl')
         print(f"Vocabulary and merges saved")
         
+    def verify_tokenizer(self):
+        path_to_ecg = f"./data/mimic/preprocessed_2500_250/{os.listdir(f'./data/mimic/preprocessed_2500_250')[0]}"
+        original_ecg = self.fm.open_npy(path_to_ecg)['ecg']
+        symbol_signal = self.process_ecg(path_to_ecg)
+        print(f"Processed ECG signal to text (first 100 characters): {symbol_signal[:100]}...")
+        print(f"Total tokens: {len(symbol_signal)}")
+        
+        encoded_ecg = self.encode_symbol(symbol_signal, self.merges)
+        print(f"Encoded ECG (first 20 tokens): {encoded_ecg[:20]}...")
+        print(f"Total tokens: {len(encoded_ecg)}")
+        print(f"Compression ratio: {len(symbol_signal) / len(encoded_ecg):.2f}X")
+        
+        decoded_text = self.decode_token(encoded_ecg, self.vocab)
+        print(f"Decoded text (first 100 characters): {decoded_text[:100]}...")
+        print(decoded_text == symbol_signal)
+        
+        decoded_signal = self.denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape), self.percentiles)
+        max_diff = np.max(np.abs(original_ecg - decoded_signal))
+        print(f"Maximum difference between original and decoded: {max_diff}")
+        
+        ### PLOTTING FUNCTION
+        
 
     def encode_symbol(self, text, merges):
         return bpe.encode_symbol(text, merges)
@@ -66,7 +89,7 @@ class ECGByteTokenizer:
         symbol_signal = np.vectorize(lambda x: self.symbols[x])(scaled_signal)
         return clipped_normalized, symbol_signal
 
-    def reverse_normalize_all(self, symbol_signal):
+    def denormalize(self, symbol_signal):
         min_vals = self.p1 - self.ep2
         max_vals = self.p99 + self.ep2
         scaled_signal = np.vectorize(lambda x: self.symbols.index(x))(symbol_signal)
