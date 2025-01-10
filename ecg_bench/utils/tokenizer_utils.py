@@ -1,11 +1,107 @@
+import numpy as np
+import multiprocessing as mp
+
+from tqdm import tqdm
+from collections import Counter
+
+import ecg_bench.representation.bpe as bpe
+
 
 class ECGByteTokenizer:
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
-        
-        
+        self.percentiles = self.fm.open_npy(self.args.percentiles)
+        self.p1 = self.percentiles['p1']
+        self.p99 = self.percentiles['p99']
+        if self.args.tokenizer is not None:
+            self.vocab, self.merges = self.fm.open_tokenizer(self.args.tokenizer)
+
+        self.symbols = list('abcdefghijklmnopqrstuvwxyz')
+        self.len_symbols = len(self.symbols)
+        self.ep1 = 1e-6
+        self.ep2 = 0.5
+
     def train_tokenizer(self):
         pass
-    
-    
+
+    def encode_symbol(self, text, merges):
+        return bpe.encode_symbol(text, merges)
+
+    def decode_token(self, encoded_ids, vocab):
+        return ''.join(vocab[token_id] for token_id in encoded_ids)
+
+    def normalize(self, signal):
+        normalized = (
+            (signal - (self.p1 - self.ep2))
+            / ((self.p99 + self.ep2) - (self.p1 - self.ep2) + self.ep1)
+        )
+        clipped_normalized = np.clip(normalized, 0, 1)
+        scaled_signal = np.minimum(
+            np.floor(clipped_normalized * self.len_symbols),
+            self.len_symbols - 1
+        ).astype(np.uint8)
+
+        symbol_signal = np.vectorize(lambda x: self.symbols[x])(scaled_signal)
+        return clipped_normalized, symbol_signal
+
+    def reverse_normalize_all(self, symbol_signal):
+        min_vals = self.p1 - self.ep2
+        max_vals = self.p99 + self.ep2
+        scaled_signal = np.vectorize(lambda x: self.symbols.index(x))(symbol_signal)
+        clipped_normalized = scaled_signal / (len(self.symbols) - 1)
+        return clipped_normalized * (max_vals - min_vals) + min_vals
+
+    def _to_symbol_string(self, ecg_array):
+        _, symbol_signal = self.normalize(ecg_array)
+        return ''.join(symbol_signal.flatten())
+
+    def process_ecg(self, ecg_path):
+        ecg_array = self.fm.open_npy(ecg_path)['ecg']
+        return self._to_symbol_string(ecg_array)
+
+    def discretize_ecgs(self, file_path, num_processes, n=None):
+        def file_path_generator():
+            with open(file_path, 'r') as file:
+                for i, line in enumerate(file):
+                    if n is not None and i >= n:
+                        break
+                    yield line.strip()
+
+        file_paths = list(file_path_generator())
+
+        with mp.Pool(processes=num_processes) as pool:
+            ecg_strings = list(
+                tqdm(
+                    pool.imap(self.process_ecg, file_paths),
+                    total=len(file_paths),
+                    desc="Discretizing ECGs"
+                )
+            )
+
+        return ''.join(ecg_strings)
+
+    def analyze_single_ecg(self, path_merges):
+        path, merges = path_merges
+        signal = np.load(path)
+        single_lead_str = self._to_symbol_string(signal)
+        all_encoded_ids = list(self.encode_symbol(single_lead_str, merges))
+        return Counter(all_encoded_ids), len(all_encoded_ids)
+
+    def analyze_token_distribution(self, test_data, merges, num_workers=None):
+        with mp.Pool(num_workers) as pool:
+            results = list(
+                tqdm(
+                    pool.imap(self.analyze_single_ecg, ((path, merges) for path in test_data)),
+                    total=len(test_data),
+                    desc=f'Analyzing token distribution with {num_workers} workers'
+                )
+            )
+
+        token_counts = Counter()
+        token_lengths = []
+        for count, length in results:
+            token_counts.update(count)
+            token_lengths.append(length)
+
+        return token_counts, token_lengths

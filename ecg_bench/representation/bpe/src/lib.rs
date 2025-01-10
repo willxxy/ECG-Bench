@@ -142,7 +142,7 @@ impl TrieNode {
 }
 
 #[pyfunction]
-fn encode_text(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>> {
+fn encode_symbol(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>> {
     let ids: Vec<u32> = text.as_bytes().iter().map(|&b| b as u32).collect();
 
     let mut trie_root = TrieNode::new();
@@ -193,6 +193,6 @@ fn encode_text(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>> {
 #[pymodule]
 fn bpe(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(byte_pair_encoding, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_text, m)?)?;
+    m.add_function(wrap_pyfunction!(encode_symbol, m)?)?;
     Ok(())
 }
