@@ -119,10 +119,7 @@ class ECGByteTokenizer:
                 tqdm(
                     pool.imap(self.process_ecg, file_paths),
                     total=len(file_paths),
-                    desc="Discretizing ECGs"
-                )
-            )
-
+                    desc="Discretizing ECGs"))
         return ''.join(ecg_strings)
 
     def analyze_single_ecg(self, path_merges):
@@ -138,9 +135,7 @@ class ECGByteTokenizer:
                 tqdm(
                     pool.imap(self.analyze_single_ecg, ((path, merges) for path in test_data)),
                     total=len(test_data),
-                    desc=f'Analyzing token distribution with {self.args.num_processes} processes'
-                )
-            )
+                    desc=f'Analyzing token distribution with {self.args.num_processes} processes'))
 
         token_counts = Counter()
         token_lengths = []

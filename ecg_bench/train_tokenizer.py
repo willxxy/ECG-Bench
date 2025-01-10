@@ -20,7 +20,8 @@ def main(args: argparse.Namespace):
     if args.train:
         tokenizer = ECGByteTokenizer(args, FileManager)
         tokenizer.train_tokenizer()
-    pass
+    if tokenizer != None:
+        tokenizer.verify_token()
 
 if __name__ == '__main__':
     main(get_args())
