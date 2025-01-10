@@ -1,6 +1,6 @@
 import numpy as np
 import multiprocessing as mp
-
+import time
 from tqdm import tqdm
 from collections import Counter
 
@@ -14,6 +14,8 @@ class ECGByteTokenizer:
         self.percentiles = self.fm.open_npy(self.args.percentiles)
         self.p1 = self.percentiles['p1']
         self.p99 = self.percentiles['p99']
+        self.n = 1000 if self.args.dev else None
+        self.num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
         if self.args.tokenizer is not None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.tokenizer)
 
@@ -23,7 +25,26 @@ class ECGByteTokenizer:
         self.ep2 = 0.5
 
     def train_tokenizer(self):
-        pass
+        all_string_signals = self.discretize_ecgs(self.args.sampled_files, self.n)
+        
+        print(f"Total ECGs processed: {len(list(all_string_signals))}")
+        print(list(all_string_signals)[:100])
+        
+        start_time = time.time()
+        ids, vocab, merges = bpe.byte_pair_encoding(all_string_signals, self.args.num_merges, self.args.num_processes)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        print(f"Byte pair encoding executed in {execution_time:.2f} seconds")
+        print("Shared vocabulary across all ECGs:")
+        print(f"Original length: {len(all_string_signals)}")
+        print(f"Encoded length: {len(ids)}")
+        print(f"Compression ratio: {len(all_string_signals) / len(ids):.2f}X")
+        print(f"Vocabulary size: {len(vocab)}")
+        
+        self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{self.num_sample_files}.pkl')
+        print(f"Vocabulary and merges saved")
+        
 
     def encode_symbol(self, text, merges):
         return bpe.encode_symbol(text, merges)

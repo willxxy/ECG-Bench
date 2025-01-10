@@ -222,6 +222,8 @@ class PreprocessECG:
             else:
                 downsampled_ecg = denoised_ecg
                 
+            downsampled_ecg = downsampled_ecg.astype(np.float32)
+                
             orig_dur = downsampled_ecg.shape[0] / self.args.target_sf
             segmented_ecg, segmented_text = self.segment_ecg(downsampled_ecg, report, seg_len=self.args.seg_len)
             seg_dur = self.args.seg_len / self.args.target_sf
@@ -270,7 +272,7 @@ class PreprocessECG:
         
         for file_path in file_paths:
             try:
-                data = np.load(file_path, allow_pickle=True).item()
+                data = self.fm.open_npy(file_path)
                 ecg_data = data['ecg']
                 flat_data = ecg_data.flatten()
                 total_values += len(flat_data)

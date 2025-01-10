@@ -13,6 +13,7 @@ def get_args():
     parser.add_argument('--percentiles', type=str, default = None, help = 'Please specify the path to the calculated percentiles')
     parser.add_argument('--train', action = 'store_true', default = None, help = 'Please specify whether to train the tokenizer')
     parser.add_argument('--tokenizer', type = str, default = None, help = 'If you want to just load the tokenizer, please specify the path to the .pkl file.')
+    parser.add_argument('--dev', action = 'store_true', default = False, help = 'Use this flag to run the script in development mode')
     return parser.parse_args()
 
 def main(args: argparse.Namespace):
