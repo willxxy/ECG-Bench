@@ -60,7 +60,7 @@ class ECGByteTokenizer:
         ecg_array = self.fm.open_npy(ecg_path)['ecg']
         return self._to_symbol_string(ecg_array)
 
-    def discretize_ecgs(self, file_path, num_processes, n=None):
+    def discretize_ecgs(self, file_path, n=None):
         def file_path_generator():
             with open(file_path, 'r') as file:
                 for i, line in enumerate(file):
@@ -70,7 +70,7 @@ class ECGByteTokenizer:
 
         file_paths = list(file_path_generator())
 
-        with mp.Pool(processes=num_processes) as pool:
+        with mp.Pool(processes=self.args.num_processes) as pool:
             ecg_strings = list(
                 tqdm(
                     pool.imap(self.process_ecg, file_paths),
@@ -88,13 +88,13 @@ class ECGByteTokenizer:
         all_encoded_ids = list(self.encode_symbol(single_lead_str, merges))
         return Counter(all_encoded_ids), len(all_encoded_ids)
 
-    def analyze_token_distribution(self, test_data, merges, num_workers=None):
-        with mp.Pool(num_workers) as pool:
+    def analyze_token_distribution(self, test_data, merges):
+        with mp.Pool(self.args.num_processes) as pool:
             results = list(
                 tqdm(
                     pool.imap(self.analyze_single_ecg, ((path, merges) for path in test_data)),
                     total=len(test_data),
-                    desc=f'Analyzing token distribution with {num_workers} workers'
+                    desc=f'Analyzing token distribution with {self.args.num_processes} processes'
                 )
             )
 
