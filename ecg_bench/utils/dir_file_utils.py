@@ -29,10 +29,17 @@ class FileManager:
         return signal, fields['fs']
     
     @staticmethod
-    def load_vocab_and_merges(path: Union[str, Path]) -> Tuple[dict, dict]:
-        """Load vocabulary and merges from a pickle file."""
+    def open_tokenizer(path: Union[str, Path]) -> Tuple[dict, dict]:
+        """Open a pickled tokenizer file and return the vocabulary and merges."""
         with open(path, 'rb') as f:
-            return pickle.load(f)
+            vocab, merges = pickle.load(f)
+        return vocab, merges
+    
+    @staticmethod
+    def save_tokenizer(vocab: dict, merges: dict, path: Union[str, Path]):
+        """Save a tokenizer vocabulary and merges to a pickled file."""
+        with open(path, 'wb') as f:
+            pickle.dump((vocab, merges), f)
     
     @staticmethod
     def ensure_directory_exists(path: Union[str, Path]) -> bool:
