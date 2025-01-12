@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import Counter
 import os
 
-import ecg_bench.representation.bpe as bpe
+import bpe
 
 
 class ECGByteTokenizer:
