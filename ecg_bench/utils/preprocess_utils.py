@@ -22,6 +22,8 @@ class PreprocessECG:
         2. Preprocess the ECG data by applying filters, denoising, and segmenting.
         3. Get the percentiles of the preprocessed ECG data.
         4. Implement clustering based sampling for N percent of the preprocessed ECG data to train tokenizer.
+        5. Map external datasets (i.e., PTB and MIMIC variant of ECG-QA and Pretrain Mimic and Mimic Instruct from ECG-Chat)
+            to preprocessed PTB and MIMIC base datasets.
     '''
     def __init__(self, args, fm):
         self.args = args
@@ -30,15 +32,19 @@ class PreprocessECG:
         
         fm.ensure_directory_exists(f'./pngs')
         
-        if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
-            self.prepare_df()
-        self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
-        self.df = self.fm.clean_dataframe(self.df)
-        if self.args.dev:
-            self.df = self.df.iloc[:1000]
-        if self.args.toy:
-            self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
-        print(self.df.head())
+        if self.args.map_data == None:
+            print(f"Preparing {args.data}")
+            if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
+                print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
+                self.prepare_df()
+            self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
+            self.df = self.fm.clean_dataframe(self.df)
+            if self.args.dev:
+                self.df = self.df.iloc[:1000]
+            if self.args.toy:
+                self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
+            print(self.df.head())
+            print('Dataframe prepared.')
     
     ### MAIN FUNCTIONS
     def prepare_df(self):
@@ -199,7 +205,10 @@ class PreprocessECG:
             for file in sampled_files:
                 f.write(f"{file}\n")
                 
-
+    def map_external_datasets(self):
+        if self.args.map_data == 'ecg_instruct_45k' or self.args.map_data == 'pretrain_mimic':
+            json_file = self.fm.open_json(f'./data/{self.args.map_data}/{self.args.map_data}.json')
+    
     ### HELPER FUNCTIONS
     ### Preprocessing functions
     def _process_single_instance(self, idx):

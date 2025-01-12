@@ -10,7 +10,8 @@ from ecg_bench.utils.preprocess_utils import PreprocessECG
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)
-    parser.add_argument('--data', type = str, default = None, help = 'Please choose the dataset')
+    parser.add_argument('--data', type = str, default = None, help = 'Please choose the base dataset')
+    parser.add_argument('--map_data', type = str, default = None, help = 'Please choose the external dataset to map to base dataset')
     parser.add_argument('--seg_len', type = int, default = 500, help = 'Please choose the segment length')
     parser.add_argument('--target_sf', type = int, default = 250, help = 'Please choose the target sampling frequency')
     parser.add_argument('--num_cores', type = int, default = 4, help = 'Please choose the number of cores, usually 4-6 is enough')
@@ -22,14 +23,19 @@ def get_args():
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
-    if args.data == 'mimic' or args.data == 'ptb':
-        preprocessor = PreprocessECG(args, FileManager)
+    fm = FileManager()
+    preprocessor = PreprocessECG(args, fm)
+    
+    if (args.data == 'mimic' or args.data == 'ptb') and (args.map_data == None):
         preprocessor.preprocess_batch()
-        
         if args.data == 'mimic' and args.seg_len == 2500:
-            # Perform sampling and calculate percentiles for mimic unsegmented data
             preprocessor.get_percentiles()
             preprocessor.stratified_sampling()
+    
+    if fm.ensure_directory_exists(f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}'):
+        if args.map_data != None:
+            preprocessor.map_external_datasets()
+    
 
 if __name__ == '__main__':
     main(get_args())
