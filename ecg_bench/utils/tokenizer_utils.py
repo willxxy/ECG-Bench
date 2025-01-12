@@ -6,9 +6,16 @@ from collections import Counter
 import os
 
 import bpe
-
+from ecg_bench.utils.viz_utils import VizUtil
 
 class ECGByteTokenizer:
+    """
+    Main class for training and verifying the tokenizer. In this class, we do the following:
+        1. Train the tokenizer using the Byte Pair Encoding algorithm.
+        2. Verify the tokenizer by encoding and decoding a sample ECG signal.
+    
+    Currently, this is a naive BPE algorithm. In the future, we will add more sophisticated merging methods.
+    """
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
@@ -17,14 +24,14 @@ class ECGByteTokenizer:
         self.p99 = self.percentiles['p99']
         self.n = 1000 if self.args.dev else None
         self.num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
-        if self.args.tokenizer is not None:
+        if self.args.tokenizer != None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.tokenizer)
-
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')
         self.len_symbols = len(self.symbols)
         self.ep1 = 1e-6
         self.ep2 = 0.5
-
+        self.viz = VizUtil()
+        
     def train_tokenizer(self):
         all_string_signals = self.discretize_ecgs(self.args.sampled_files, self.n)
         
@@ -62,12 +69,15 @@ class ECGByteTokenizer:
         print(f"Decoded text (first 100 characters): {decoded_text[:100]}...")
         print(decoded_text == symbol_signal)
         
-        decoded_signal = self.denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape), self.percentiles)
+        decoded_signal = self.denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape))
         max_diff = np.max(np.abs(original_ecg - decoded_signal))
         print(f"Maximum difference between original and decoded: {max_diff}")
         
-        ### PLOTTING FUNCTION
+        self.viz.plot_2d_ecg(decoded_signal, 'decoded_ecg_2d', save_path = './pngs/', sample_rate = 250)
+        self.viz.plot_1d_ecg(decoded_signal, 'decoded_ecg_1d', save_path = './pngs/', sample_rate = 250)
         
+        self.viz.plot_2d_ecg(original_ecg, 'original_ecg_2d', save_path = './pngs/', sample_rate = 250)
+        self.viz.plot_1d_ecg(original_ecg, 'original_ecg_1d', save_path = './pngs/', sample_rate = 250)
 
     def encode_symbol(self, text, merges):
         return bpe.encode_symbol(text, merges)

@@ -17,10 +17,11 @@ def get_args():
     return parser.parse_args()
 
 def main(args: argparse.Namespace):
+    tokenizer = ECGByteTokenizer(args, FileManager)
+    
     if args.train:
-        tokenizer = ECGByteTokenizer(args, FileManager)
         tokenizer.train_tokenizer()
-    if tokenizer != None:
+    if args.tokenizer != None:
         tokenizer.verify_tokenizer()
 
 if __name__ == '__main__':
