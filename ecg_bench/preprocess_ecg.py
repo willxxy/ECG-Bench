@@ -22,13 +22,15 @@ def get_args():
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
-    preprocessor = PreprocessECG(args, FileManager)
-    preprocessor.preprocess_batch()
+    if args.data == 'mimic' or args.data == 'ptb':
+        preprocessor = PreprocessECG(args, FileManager)
+        preprocessor.preprocess_batch()
+        
+        if args.data == 'mimic' and args.seg_len == 2500:
+            # Perform sampling and calculate percentiles for mimic unsegmented data
+            preprocessor.get_percentiles()
+            preprocessor.stratified_sampling()
     
-    if args.data == 'mimic' and args.seg_len == 2500:
-        # Perform sampling and calculate percentiles for mimic unsegmented data
-        preprocessor.get_percentiles()
-        preprocessor.stratified_sampling()
         
     ## NOW ADD SAMPLING AND PERCENTILES
     # np_file = FileManager.open_npy(f"./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}/{os.listdir(f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}')[0]}")
