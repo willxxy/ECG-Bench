@@ -19,6 +19,12 @@ class FileManager:
             return json.load(f)
     
     @staticmethod
+    def save_json(data: dict, path: Union[str, Path]):
+        """Save a dictionary to a JSON file."""
+        with open(path, 'w') as f:
+            json.dump(data, f)
+    
+    @staticmethod
     def open_npy(path: Union[str, Path]) -> np.ndarray:
         """Load a NumPy array from a .npy file."""
         return np.load(path, allow_pickle=True).item()

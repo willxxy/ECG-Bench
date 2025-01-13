@@ -1,4 +1,6 @@
 import numpy as np
+from pathlib import Path
+import glob
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -32,6 +34,7 @@ class PreprocessECG:
         
         fm.ensure_directory_exists(f'./pngs')
         
+        
         if self.args.map_data == None:
             print(f"Preparing {args.data}")
             if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
@@ -45,6 +48,9 @@ class PreprocessECG:
                 self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
             print(self.df.head())
             print('Dataframe prepared.')
+        else:
+            self.ecg_folder = Path(self.preprocessed_dir)
+            self.available_ecgs = set(f.stem for f in self.ecg_folder.glob('*'))
     
     ### MAIN FUNCTIONS
     def prepare_df(self):
@@ -59,34 +65,28 @@ class PreprocessECG:
             record_list = pd.read_csv('./data/mimic/record_list.csv')
             machine_measurements = pd.read_csv('./data/mimic/machine_measurements.csv')
             waveform_note_links = pd.read_csv('./data/mimic/waveform_note_links.csv')
-            
             report_columns = [f'report_{i}' for i in range(18)]
-            
             machine_measurements['report'] = machine_measurements[report_columns].apply(
                 lambda x: ' '.join([str(val) for val in x if pd.notna(val)]), axis=1)
-            
             mm_columns = ['subject_id', 'study_id'] + report_columns + ['report']
             
             merged_df = pd.merge(
                 record_list[['subject_id', 'study_id', 'file_name', 'path']],
                 machine_measurements[mm_columns],
                 on=['subject_id', 'study_id'],
-                how='inner'
-            )
+                how='inner')
+            
             merged_df = merged_df.dropna(subset=report_columns, how='all')
-            df = merged_df[['path', 'report']]
-        
+            df = merged_df[['path', 'report']]    
+            
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
-
     def preprocess_batch(self):
         self.fm.ensure_directory_exists(self.preprocessed_dir)
-        
         if self.args.data == 'mimic':
             self.add_path = './data/mimic'
         elif self.args.data == 'ptb':
             self.add_path = './data/ptb'
-        
         skipped_count = 0        
         try:
             with ProcessPoolExecutor(max_workers=self.args.num_cores) as executor:
@@ -94,7 +94,6 @@ class PreprocessECG:
                     executor.submit(self._process_single_instance, idx)
                     for idx in range(len(self.df))
                 ]
-                
                 for future in tqdm(as_completed(futures), 
                                  total=len(futures), 
                                  desc='Preprocessing ECGs...'):
@@ -105,29 +104,21 @@ class PreprocessECG:
                     except Exception as e:
                         print(f"Error processing instance: {str(e)}")
                         skipped_count += 1
-        
         except Exception as e:
             print(f"Error in preprocess_instance: {str(e)}")
-        
         finally:
             print(f"Total instances skipped: {skipped_count}")
             
-
     def get_percentiles(self):
-        
         all_files = [os.path.join(self.preprocessed_dir, f) for f in os.listdir(self.preprocessed_dir) 
                     if f.endswith('.npy')]
-        
         if not all_files:
             raise ValueError(f"No .npy files found in {self.preprocessed_dir}")
-
         num_files = len(all_files)
         num_chunks = self.args.num_cores * 4
         chunk_size = max(1, num_files // num_chunks)
         samples_per_chunk = max(1, self.args.num_percentiles // num_chunks)
-        
-        file_chunks = [all_files[i:i + chunk_size] for i in range(0, num_files, chunk_size)]
-        
+        file_chunks = [all_files[i:i + chunk_size] for i in range(0, num_files, chunk_size)]        
         chunk_args = [(chunk, samples_per_chunk) for chunk in file_chunks]
 
         all_values = []
@@ -206,8 +197,38 @@ class PreprocessECG:
                 f.write(f"{file}\n")
                 
     def map_external_datasets(self):
-        if self.args.map_data == 'ecg_instruct_45k' or self.args.map_data == 'pretrain_mimic':
-            json_file = self.fm.open_json(f'./data/{self.args.map_data}/{self.args.map_data}.json')
+        valid_instances = []
+        
+        if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic']:
+            data = self.fm.open_json(f'./data/{self.args.map_data}/{self.args.map_data}.json')
+        elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
+            paraphrased_jsons = glob.glob(f'./data/ecg-qa/output/{self.args.map_data.split("_")[1]}/paraphrased/*/*.json')
+            template_jsons = glob.glob(f'./data/ecg-qa/output/{self.args.map_data.split("_")[1]}/template/*/*.json')
+            path_to_all_jsons = paraphrased_jsons + template_jsons
+            print('Setting up ECG-QA data...')
+            data = self.setup_ecg_qa(path_to_all_jsons)
+            
+        for instance in tqdm(data, desc = 'Mapping external dataset'):
+            if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic']:
+                text = instance['conversations']
+                ecg_path = instance['ecg']
+                ecg_path = '_'.join(ecg_path.split('/'))
+            elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
+                text = [instance['question_type'], instance['question'], instance['answer']]
+                ecg_path = instance['ecg_path'][0]
+                ecg_path = '_'.join(ecg_path.split('/')[2:])
+                
+            for i in range(10):
+                if f"{ecg_path}_{i}" in self.available_ecgs:
+                    valid_instances.append({
+                        'ecg_path' : f"{self.preprocessed_dir}/{ecg_path}_{i}.npy",
+                        'text' : text
+                    })
+        print(f"Total instances for {self.args.map_data}: {len(data)}")
+        print(f'Length of available ecgs: {len(self.available_ecgs)}')
+        print(f"Valid instances: {len(valid_instances)}")
+        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped.json')
+            
     
     ### HELPER FUNCTIONS
     ### Preprocessing functions
@@ -265,7 +286,7 @@ class PreprocessECG:
                     'target_sf': self.args.target_sf,
                     'seg_len': self.args.seg_len
                 }
-                save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}.npy"
+                save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_0.npy"
                 np.save(save_path, save_dic)
                 
             return True
@@ -633,3 +654,12 @@ class PreprocessECG:
         diffs = np.diff(inertias)
         elbow_point = np.argmin(diffs) + 2  # +2 because we started from 2 clusters
         return elbow_point
+
+    ### Mapping external datasets functions
+    def setup_ecg_qa(self, glob_paths, question_types=['single-verify', 'single-choose', 'single-query']):
+        data = []
+        for fname in sorted(glob_paths):
+            loaded_file = self.fm.open_json(fname)
+            filtered_list = [item for item in loaded_file if item['question_type'] in question_types]
+            data.extend(filtered_list)
+        return data
