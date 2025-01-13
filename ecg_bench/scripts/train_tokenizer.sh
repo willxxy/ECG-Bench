@@ -1,3 +1,5 @@
+#!/bin/bash
+
 python train_tokenizer.py \
 --num_merges=3500 \
 --sampled_files=data/sampled_300000_200.txt \

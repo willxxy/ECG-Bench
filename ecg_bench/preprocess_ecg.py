@@ -32,7 +32,7 @@ def main(args: argparse.Namespace):
             preprocessor.get_percentiles()
             preprocessor.stratified_sampling()
     
-    if fm.ensure_directory_exists(f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}'):
+    if fm.ensure_directory_exists(folder = f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}'):
         if args.map_data != None:
             preprocessor.map_external_datasets()
     

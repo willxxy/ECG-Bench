@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ### BASE DATA
 # CUDA_VISIBLE_DEVICES=1 python preprocess_ecg.py --data=ptb --seg_len=500
 # python preprocess_ecg.py --data=mimic --toy --seg_len=500

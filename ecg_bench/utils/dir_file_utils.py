@@ -48,26 +48,30 @@ class FileManager:
             pickle.dump((vocab, merges), f)
     
     @staticmethod
-    def ensure_directory_exists(path: Union[str, Path]) -> bool:
+    def ensure_directory_exists(folder: Union[str, Path, None] = None, file: Union[str, Path, None] = None) -> bool:
         """
-        Check if path exists and create directory if needed.
-        Returns True if path exists (file or dir), False otherwise.
+        Return True if path (file or directory) already exists.
+        If path does not exist:
+        - If path has a file extension (suffix), return False (do nothing).
+        - Otherwise, assume it's a directory, create it, and return True.
         """
-        path = Path(path)
+        if folder != None:
+            path = Path(folder)
+        elif file != None:
+            path = Path(file)
+
         if path.exists():
-            if path.is_file():
-                print(f"File exists: {path}")
-                return True
-            print(f"Directory exists: {path}")
+            print(f"Path already exists: {path}")
             return True
-        
-        if path.suffix:  # Has file extension
-            print(f"File does not exist: {path}")
-            return False
-            
-        path.mkdir(parents=True, exist_ok=True)
-        print(f"Created directory: {path}")
-        return True
+        else:
+            if folder != None:
+                print(f"Creating directory: {path}")
+                path.mkdir(parents=True, exist_ok=True)
+                return True
+            elif file != None:
+                print(f"Path is a file and does not exist: {path}")
+                return False
+
     
     @staticmethod
     def align_signal_text_files(signal_dir: Union[str, Path], text_dir: Union[str, Path]) -> Tuple[List[str], List[str]]:

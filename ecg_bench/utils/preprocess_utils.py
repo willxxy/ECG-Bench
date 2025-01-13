@@ -32,12 +32,12 @@ class PreprocessECG:
         self.fm = fm
         self.preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
         
-        fm.ensure_directory_exists(f'./pngs')
+        fm.ensure_directory_exists(folder = f'./pngs')
         
         
         if self.args.map_data == None:
             print(f"Preparing {args.data}")
-            if fm.ensure_directory_exists(f'./data/{args.data}/{args.data}.csv') == False:
+            if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
                 print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
                 self.prepare_df()
             self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
@@ -82,7 +82,7 @@ class PreprocessECG:
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
     def preprocess_batch(self):
-        self.fm.ensure_directory_exists(self.preprocessed_dir)
+        self.fm.ensure_directory_exists(folder = self.preprocessed_dir)
         if self.args.data == 'mimic':
             self.add_path = './data/mimic'
         elif self.args.data == 'ptb':
@@ -227,7 +227,7 @@ class PreprocessECG:
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f'Length of available ecgs: {len(self.available_ecgs)}')
         print(f"Valid instances: {len(valid_instances)}")
-        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped.json')
+        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_{self.args.seg_len}_{self.args.target_sf}_mapped.json')
             
     
     ### HELPER FUNCTIONS
