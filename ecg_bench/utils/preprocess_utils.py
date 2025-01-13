@@ -218,7 +218,7 @@ class PreprocessECG:
                 ecg_path = instance['ecg_path'][0]
                 ecg_path = '_'.join(ecg_path.split('/')[2:])
                 
-            for i in range(10):
+            for i in range(10): # at most we will have 10 segments if each segment is 1 sec
                 if f"{ecg_path}_{i}" in self.available_ecgs:
                     valid_instances.append({
                         'ecg_path' : f"{self.preprocessed_dir}/{ecg_path}_{i}.npy",
