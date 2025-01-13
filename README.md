@@ -34,7 +34,7 @@ example: python tests/test_file.py
 [ ] runners
     - [ ] .py files for training and evaluating
 
-[ ] 
+[ ]  Add ECG instruct and datasets from PULSE paper.
 
 
 ## Installation <a name="installation"></a>
