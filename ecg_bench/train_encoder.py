@@ -107,8 +107,6 @@ def main(rank, world_size):
     
     runs_save_dir_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.lr}_{args.batch_size}_{args.epochs}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}_{args.patience}"
     fm.ensure_directory_exists(folder = runs_save_dir_path)
-    fm.ensure_directory_exists(file = f'./data/{args.data}.json')
-    fm.ensure_directory_exists(file = f'./data/sjksdjk.json')
     
     if args.log:
         print('Initializing Wandb')
