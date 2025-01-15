@@ -17,6 +17,7 @@ class ECGDataset(Dataset):
     def __getitem__(self, idx):
         instance = self.json_data_file[idx]
         ecg_path = instance['ecg_path']
+        ecg_signal = self.fm.open_ecg(ecg_path)
         text = instance['text']
         
         return_dic = {
