@@ -4,14 +4,18 @@ echo "ecg_instruct_45k_mapped"
 
 python train_encoder.py \
 --data=ecg_instruct_45k_mapped \
+--model=clip \
 --gpus=4,5 \
---dis
+--dis \
+--dev
 
 echo "----------------------------------------"
 
 python train_encoder.py \
 --data=ecg_instruct_45k_mapped \
---device=cuda:4
+--model=clip \
+--device=cuda:4 \
+--dev
 
 # echo "----------------------------------------"
 

@@ -19,3 +19,10 @@ class ECGDataset(Dataset):
         ecg_path = instance['ecg_path']
         text = instance['text']
         
+        return_dic = {
+            'ecg_path': ecg_path,
+            'text': text
+        }
+        
+        return return_dic
+        

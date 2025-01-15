@@ -11,10 +11,16 @@ import gc
 import random
 import numpy as np
 import wandb
+from peft import LoraConfig, TaskType, get_peft_model
+from torch.utils.data import DataLoader
+
 
 from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
+from ecg_bench.utils.data_loader_utils import ECGDataset
+from ecg_bench.utils.training_utils import TrainingUtils
+from ecg_bench.runners.train import trainer
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)
@@ -34,7 +40,6 @@ def get_args():
     parser.add_argument('--percentiles', type = str, default = None, help = 'Please choose the percentiles computed during preprocessing')
     parser.add_argument('--peft', action = 'store_true', default = None, help = 'Please choose whether to use PEFT or not')
     
-    
     ### Optimizer
     parser.add_argument('--lr', type = float, default = 1e-4, help='Please choose the learning rate')
     parser.add_argument('--batch_size', type = int, default = 128, help='Please choose the batch size')
@@ -45,6 +50,7 @@ def get_args():
     parser.add_argument('--warmup', type = int, default = 500, help = 'Please choose the number of warmup steps for the optimizer' )
     parser.add_argument('--weight_decay', type = float, default = 1e-2, help = 'Please choose the weight decay')
     parser.add_argument('--patience', type = int, default = 5, help='Please choose the patience')
+    parser.add_argument('--delta', type = float, default = 0.1, help='Please choose the delta')
     
     ### For development
     parser.add_argument('--dev', action = 'store_true', default = None, help = 'Please choose whether to use development mode or not')
@@ -104,18 +110,64 @@ def main(rank, world_size):
     
     fm = FileManager()
     viz = VizUtil()
+    train_utils = TrainingUtils(args, fm, viz)
     
-    runs_save_dir_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.lr}_{args.batch_size}_{args.epochs}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}_{args.patience}"
-    fm.ensure_directory_exists(folder = runs_save_dir_path)
+    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
+    fm.ensure_directory_exists(folder = args.save_path)
     
     if args.log:
         print('Initializing Wandb')
         wandb.init(project = 'ecg-bench',
-                   name = f"{'_'.join(runs_save_dir_path.split('/')[2:])}",
+                   name = f"{'_'.join(args.save_path.split('/')[2:])}",
                    config = args)
     
     
-    data_json_file = fm.open_json(f'./data/{args.data}.json')
+    json_data_file = fm.open_json(f'./data/{args.data}.json')
+    print('Length of Dataset:', len(json_data_file))
+    
+    train_dataset = ECGDataset(
+        json_data_file = json_data_file,
+        fm = fm,
+        args = args
+    )
+    
+    if args.dis:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, 
+                                                                        num_replicas=world_size, 
+                                                                        rank=rank,
+                                                                        seed = args.seed,
+                                                                        shuffle = True)
+        shuffle = False
+    else:
+        train_sampler = None
+        shuffle = True
+        
+    train_loader = DataLoader(train_dataset,
+                              batch_size = args.batch_size,
+                              shuffle = shuffle,
+                              num_workers = 4,
+                              sampler = train_sampler)
+    
+    model_object = train_utils.create_model()
+    
+    encoder = model_object['encoder']
+    encoder_tokenizer = model_object['encoder_tokenizer']
+    encoder = encoder.to(device)
+    
+    print(f'Total number of parameters: {train_utils.count_parameters(encoder)}')
+    
+    optimizer = ScheduledOptim(
+        Adam(filter(lambda x: x.requires_grad, encoder.parameters()),
+            betas=(args.beta1, args.beta2), eps=args.eps, lr = args.lr, weight_decay=args.weight_decay), 
+                    model_object['model_hidden_size'], args.warmup)
+
+    all_epochs = []
+    train_losses = []
+    
+    for epoch in range(args.epochs):
+        all_epochs.append(epoch)
+        train_dic = trainer(encoder, train_loader, optimizer, args, epoch)
+        
     
     if args.log:
         wandb.finish()
