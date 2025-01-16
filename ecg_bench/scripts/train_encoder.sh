@@ -15,11 +15,12 @@ python train_encoder.py \
 --data=ecg_instruct_45k_mapped \
 --model=clip \
 --device=cuda:0 \
+--percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --dev
 
-echo "----------------------------------------"
+# echo "----------------------------------------"
 
-echo "pretrain_mimic_mapped"
+# echo "pretrain_mimic_mapped"
 
 # python train_encoder.py \
 # --data=pretrain_mimic_mapped \
@@ -30,15 +31,16 @@ echo "pretrain_mimic_mapped"
 
 # echo "----------------------------------------"
 
-python train_encoder.py \
---data=pretrain_mimic_mapped \
---model=clip \
---device=cuda:0 \
---dev
+# python train_encoder.py \
+# --data=pretrain_mimic_mapped \
+# --model=clip \
+# --device=cuda:0 \
+# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+# --dev
 
-echo "----------------------------------------"
+# echo "----------------------------------------"
 
-echo "ecg-qa_mimic-iv-ecg_mapped"
+# echo "ecg-qa_mimic-iv-ecg_mapped"
 
 # python train_encoder.py \
 # --data=ecg-qa_mimic-iv-ecg_mapped \
@@ -47,15 +49,16 @@ echo "ecg-qa_mimic-iv-ecg_mapped"
 
 # echo "----------------------------------------"
 
-python train_encoder.py \
---data=ecg-qa_mimic-iv-ecg_mapped \
---model=clip \
---device=cuda:0 \
---dev
+# python train_encoder.py \
+# --data=ecg-qa_mimic-iv-ecg_mapped \
+# --model=clip \
+# --device=cuda:0 \
+# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+# --dev
 
-echo "----------------------------------------"
+# echo "----------------------------------------"
 
-echo "ecg-qa_ptbxl_mapped"
+# echo "ecg-qa_ptbxl_mapped"
 
 # python train_encoder.py \
 # --data=ecg-qa_ptbxl_mapped \
@@ -64,9 +67,10 @@ echo "ecg-qa_ptbxl_mapped"
 
 # echo "----------------------------------------"
 
-python train_encoder.py \
---data=ecg-qa_ptbxl_mapped \
---device=cuda:0 \
---model=clip \
---dev
+# python train_encoder.py \
+# --data=ecg-qa_ptbxl_mapped \
+# --device=cuda:0 \
+# --model=clip \
+# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+# --dev
 

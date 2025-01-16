@@ -6,10 +6,16 @@ from PIL import Image
 
 
 class ECGDataset(Dataset):
-    def __init__(self, json_data_file, fm, args):
+    def __init__(self, json_data_file, 
+                 fm, args, viz, tokenizer_utils,
+                 encoder_tokenizer = None, encoder_tokenizer2 = None):
         self.json_data_file = json_data_file
         self.fm = fm
         self.args = args
+        self.viz = viz
+        self.tokenizer_utils = tokenizer_utils
+        self.encoder_tokenizer = encoder_tokenizer
+        self.encoder_tokenizer2 = encoder_tokenizer2
         
         # For datasets that don't have question
         self.uniform_question = 'Could you please help me explain my ECG?'
@@ -19,37 +25,39 @@ class ECGDataset(Dataset):
 
     def __getitem__(self, idx):
         instance = self.json_data_file[idx]
-        self.prepare_instance(instance)
-        
-        return_dic = {
-
-        }
-        
-        return return_dic
-        
-    def prepare_instance(self, instance):
-        ### from json file
-        altered_text = instance['text']
-        if self.args.data == 'pretrain_mimic_mapped':
-            question, answer = altered_text[0]['value'].replace('\n', '').replace('<ecg>', ''), altered_text[1]['value']
-        elif self.args.data in ['ecg-qa_mimic-iv-ecg_mapped', 'ecg-qa_ptbxl_mapped']:
-            question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
-            answer = ' '.join(answer) if isinstance(answer, list) else answer
-        print(question)
-        print(answer)
-        
-        ### from numpy file
         np_path = instance['ecg_path']
         ecg_path = self.fm.open_npy(np_path)
         ecg_signal = ecg_path['ecg']
         original_report = ecg_path['report']
-        print(ecg_signal.shape)
-        print(original_report)
+        altered_text = instance['text']
         
-        return_dic = {
-            'question': question,
-            'answer': answer,
-            'ecg': ecg_signal,
-            'original_report': original_report
+        if self.args.model == 'clip':
+            return_dict = self.prepare_clip_input(ecg_signal, original_report)
+        
+        return return_dict
+    
+    def prepare_clip_input(self, ecg_signal, original_report):
+        # self.viz.plot_2d_ecg(ecg_signal, 'ecg_signal', save_path = './pngs/', sample_rate = 250)
+        # print('ecg_signal:', ecg_signal.shape)
+        normalized_signal, _ = self.tokenizer_utils.normalize(ecg_signal)
+        rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis = -1).astype(np.uint8)
+        image_signal = Image.fromarray(rgb_norm_signal)
+        # print('normalized_signal:', normalized_signal.shape)
+        # self.viz.plot_2d_ecg(normalized_signal, 'normalized_signal', save_path = './pngs/', sample_rate = 250)
+        clip_inputs = self.encoder_tokenizer(text = [original_report],
+                                             images = [image_signal],
+                                             return_tensors = 'pt',
+                                             padding = 'max_length',
+                                             max_length = 77,
+                                             truncation = True)
+        input_ids = clip_inputs['input_ids'][0]
+        attention_mask = clip_inputs['attention_mask'][0]
+        pixel_values = clip_inputs['pixel_values'][0]
+        return {
+            'clip_input_ids': input_ids,
+            'clip_att_mask': attention_mask,
+            'clip_pixel': pixel_values
         }
+
+        
         

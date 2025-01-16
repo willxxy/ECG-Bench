@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader
 from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
+from ecg_bench.utils.tokenizer_utils import ECGByteTokenizer
 from ecg_bench.utils.data_loader_utils import ECGDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
@@ -78,6 +79,7 @@ def main(rank, world_size):
         print('Running in Development Mode')
         args.epochs=2
         args.log = False
+        args.batch_size = 1
     
     if args.dis:
         print('Setting up Distributed Devices')
@@ -111,6 +113,7 @@ def main(rank, world_size):
     fm = FileManager()
     viz = VizUtil()
     train_utils = TrainingUtils(args, fm, viz)
+    tokenizer_utils = ECGByteTokenizer(args, fm)
     
     args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
@@ -125,11 +128,26 @@ def main(rank, world_size):
     json_data_file = fm.open_json(f'./data/{args.data}.json')
     print('Length of Dataset:', len(json_data_file))
     
+    model_object = train_utils.create_model()
+    
+    encoder = model_object['encoder']
+    encoder_tokenizer = model_object['encoder_tokenizer']
+    encoder = encoder.to(device)
+    
+    print(f'Total number of parameters: {train_utils.count_parameters(encoder)}')
+    
+    optimizer = ScheduledOptim(
+        Adam(filter(lambda x: x.requires_grad, encoder.parameters()),
+            betas=(args.beta1, args.beta2), eps=args.eps, lr = args.lr, weight_decay=args.weight_decay), 
+                    model_object['model_hidden_size'], args.warmup)
+    
     train_dataset = ECGDataset(
         json_data_file = json_data_file,
         fm = fm,
-        args = args
-    )
+        args = args,
+        viz = viz,
+        tokenizer_utils = tokenizer_utils,
+        encoder_tokenizer = encoder_tokenizer)
     
     if args.dis:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, 
@@ -145,21 +163,9 @@ def main(rank, world_size):
     train_loader = DataLoader(train_dataset,
                               batch_size = args.batch_size,
                               shuffle = shuffle,
-                              num_workers = 4,
-                              sampler = train_sampler)
-    
-    model_object = train_utils.create_model()
-    
-    encoder = model_object['encoder']
-    encoder_tokenizer = model_object['encoder_tokenizer']
-    encoder = encoder.to(device)
-    
-    print(f'Total number of parameters: {train_utils.count_parameters(encoder)}')
-    
-    optimizer = ScheduledOptim(
-        Adam(filter(lambda x: x.requires_grad, encoder.parameters()),
-            betas=(args.beta1, args.beta2), eps=args.eps, lr = args.lr, weight_decay=args.weight_decay), 
-                    model_object['model_hidden_size'], args.warmup)
+                              num_workers = len(args.gpus.split(',')),
+                              sampler = train_sampler,
+                              pin_memory = True)
 
     all_epochs = []
     train_losses = []

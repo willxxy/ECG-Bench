@@ -24,7 +24,7 @@ class TrainingUtils:
         encoder = None
         encoder_tokenizer = None
         encoder2 = None
-        encoder2_tokenizer = None
+        encoder_tokenizer2 = None
         llm = None
         llm_tokenizer = None
         
@@ -42,7 +42,7 @@ class TrainingUtils:
             'encoder': encoder,
             'encoder_tokenizer': encoder_tokenizer,
             'encoder2': encoder2,
-            'encoder2_tokenizer': encoder2_tokenizer,
+            'encoder2_tokenizer': encoder_tokenizer2,
             'llm': llm,
             'llm_tokenizer': llm_tokenizer,
             'find_unused_parameters': find_unused_parameters,

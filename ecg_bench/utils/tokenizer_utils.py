@@ -23,7 +23,10 @@ class ECGByteTokenizer:
         self.p1 = self.percentiles['p1']
         self.p99 = self.percentiles['p99']
         self.n = 1000 if self.args.dev else None
-        self.num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
+        try:
+            self.num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
+        except:
+            print('Probably training NN')
         if self.args.tokenizer != None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.tokenizer)
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')
