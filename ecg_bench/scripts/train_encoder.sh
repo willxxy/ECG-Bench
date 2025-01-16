@@ -13,7 +13,7 @@ echo "ecg_instruct_45k_mapped"
 
 python train_encoder.py \
 --data=ecg_instruct_45k_mapped \
---model=clip \
+--model=vit \
 --device=cuda:0 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --dev

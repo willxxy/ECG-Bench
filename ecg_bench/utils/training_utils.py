@@ -38,6 +38,16 @@ class TrainingUtils:
             print("Encoder Configs", encoder.clip.config)
             print(f"Model Hidden Size: {model_hidden_size}")
             print(f"Find Unused Parameters: {find_unused_parameters}")
+        
+        elif self.args.model == 'vit':
+            from ecg_bench.models.ecg_encoder.vit import ViT   
+            hf_encoder = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir) 
+            encoder = ViT(hf_encoder)
+            encoder_tokenizer = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir)
+            find_unused_parameters = False
+            model_hidden_size = encoder.vit.config.hidden_size
+            self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
+        
         return {
             'encoder': encoder,
             'encoder_tokenizer': encoder_tokenizer,

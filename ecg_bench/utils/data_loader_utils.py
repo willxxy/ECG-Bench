@@ -33,15 +33,14 @@ class ECGDataset(Dataset):
         
         if self.args.model == 'clip':
             return_dict = self.prepare_clip_input(ecg_signal, original_report)
-        
+        elif self.args.model == 'vit':
+            return_dict = self.prepare_vit_input(ecg_signal)
         return return_dict
     
     def prepare_clip_input(self, ecg_signal, original_report):
         # self.viz.plot_2d_ecg(ecg_signal, 'ecg_signal', save_path = './pngs/', sample_rate = 250)
         # print('ecg_signal:', ecg_signal.shape)
-        normalized_signal, _ = self.tokenizer_utils.normalize(ecg_signal)
-        rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis = -1).astype(np.uint8)
-        image_signal = Image.fromarray(rgb_norm_signal)
+        image_signal = self.signal_to_image(ecg_signal)
         # print('normalized_signal:', normalized_signal.shape)
         # self.viz.plot_2d_ecg(normalized_signal, 'normalized_signal', save_path = './pngs/', sample_rate = 250)
         clip_inputs = self.encoder_tokenizer(text = [original_report],
@@ -58,6 +57,23 @@ class ECGDataset(Dataset):
             'clip_att_mask': attention_mask,
             'clip_pixel': pixel_values
         }
+    
+    def prepare_vit_input(self, ecg_signal):
+        image_signal = self.signal_to_image(ecg_signal)
+        vit_inputs = self.encoder_tokenizer(images = image_signal,
+                                             return_tensors = 'pt')
+        pixel_values = vit_inputs['pixel_values'][0]
+        mask = torch.rand(size=(1, self.args.num_patches)) < 0.75
+        mask = mask.squeeze(0)
+        return {
+            'vit_pixel': pixel_values,
+            'vit_mask': mask
+        }
+    
+    def signal_to_image(self, signal):
+        normalized_signal, _ = self.tokenizer_utils.normalize(signal)
+        rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis = -1).astype(np.uint8)
+        return Image.fromarray(rgb_norm_signal)
 
         
         
