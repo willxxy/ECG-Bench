@@ -1,7 +1,8 @@
 import random
 import torch.nn as nn
 from transformers import AutoProcessor, CLIPModel, AutoImageProcessor, \
-                            ViTForMaskedImageModeling, AutoModel, AutoTokenizer
+                            ViTForMaskedImageModeling, AutoModel, AutoTokenizer, \
+                                AutoModelForCausalLM
 class TrainingUtils:
     def __init__(self, args, fm, viz):
         self.args = args
@@ -43,10 +44,15 @@ class TrainingUtils:
             from ecg_bench.models.ecg_encoder.vit import ViT   
             hf_encoder = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir) 
             encoder = ViT(hf_encoder)
-            encoder_tokenizer = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir)
+            encoder_tokenizer = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir, use_fast = True)
             find_unused_parameters = False
             model_hidden_size = encoder.vit.config.hidden_size
             self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
+        
+        elif self.args.model == 'llama-3.2-1b':
+            from ecg_benc.models.llm.llama import Llama
+            llm = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
+            llm_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
         
         return {
             'encoder': encoder,

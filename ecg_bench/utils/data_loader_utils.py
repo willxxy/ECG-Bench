@@ -24,18 +24,22 @@ class ECGDataset(Dataset):
         return len(self.json_data_file)
 
     def __getitem__(self, idx):
-        instance = self.json_data_file[idx]
-        np_path = instance['ecg_path']
-        ecg_path = self.fm.open_npy(np_path)
-        ecg_signal = ecg_path['ecg']
-        original_report = ecg_path['report']
-        altered_text = instance['text']
-        
-        if self.args.model == 'clip':
-            return_dict = self.prepare_clip_input(ecg_signal, original_report)
-        elif self.args.model == 'vit':
-            return_dict = self.prepare_vit_input(ecg_signal)
-        return return_dict
+        try:
+            instance = self.json_data_file[idx]
+            np_path = instance['ecg_path']
+            ecg_path = self.fm.open_npy(np_path)
+            ecg_signal = ecg_path['ecg']
+            original_report = ecg_path['report']
+            altered_text = instance['text']
+            
+            if self.args.model == 'clip':
+                return_dict = self.prepare_clip_input(ecg_signal, original_report)
+            elif self.args.model == 'vit':
+                return_dict = self.prepare_vit_input(ecg_signal)
+            return return_dict
+        except Exception as e:
+            print(f"Skipping invalid data at index {idx}")
+            return None
     
     def prepare_clip_input(self, ecg_signal, original_report):
         # self.viz.plot_2d_ecg(ecg_signal, 'ecg_signal', save_path = './pngs/', sample_rate = 250)
@@ -49,9 +53,9 @@ class ECGDataset(Dataset):
                                              padding = 'max_length',
                                              max_length = 77,
                                              truncation = True)
-        input_ids = clip_inputs['input_ids'][0]
-        attention_mask = clip_inputs['attention_mask'][0]
-        pixel_values = clip_inputs['pixel_values'][0]
+        input_ids = clip_inputs['input_ids'][0].contiguous()
+        attention_mask = clip_inputs['attention_mask'][0].contiguous()
+        pixel_values = clip_inputs['pixel_values'][0].contiguous()
         return {
             'clip_input_ids': input_ids,
             'clip_att_mask': attention_mask,
@@ -62,9 +66,9 @@ class ECGDataset(Dataset):
         image_signal = self.signal_to_image(ecg_signal)
         vit_inputs = self.encoder_tokenizer(images = image_signal,
                                              return_tensors = 'pt')
-        pixel_values = vit_inputs['pixel_values'][0]
+        pixel_values = vit_inputs['pixel_values'][0].contiguous()
         mask = torch.rand(size=(1, self.args.num_patches)) < 0.75
-        mask = mask.squeeze(0)
+        mask = mask[0].contiguous()
         return {
             'vit_pixel': pixel_values,
             'vit_mask': mask

@@ -7,8 +7,8 @@ class CLIP(nn.Module):
         self.clip = clip
         
     def forward(self, batch):
-        out = self.clip(input_ids = batch['clip_input_ids'],
-                        attention_mask = batch['clip_att_mask'],
-                        pixel_values = batch['clip_pixel'],
+        out = self.clip(input_ids = batch['clip_input_ids'].to(self.clip.device),
+                        attention_mask = batch['clip_att_mask'].to(self.clip.device),
+                        pixel_values = batch['clip_pixel'].to(self.clip.device),
                         return_loss = True)
         return out

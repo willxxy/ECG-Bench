@@ -7,6 +7,6 @@ class ViT(nn.Module):
         self.vit = vit
             
     def forward(self, batch):
-        out = self.vit( pixel_values = batch['vit_pixel'].to(self.device),
-                        bool_masked_pos = batch['mask'].to(self.device))
+        out = self.vit( pixel_values = batch['vit_pixel'].to(self.vit.device),
+                        bool_masked_pos = batch['vit_mask'].to(self.vit.device),)
         return out

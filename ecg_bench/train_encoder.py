@@ -62,6 +62,11 @@ def get_args():
     parser.add_argument('--gpus', type=str, default='0', help='Comma-separated list of GPU ids to use (e.g., "0,1,2")')
     parser.add_argument('--ports', type=str, default='12356', help='Comma-separated list of ports to use (e.g., "12355,12356,12357")')
     
+    ### Mode
+    parser.add_argument('--train', action = 'store_true', default = None, help = 'Please choose whether to enter training mode or not')
+    parser.add_argument('--interpret', action = 'store_true', default = None, help = 'Please choose whether to interpret the model or not')
+    parser.add_argument('--inference', action = 'store_true', default = None, help = 'Please choose whether to enter inference mode or not')
+    
     return parser.parse_args()
 
 def setup(rank, world_size, args):
@@ -133,6 +138,8 @@ def main(rank, world_size):
     encoder = model_object['encoder']
     encoder_tokenizer = model_object['encoder_tokenizer']
     encoder = encoder.to(device)
+    if args.dis:
+        encoder = DDP(encoder, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
     
     print(f'Total number of parameters: {train_utils.count_parameters(encoder)}')
     
@@ -173,6 +180,34 @@ def main(rank, world_size):
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
         train_dic = trainer(encoder, train_loader, optimizer, args, epoch)
+        train_losses.append(train_dic['average_loss'])
+        
+        if args.log:
+            wandb.log({
+                'train_epoch_loss' : train_dic['average_loss'],
+                'epoch' : epoch
+            })
+        
+        if train_dic['average_loss'] <= min(train_losses):
+            model_state_dict = encoder.module.state_dict() if args.dis else encoder.state_dict()
+            
+            checkpoint = {
+                'model': model_state_dict,
+                'epoch': epoch
+            }
+            
+            checkpoint_path = f"{args.save_path}/best_model.pth"
+            
+            if args.dis:
+                dist.barrier()
+                if dist.get_rank() == 0:
+                    torch.save(checkpoint, checkpoint_path)
+            else:
+                torch.save(checkpoint, checkpoint_path)
+            
+            print(f"Best model saved at epoch: {epoch+1}")
+            
+    viz.plot_train_val_loss(train_losses, dir_path = args.save_path)
         
     
     if args.log:
