@@ -33,7 +33,7 @@ class TrainingUtils:
             r = self.args.lora_rank,
             lora_alpha = self.args.lora_alpha,
             target_modules = target_modules,
-            task_type = TaskType.CausalLM,
+            task_type = TaskType.CAUSAL_LM,
             lora_dropout = self.args.lora_dropout,
             bias = "none")
         return lora_config
@@ -72,7 +72,7 @@ class TrainingUtils:
             llm_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
             llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, list(self.ecg_tokenizer_utils.vocab.keys()))
             if self.args.peft:
-                llm = get_peft_model(llm, lora_config = self.get_lora_configs())
+                llm = get_peft_model(llm, self.get_lora_configs())
                 llm.print_trainable_parameters()
             llm = Llama(llm, self.args)
             model_hidden_size = llm.llm.config.hidden_size

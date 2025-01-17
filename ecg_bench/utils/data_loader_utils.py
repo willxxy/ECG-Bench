@@ -28,7 +28,7 @@ class ECGDataset(Dataset):
         try:
             instance = self.json_data_file[idx]
             np_path = instance['ecg_path']
-            ecg_path = self.fm.open_npy(np_path)
+            ecg_path = self.train_utils.fm.open_npy(np_path)
             ecg_signal = ecg_path['ecg']
             original_report = ecg_path['report']
             altered_text = instance['text']
@@ -41,6 +41,7 @@ class ECGDataset(Dataset):
                 return self.prepare_llama_input(ecg_signal, original_report, altered_text)
             
         except Exception as e:
+            print(e)
             print(f"Skipping invalid data at index {idx}")
             return None
     
@@ -91,12 +92,14 @@ class ECGDataset(Dataset):
         self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
     
     def prepare_llama_input(self, ecg_signal, original_report, altered_text):
-        if self.args.dataset == 'pretrain_mimic_mapped':
+        if self.args.data == 'pretrain_mimic_mapped':
             question, answer = altered_text[0]['value'].replace('\n', '').replace('<ecg>', ''), altered_text[1]['value']
-        elif self.args.dataset in ['ecg-qa_mimic-iv-ecg_mapped', 'ecg-qa_ptbxl_mapped']:
+        elif self.args.data in ['ecg-qa_mimic-iv-ecg_mapped', 'ecg-qa_ptbxl_mapped']:
             question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
             answer = ' '.join(answer) if isinstance(answer, list) else answer
-            
+        print('question:', question)
+        print('answer:', answer)
+        print('ecg_signal shape', ecg_signal.shape)
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                             self.train_utils.ecg_tokenizer_utils.merges)
@@ -104,12 +107,11 @@ class ECGDataset(Dataset):
         tokenized_question = self.llm_tokenizer([question], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
         tokenized_answer = self.llm_tokenizer([answer], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
         
-        if self.args.train == 'end_to_end':
-            if self.args.inference:
-                return self._prepare_inference(tokenized_signal, tokenized_question, answer, question)
-            else:
-                return self._prepare_training(tokenized_signal, tokenized_question, tokenized_answer, ecg_signal)
-
+        if self.args.train == 'end_to_end' and self.args.inference == None:
+            return self._prepare_training(tokenized_signal, tokenized_question, tokenized_answer, ecg_signal)
+        if self.args.inference == 'end_to_end' and self.args.train == None:
+            return self._prepare_inference(tokenized_signal, tokenized_question, answer, question)
+                
     def prepare_clip_input(self, ecg_signal, original_report):
         # self.viz.plot_2d_ecg(ecg_signal, 'ecg_signal', save_path = './pngs/', sample_rate = 250)
         # print('ecg_signal:', ecg_signal.shape)

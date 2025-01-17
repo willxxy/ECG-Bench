@@ -11,7 +11,6 @@ import gc
 import random
 import numpy as np
 import wandb
-from peft import LoraConfig, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 
 
@@ -89,7 +88,7 @@ def main(rank, world_size):
         print('Running in Development Mode')
         args.epochs=2
         args.log = False
-        args.batch_size = 1
+        args.batch_size = 2
     
     if args.dis:
         print('Setting up Distributed Devices')
@@ -123,7 +122,7 @@ def main(rank, world_size):
     fm = FileManager()
     viz = VizUtil()
     ecg_tokenizer_utils = ECGByteTokenizer(args, fm)
-    train_utils = TrainingUtils(args, fm, viz, ecg_tokenizer_utils)
+    train_utils = TrainingUtils(args=args, fm=fm, viz=viz, ecg_tokenizer_utils = ecg_tokenizer_utils)
     
     
     args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
@@ -139,7 +138,6 @@ def main(rank, world_size):
     
     llm = model_object['llm']
     llm_tokenizer = model_object['llm_tokenizer']
-    ecg_tokenizer = model_object['ecg_tokenizer']
     llm = llm.to(device)
     if args.dis:
         llm = DDP(llm, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
@@ -157,71 +155,85 @@ def main(rank, world_size):
     print('Length of Train Dataset:', len(train_data))
     print('Length of Test Dataset:', len(test_data))
     
-    train_dataset = ECGDataset(
-        json_data_file = train_data,
-        args = args,
-        train_utils = train_utils,
-        llm_tokenizer = llm_tokenizer)
-    
-    if args.dis:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, 
-                                                                        num_replicas=world_size, 
-                                                                        rank=rank,
-                                                                        seed = args.seed,
-                                                                        shuffle = True)
-        shuffle = False
-    else:
-        train_sampler = None
-        shuffle = True
+    if args.train == 'end_to_end' and args.inference == None:
+        train_dataset = ECGDataset(
+            json_data_file = train_data,
+            args = args,
+            train_utils = train_utils,
+            llm_tokenizer = llm_tokenizer)
         
-    train_loader = DataLoader(train_dataset,
-                              batch_size = args.batch_size,
-                              shuffle = shuffle,
-                              num_workers = len(args.gpus.split(',')),
-                              sampler = train_sampler,
-                              pin_memory = True)
+        if args.dis:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, 
+                                                                            num_replicas=world_size, 
+                                                                            rank=rank,
+                                                                            seed = args.seed,
+                                                                            shuffle = True)
+            shuffle = False
+        else:
+            train_sampler = None
+            shuffle = True
+            
+        train_loader = DataLoader(train_dataset,
+                                batch_size = args.batch_size,
+                                shuffle = shuffle,
+                                num_workers = len(args.gpus.split(',')),
+                                sampler = train_sampler,
+                                pin_memory = True)
 
-    all_epochs = []
-    train_losses = []
-    
-    for epoch in range(args.epochs):
-        all_epochs.append(epoch)
-        train_dic = trainer(llm, train_loader, optimizer, args, epoch)
-        train_losses.append(train_dic['average_loss'])
+        all_epochs = []
+        train_losses = []
+        
+        for epoch in range(args.epochs):
+            all_epochs.append(epoch)
+            train_dic = trainer(llm, train_loader, optimizer, args, epoch)
+            train_losses.append(train_dic['average_loss'])
+            
+            if args.log:
+                wandb.log({
+                    'train_epoch_loss' : train_dic['average_loss'],
+                    'epoch' : epoch
+                })
+            
+            if train_dic['average_loss'] <= min(train_losses):
+                model_state_dict = llm.module.state_dict() if args.dis else llm.state_dict()
+                
+                checkpoint = {
+                    'model': model_state_dict,
+                    'epoch': epoch
+                }
+                
+                checkpoint_path = f"{args.save_path}/best_model.pth"
+                
+                if args.dis:
+                    dist.barrier()
+                    if dist.get_rank() == 0:
+                        torch.save(checkpoint, checkpoint_path)
+                else:
+                    torch.save(checkpoint, checkpoint_path)
+                
+                print(f"Best model saved at epoch: {epoch+1}")
+                
+        viz.plot_train_val_loss(train_losses, dir_path = args.save_path)
+            
         
         if args.log:
-            wandb.log({
-                'train_epoch_loss' : train_dic['average_loss'],
-                'epoch' : epoch
-            })
+            wandb.finish()
+            
+        if args.dis:
+            cleanup()
+            
+    elif args.train == None and args.inference == 'end_to_end':
+        test_dataset = ECGDataset(
+            json_data_file = test_data,
+            args = args,
+            train_utils = train_utils,
+            llm_tokenizer = llm_tokenizer)
+            
+        test_loader = DataLoader(test_dataset,
+                                batch_size = 1,
+                                shuffle = False,
+                                pin_memory = True)
         
-        if train_dic['average_loss'] <= min(train_losses):
-            model_state_dict = llm.module.state_dict() if args.dis else llm.state_dict()
-            
-            checkpoint = {
-                'model': model_state_dict,
-                'epoch': epoch
-            }
-            
-            checkpoint_path = f"{args.save_path}/best_model.pth"
-            
-            if args.dis:
-                dist.barrier()
-                if dist.get_rank() == 0:
-                    torch.save(checkpoint, checkpoint_path)
-            else:
-                torch.save(checkpoint, checkpoint_path)
-            
-            print(f"Best model saved at epoch: {epoch+1}")
-            
-    viz.plot_train_val_loss(train_losses, dir_path = args.save_path)
-        
-    
-    if args.log:
-        wandb.finish()
-        
-    if args.dis:
-        cleanup()
     
 if __name__ == '__main__':
     args = get_args()
