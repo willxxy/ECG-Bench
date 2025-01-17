@@ -38,7 +38,7 @@ class ECGDataset(Dataset):
             elif self.args.model == 'vit':
                 return self.prepare_vit_input(ecg_signal)
             elif self.args.model == 'llama-3.2-1b':
-                return self.prepare_llama_input(ecg_signal, original_report, altered_text)
+                return self.prepare_llama_input(ecg_signal, altered_text)
             
         except Exception as e:
             print(e)
@@ -91,15 +91,15 @@ class ECGDataset(Dataset):
         self.sig_start_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_start>'])
         self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
     
-    def prepare_llama_input(self, ecg_signal, original_report, altered_text):
+    def prepare_llama_input(self, ecg_signal, altered_text, original_report = None):
         if self.args.data == 'pretrain_mimic_mapped':
             question, answer = altered_text[0]['value'].replace('\n', '').replace('<ecg>', ''), altered_text[1]['value']
         elif self.args.data in ['ecg-qa_mimic-iv-ecg_mapped', 'ecg-qa_ptbxl_mapped']:
             question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
             answer = ' '.join(answer) if isinstance(answer, list) else answer
-        print('question:', question)
-        print('answer:', answer)
-        print('ecg_signal shape', ecg_signal.shape)
+        # print('question:', question)
+        # print('answer:', answer)
+        # print('ecg_signal shape', ecg_signal.shape)
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                             self.train_utils.ecg_tokenizer_utils.merges)

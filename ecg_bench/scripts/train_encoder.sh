@@ -2,7 +2,7 @@
 
 echo "ecg_instruct_45k_mapped"
 
-python train_encoder.py \
+python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=clip \
 --gpus=3,5 \
@@ -10,7 +10,7 @@ python train_encoder.py \
 --dis \
 --dev
 
-python train_encoder.py \
+python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=vit \
 --gpus=3,5 \
@@ -20,14 +20,14 @@ python train_encoder.py \
 
 # echo "----------------------------------------"
 
-python train_encoder.py \
+python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=clip \
 --device=cuda:3 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --dev
 
-python train_encoder.py \
+python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=vit \
 --device=cuda:3 \

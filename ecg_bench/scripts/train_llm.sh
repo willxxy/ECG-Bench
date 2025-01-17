@@ -2,7 +2,7 @@
 
 echo "ecg_instruct_45k_mapped"
 
-python train_llm.py \
+python main_end_to_end.py \
 --data=pretrain_mimic_mapped \
 --model=llama-3.2-1b \
 --gpus=3,0 \
@@ -16,7 +16,7 @@ python train_llm.py \
 # echo "----------------------------------------"
 
 
-python train_llm.py \
+python main_end_to_end.py \
 --data=pretrain_mimic_mapped \
 --model=llama-3.2-1b \
 --device=cuda:3 \
