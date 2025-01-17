@@ -107,9 +107,9 @@ class ECGDataset(Dataset):
         tokenized_question = self.llm_tokenizer([question], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
         tokenized_answer = self.llm_tokenizer([answer], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
         
-        if self.args.train == 'end_to_end' and self.args.inference == None:
+        if self.args.train == 'end2end' and self.args.inference == None:
             return self._prepare_training(tokenized_signal, tokenized_question, tokenized_answer, ecg_signal)
-        if self.args.inference == 'end_to_end' and self.args.train == None:
+        if self.args.inference == 'end2end' and self.args.train == None:
             return self._prepare_inference(tokenized_signal, tokenized_question, answer, question)
                 
     def prepare_clip_input(self, ecg_signal, original_report):

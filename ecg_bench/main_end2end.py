@@ -13,6 +13,7 @@ import numpy as np
 import wandb
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
+import json
 
 from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
@@ -21,6 +22,7 @@ from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
 from ecg_bench.utils.data_loader_utils import ECGDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
+from ecg_bench.runners.inference import tester
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)
@@ -67,9 +69,12 @@ def get_args():
     parser.add_argument('--ports', type=str, default='12356', help='Comma-separated list of ports to use (e.g., "12355,12356,12357")')
     
     ### Mode
-    parser.add_argument('--train', type = str, default = None, help = 'Please choose the training mode [first, second, end_to_end]')
+    parser.add_argument('--train', type = str, default = None, help = 'Please choose the training mode [first, second, end2end]')
     parser.add_argument('--interpret', action = 'store_true', default = None, help = 'Please choose whether to interpret the model or not')
-    parser.add_argument('--inference', type = str, default = None, help = 'Please choose the inference mode [second, end_to_end]')
+    parser.add_argument('--inference', type = str, default = None, help = 'Please choose the inference mode [second, end2end]')
+    
+    ### For inference
+    parser.add_argument('--checkpoint', type = str, default = None, help = 'Please choose the checkpoint')
     
     return parser.parse_args()
 
@@ -126,7 +131,7 @@ def main(rank, world_size):
     train_utils = TrainingUtils(args, fm, viz, ecg_tokenizer_utils)
     
     print('Creating runs directory')
-    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
+    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.train}_{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
     
     if args.log:
@@ -157,7 +162,7 @@ def main(rank, world_size):
     print('Length of Train Dataset:', len(train_data))
     print('Length of Test Dataset:', len(test_data))
     
-    if args.train == 'end_to_end' and args.inference == None:
+    if args.train == 'end2end' and args.inference == None:
         train_dataset = ECGDataset(
             json_data_file = train_data,
             args = args,
@@ -222,7 +227,7 @@ def main(rank, world_size):
         if args.dis:
             cleanup()
             
-    elif args.train == None and args.inference == 'end_to_end':
+    elif args.train == None and args.inference == 'end2end':
         test_dataset = ECGDataset(
             json_data_file = test_data,
             args = args,
@@ -233,8 +238,36 @@ def main(rank, world_size):
                                 batch_size = 1,
                                 shuffle = False,
                                 pin_memory = True)
+        print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
+        seeds = [0]
+        all_seed_results = []
+        checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.checkpoint}"
+        for seed in seeds:
+            print(f'Inferencing on seed {seed}')
+            torch.manual_seed(seed)
+            random.seed(seed)
+            np.random.seed(seed)
+            
+            checkpoint = torch.load(f"{checkpoint_path}/best_model.pth", map_location=args.device)
+            llm.load_state_dict(checkpoint['model'])
+            print('Model loaded')
+            
+            seed_results = tester(llm, test_loader, llm_tokenizer, args, train_utils)
+            all_seed_results.append(seed_results)
+            with open(f"{checkpoint_path}/seed_{seed}.json", 'w') as f:
+                json.dump({
+                    'averages': seed_results['metrics'],
+                    'qa_results': seed_results['qa_results']
+                }, f)
         
-    
+        print(f'Inferencing on {args.model} for checkpoint {args.checkpoint} completed')
+        print(f'Running statistical analysis')
+        statistical_results = train_utils.run_statistical_analysis(all_seed_results)
+        print(f'Statistical results: {statistical_results}')
+        
+        with open(f"{checkpoint_path}/statistical_results.json", 'w') as f:
+            json.dump(statistical_results, f)
+            
 if __name__ == '__main__':
     args = get_args()
     world_size = len(args.gpus.split(','))

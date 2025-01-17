@@ -2,28 +2,40 @@
 
 echo "ecg_instruct_45k_mapped"
 
-python main_end_to_end.py \
---data=pretrain_mimic_mapped \
---model=llama-3.2-1b \
---gpus=3,0 \
+python main_first.py \
+--data=ecg_instruct_45k_mapped \
+--model=clip \
+--gpus=3,5 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
---ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
 --dis \
---peft \
---train=end_to_end \
+--train=first \
+--dev
+
+python main_first.py \
+--data=ecg_instruct_45k_mapped \
+--model=vit \
+--gpus=3,5 \
+--percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+--dis \
+--train=first \
 --dev
 
 # echo "----------------------------------------"
 
-
-python main_end_to_end.py \
---data=pretrain_mimic_mapped \
---model=llama-3.2-1b \
+python main_first.py \
+--data=ecg_instruct_45k_mapped \
+--model=clip \
 --device=cuda:3 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
---ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
---peft \
---train=end_to_end \
+--train=first \
+--dev
+
+python main_first.py \
+--data=ecg_instruct_45k_mapped \
+--model=vit \
+--device=cuda:3 \
+--percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+--train=first \
 --dev
 
 # echo "----------------------------------------"

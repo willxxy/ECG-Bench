@@ -65,9 +65,9 @@ def get_args():
     parser.add_argument('--ports', type=str, default='12356', help='Comma-separated list of ports to use (e.g., "12355,12356,12357")')
     
     ### Mode
-    parser.add_argument('--train', type = str, default = None, help = 'Please choose the training mode [first, second, end_to_end]')
+    parser.add_argument('--train', type = str, default = None, help = 'Please choose the training mode [first, second, end2end]')
     parser.add_argument('--interpret', action = 'store_true', default = None, help = 'Please choose whether to interpret the model or not')
-    parser.add_argument('--inference', type = str, default = None, help = 'Please choose the inference mode [second, end_to_end]')
+    parser.add_argument('--inference', type = str, default = None, help = 'Please choose the inference mode [second, end2end]')
     
     return parser.parse_args()
 
@@ -123,7 +123,7 @@ def main(rank, world_size):
     train_utils = TrainingUtils(args, fm, viz, ecg_tokenizer_utils)
     
     
-    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
+    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.train}_{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
     
     if args.log:

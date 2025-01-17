@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 
-def tester(model, dataloader, tokenizer, args):
+def tester(model, dataloader, tokenizer, args, train_utils):
     model.eval()
     len_of_batch = 0
     dev_count = 0
@@ -14,14 +14,12 @@ def tester(model, dataloader, tokenizer, args):
             if batch is None:
                 print(f"Skipping invalid batch ")
                 continue
+            
             answer = batch['answer']
             
             try:
-                if args.model in ['clip_vit_model', 'clip_model', 'vit_model', 'resnet_model']:
-                    out = [model.generate(batch, tokenizer).split('?')[-1]]
-                else:
-                    out = [model.generate(batch, tokenizer)]
-                all_results.append(evaluate_strings(answer, out, args.device))
+                out = [model.generate(batch, tokenizer)]
+                all_results.append(train_utils.evaluate_strings(answer, out, args.device))
                 gt_answers.append(answer[0])
                 gen_answers.append(out[0])
                 questions.append(batch['question'][0])

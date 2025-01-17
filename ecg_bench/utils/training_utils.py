@@ -4,6 +4,17 @@ import torch.nn as nn
 from transformers import AutoProcessor, CLIPModel, AutoImageProcessor, \
                             ViTForMaskedImageModeling, AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, TaskType, get_peft_model
+from transformers import logging
+logging.set_verbosity_error()
+import nltk
+from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+from nltk.translate.meteor_score import meteor_score
+from rouge import Rouge
+from evaluate import load
+import numpy as np
+from scipy import stats
+
+nltk.download('wordnet')
 
 class TrainingUtils:
     def __init__(self, args, fm, viz, ecg_tokenizer_utils = None):
@@ -112,3 +123,67 @@ class TrainingUtils:
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
         return llm, llm_tokenizer
+    
+    def calculate_bleu(self, references, hypotheses):
+        smoother = SmoothingFunction()
+        return corpus_bleu([[r.split()] for r in references], [h.split() for h in hypotheses], smoothing_function = smoother.method1)
+
+    def calculate_meteor(self, references, hypotheses):
+        return np.mean([meteor_score([r.split()], h.split()) for r, h in zip(references, hypotheses)])
+
+    def calculate_rouge(self, references, hypotheses):
+        rouge = Rouge()
+        scores = rouge.get_scores(hypotheses, references, avg=True)
+        return {
+            'rouge-1': scores['rouge-1']['f'],
+            'rouge-2': scores['rouge-2']['f'],
+            'rouge-l': scores['rouge-l']['f']
+        }
+        
+        
+    def calculate_bertscore(self, references, hypotheses, device):
+        bertscore = load('bertscore')
+        results = bertscore.compute(predictions = hypotheses,
+                            references = references, lang = 'en', device = device)
+        return {
+            'hf-prec': results['precision'],
+            'hf-rec': results['recall'],
+            'hf-f1': results['f1']
+        }
+        
+    def evaluate_strings(self, references, hypotheses, device):
+        if len(references) != len(hypotheses):
+            raise ValueError("The number of references and hypotheses must be the same.")
+        return {
+            'BLEU': self.calculate_bleu(references, hypotheses),
+            'METEOR': self.calculate_meteor(references, hypotheses),
+            'ROUGE': self.calculate_rouge(references, hypotheses),
+            'BERTSCORE': self.calculate_bertscore(references, hypotheses, device)
+        }
+        
+
+    def run_statistical_analysis(self, all_seeds_results):
+        metrics = list(all_seeds_results[0]['metrics'].keys())
+        statistical_results = {}
+        
+        for metric in metrics:
+            values = [result['metrics'][metric] * 100 for result in all_seeds_results]
+            
+            mean = np.mean(values)
+            std = np.std(values, ddof=1)  # ddof=1 for sample standard deviation
+            
+            confidence = 0.95
+            degrees_of_freedom = len(values) - 1
+            t_value = stats.t.ppf((1 + confidence) / 2, degrees_of_freedom)
+            margin_of_error = t_value * (std / np.sqrt(len(values)))
+            
+            conf_interval = (mean - margin_of_error, mean + margin_of_error)
+            
+            statistical_results[metric] = {
+                'mean': mean,
+                'std': std,
+                'conf_interval': conf_interval,
+                'raw_values': values
+            }
+        
+        return statistical_results
