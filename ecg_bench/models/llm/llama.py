@@ -13,18 +13,18 @@ class Llama(nn.Module):
             self.output_attentions = False
             
     def forward(self, batch):
-        out = self.llm(input_ids = batch['tokenized_signal'].to(self.llm.device),
+        out = self.llm(input_ids = batch['input_ids'].to(self.llm.device),
                     attention_mask = batch['attn_mask'].to(self.llm.device),
-                    labels = batch['quantized_signal_ids_input'].to(self.llm.device),
+                    labels = batch['labels'].to(self.llm.device),
                     position_ids = batch['position_ids'].to(self.llm.device),
                     output_attentions = self.output_attentions # this causes OOM during training so set it as False
                     )
         return out
     
     def generate(self, batch, tokenizer):
-        input_len = batch['tokenized_signal'].shape[1]
+        input_len = batch['input_ids'].shape[1]
         generated_ids = self.llm.generate(
-                input_ids=batch['tokenized_signal'].to(self.llm.device),
+                input_ids=batch['input_ids'].to(self.llm.device),
                 attention_mask=batch['attn_mask'].to(self.llm.device),
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,

@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
-from ecg_bench.utils.tokenizer_utils import ECGByteTokenizer
+from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
 from ecg_bench.utils.data_loader_utils import ECGDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
@@ -36,10 +36,9 @@ def get_args():
     parser.add_argument('--model', type = str, default = None, help='Please choose the model')
     parser.add_argument('--device', type = str, default = None, help='Please choose the device')
     parser.add_argument('--seed', type = int, default = 0, help='Please choose the seed')
-    parser.add_argument('--pad_to_max', type = int, default = 1000, help = 'Please specify the pad to max size')
-    parser.add_argument('--tokenizer', type = str, help = 'Please specify the tokenizer')
+    parser.add_argument('--pad_to_max', type = int, default = 1020, help = 'Please specify the pad to max size')
+    parser.add_argument('--ecg_tokenizer', type = str, help = 'Please specify the tokenizer')
     parser.add_argument('--percentiles', type = str, default = None, help = 'Please choose the percentiles computed during preprocessing')
-    parser.add_argument('--peft', action = 'store_true', default = None, help = 'Please choose whether to use PEFT or not')
     
     ### Optimizer
     parser.add_argument('--lr', type = float, default = 1e-4, help='Please choose the learning rate')
@@ -53,6 +52,12 @@ def get_args():
     parser.add_argument('--patience', type = int, default = 5, help='Please choose the patience')
     parser.add_argument('--delta', type = float, default = 0.1, help='Please choose the delta')
     
+    ### PEFT 
+    parser.add_argument('--peft', action = 'store_true', default = None, help = 'Please choose whether to use PEFT or not')
+    parser.add_argument('--lora_rank', type = int, default = 16, help = 'Please choose the lora rank')
+    parser.add_argument('--lora_alpha', type = int, default = 32, help = 'Please choose the lora alpha')
+    parser.add_argument('--lora_dropout', type = float, default = 0.05, help = 'Please choose the lora dropout')
+    
     ### For development
     parser.add_argument('--dev', action = 'store_true', default = None, help = 'Please choose whether to use development mode or not')
     parser.add_argument('--log', action = 'store_true', default = None, help = 'Please choose whether to log or not')
@@ -63,9 +68,9 @@ def get_args():
     parser.add_argument('--ports', type=str, default='12356', help='Comma-separated list of ports to use (e.g., "12355,12356,12357")')
     
     ### Mode
-    parser.add_argument('--train', action = 'store_true', default = None, help = 'Please choose whether to enter training mode or not')
+    parser.add_argument('--train', type = str, default = None, help = 'Please choose the training mode [first, second, end_to_end]')
     parser.add_argument('--interpret', action = 'store_true', default = None, help = 'Please choose whether to interpret the model or not')
-    parser.add_argument('--inference', action = 'store_true', default = None, help = 'Please choose whether to enter inference mode or not')
+    parser.add_argument('--inference', type = str, default = None, help = 'Please choose the inference mode [second, end_to_end]')
     
     return parser.parse_args()
 
@@ -117,8 +122,9 @@ def main(rank, world_size):
     
     fm = FileManager()
     viz = VizUtil()
-    train_utils = TrainingUtils(args, fm, viz)
-    tokenizer_utils = ECGByteTokenizer(args, fm)
+    ecg_tokenizer_utils = ECGByteTokenizer(args, fm)
+    train_utils = TrainingUtils(args, fm, viz, ecg_tokenizer_utils)
+    
     
     args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
@@ -131,16 +137,17 @@ def main(rank, world_size):
     
     model_object = train_utils.create_model()
     
-    encoder = model_object['encoder']
-    encoder_tokenizer = model_object['encoder_tokenizer']
-    encoder = encoder.to(device)
+    llm = model_object['llm']
+    llm_tokenizer = model_object['llm_tokenizer']
+    ecg_tokenizer = model_object['ecg_tokenizer']
+    llm = llm.to(device)
     if args.dis:
-        encoder = DDP(encoder, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
+        llm = DDP(llm, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
     
-    print(f'Total number of parameters: {train_utils.count_parameters(encoder)}')
+    print(f'Total number of parameters: {train_utils.count_parameters(llm)}')
     
     optimizer = ScheduledOptim(
-        Adam(filter(lambda x: x.requires_grad, encoder.parameters()),
+        Adam(filter(lambda x: x.requires_grad, llm.parameters()),
             betas=(args.beta1, args.beta2), eps=args.eps, lr = args.lr, weight_decay=args.weight_decay), 
                     model_object['model_hidden_size'], args.warmup)
     
@@ -148,15 +155,13 @@ def main(rank, world_size):
     json_data_file = fm.open_json(f'./data/{args.data}.json')
     train_data, test_data = train_utils.split_dataset(json_data_file)
     print('Length of Train Dataset:', len(train_data))
-    print('Length of Test Dataset:', len(train_data))
+    print('Length of Test Dataset:', len(test_data))
     
     train_dataset = ECGDataset(
         json_data_file = train_data,
-        fm = fm,
         args = args,
-        viz = viz,
-        tokenizer_utils = tokenizer_utils,
-        encoder_tokenizer = encoder_tokenizer)
+        train_utils = train_utils,
+        llm_tokenizer = llm_tokenizer)
     
     if args.dis:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, 
@@ -181,7 +186,7 @@ def main(rank, world_size):
     
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
-        train_dic = trainer(encoder, train_loader, optimizer, args, epoch)
+        train_dic = trainer(llm, train_loader, optimizer, args, epoch)
         train_losses.append(train_dic['average_loss'])
         
         if args.log:
@@ -191,7 +196,7 @@ def main(rank, world_size):
             })
         
         if train_dic['average_loss'] <= min(train_losses):
-            model_state_dict = encoder.module.state_dict() if args.dis else encoder.state_dict()
+            model_state_dict = llm.module.state_dict() if args.dis else llm.state_dict()
             
             checkpoint = {
                 'model': model_state_dict,

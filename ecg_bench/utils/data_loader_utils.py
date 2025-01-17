@@ -7,16 +7,17 @@ from PIL import Image
 
 class ECGDataset(Dataset):
     def __init__(self, json_data_file, 
-                 fm, args, viz, tokenizer_utils,
-                 encoder_tokenizer = None, encoder_tokenizer2 = None):
+                 args, train_utils, encoder_tokenizer = None, 
+                 encoder_tokenizer2 = None, llm_tokenizer = None):
         self.json_data_file = json_data_file
-        self.fm = fm
+        self.train_utils = train_utils
         self.args = args
-        self.viz = viz
-        self.tokenizer_utils = tokenizer_utils
+    
         self.encoder_tokenizer = encoder_tokenizer
         self.encoder_tokenizer2 = encoder_tokenizer2
-        
+        self.llm_tokenizer = llm_tokenizer
+        if llm_tokenizer != None:
+            self._create_special_tokens()
         # For datasets that don't have question
         self.uniform_question = 'Could you please help me explain my ECG?'
         
@@ -33,14 +34,82 @@ class ECGDataset(Dataset):
             altered_text = instance['text']
             
             if self.args.model == 'clip':
-                return_dict = self.prepare_clip_input(ecg_signal, original_report)
+                return self.prepare_clip_input(ecg_signal, original_report)
             elif self.args.model == 'vit':
-                return_dict = self.prepare_vit_input(ecg_signal)
-            return return_dict
+                return self.prepare_vit_input(ecg_signal)
+            elif self.args.model == 'llama-3.2-1b':
+                return self.prepare_llama_input(ecg_signal, original_report, altered_text)
+            
         except Exception as e:
             print(f"Skipping invalid data at index {idx}")
             return None
     
+    def _prepare_inference(self, tokenized_signal, tokenized_question, answer, question):
+        inference_seq = [self.bos_id] + self.sig_start_id + tokenized_signal + self.sig_end_id + tokenized_question
+        attention_mask = self.create_attention_like_mask(self.pad_id, inference_seq)
+        return {
+            'answer': answer,
+            'question': question,
+            'input_ids': torch.tensor(inference_seq, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32)
+        }
+
+    def _prepare_training(self, tokenized_signal, tokenized_question, tokenized_answer, signal):
+
+        qa_len = len(tokenized_question) + len(tokenized_answer)
+        available_space = self.args.pad_to_max - qa_len
+
+        if len(tokenized_signal) > available_space:
+            tokenized_signal = [self.bos_id] + self.sig_start_id + tokenized_signal[:available_space] + self.sig_end_id
+        elif len(tokenized_signal) < available_space:
+            tokenized_signal = [self.pad_id] * (available_space - len(tokenized_signal)) + [self.bos_id] + self.sig_start_id + tokenized_signal + self.sig_end_id
+        else:
+            tokenized_signal = [self.bos_id] + self.sig_start_id + tokenized_signal + self.sig_end_id
+
+        input_ids = tokenized_signal + tokenized_question + tokenized_answer + [self.eos_id]
+        labels = [-100] * (len(tokenized_signal) + len(tokenized_question)) + tokenized_answer + [self.eos_id]
+        labels = torch.tensor(labels, dtype=torch.int64)
+        position_ids = self.create_position_ids(input_ids, self.pad_id)
+        attention_mask = self.create_attention_like_mask(self.pad_id, input_ids)
+
+        assert len(input_ids) == len(attention_mask) == (self.args.pad_to_max + 4) == labels.shape[0] == position_ids.shape[0], \
+            f"Lengths don't match: masked_sample ({len(input_ids)}), attention_mask ({len(attention_mask)})"
+
+        return {
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
+            'labels': labels,
+            'position_ids': position_ids,
+            'signal': signal,
+        }
+    
+    def _create_special_tokens(self):
+        self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
+        self.bos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.bos_token)
+        self.eos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.eos_token)
+        self.sig_start_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_start>'])
+        self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
+    
+    def prepare_llama_input(self, ecg_signal, original_report, altered_text):
+        if self.args.dataset == 'pretrain_mimic_mapped':
+            question, answer = altered_text[0]['value'].replace('\n', '').replace('<ecg>', ''), altered_text[1]['value']
+        elif self.args.dataset in ['ecg-qa_mimic-iv-ecg_mapped', 'ecg-qa_ptbxl_mapped']:
+            question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
+            answer = ' '.join(answer) if isinstance(answer, list) else answer
+            
+        symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
+        encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
+                                                                            self.train_utils.ecg_tokenizer_utils.merges)
+        tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
+        tokenized_question = self.llm_tokenizer([question], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
+        tokenized_answer = self.llm_tokenizer([answer], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
+        
+        if self.args.train == 'end_to_end':
+            if self.args.inference:
+                return self._prepare_inference(tokenized_signal, tokenized_question, answer, question)
+            else:
+                return self._prepare_training(tokenized_signal, tokenized_question, tokenized_answer, ecg_signal)
+
     def prepare_clip_input(self, ecg_signal, original_report):
         # self.viz.plot_2d_ecg(ecg_signal, 'ecg_signal', save_path = './pngs/', sample_rate = 250)
         # print('ecg_signal:', ecg_signal.shape)
@@ -75,9 +144,16 @@ class ECGDataset(Dataset):
         }
     
     def signal_to_image(self, signal):
-        normalized_signal, _ = self.tokenizer_utils.normalize(signal)
+        normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
         rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis = -1).astype(np.uint8)
         return Image.fromarray(rgb_norm_signal)
 
-        
-        
+    def create_attention_like_mask(self, pad_id, numbers):
+        return [0 if num == pad_id else 1 for num in numbers]
+
+    def create_position_ids(self, padded_sequence, pad_token_id):
+        padded_sequence = torch.tensor(padded_sequence)
+        mask = (padded_sequence != pad_token_id).long()
+        position_ids = torch.cumsum(mask, dim=0) - 1
+        position_ids.masked_fill_(mask == 0, 0)
+        return position_ids

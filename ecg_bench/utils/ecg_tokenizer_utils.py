@@ -27,8 +27,8 @@ class ECGByteTokenizer:
             self.num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
         except:
             print('Probably training NN')
-        if self.args.tokenizer != None:
-            self.vocab, self.merges = self.fm.open_tokenizer(self.args.tokenizer)
+        if self.args.ecg_tokenizer != None:
+            self.vocab, self.merges = self.fm.open_tokenizer(self.args.ecg_tokenizer)
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')
         self.len_symbols = len(self.symbols)
         self.ep1 = 1e-6
