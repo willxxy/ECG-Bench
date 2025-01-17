@@ -28,3 +28,4 @@ captum==0.7.0
 evaluate==0.4.3
 pytest==8.3.4
 ecg_plot==0.2.8
+bert_score

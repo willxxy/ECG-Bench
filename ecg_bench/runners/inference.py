@@ -5,7 +5,6 @@ def tester(model, dataloader, tokenizer, args, train_utils):
     model.eval()
     len_of_batch = 0
     dev_count = 0
-    all_results = []
     gt_answers = []
     gen_answers = []
     questions = []
@@ -19,56 +18,44 @@ def tester(model, dataloader, tokenizer, args, train_utils):
             
             try:
                 out = [model.generate(batch, tokenizer)]
-                all_results.append(train_utils.evaluate_strings(answer, out, args.device))
+                # Instead of evaluating immediately, collect all outputs
                 gt_answers.append(answer[0])
                 gen_answers.append(out[0])
                 questions.append(batch['question'][0])
             except Exception as e:
-                print('could not evaluate for some reason:', str(e))  # prints the error message
+                print('could not evaluate for some reason:', str(e))
                 print(f"Error type: {type(e).__name__}")
                 print(out)
                 print(answer)
-                all_results.append({'BLEU': 0, 
-                                    'METEOR': 0.0, 
-                                    'ROUGE': {'rouge-1': 0.0, 'rouge-2': 0.0, 'rouge-l': 0.0}, 
-                                    'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]}})
+                # Add empty strings for failed generations to maintain alignment
+                gt_answers.append("")
+                gen_answers.append("")
+                questions.append(batch['question'][0])
             
             len_of_batch += 1
             
             if args.dev:
                 dev_count += 1
-                if dev_count == 10:
+                if dev_count == 25:
                     break
-                
-    # Calculate metrics for this seed
-    metric_sums = {
-        'BLEU': 0, 'METEOR': 0, 
-        'rouge-1': 0, 'rouge-2': 0, 'rouge-l': 0,
-        'hf-prec': 0, 'hf-rec': 0, 'hf-f1': 0
-    }
-    metric_counts = {k: 0 for k in metric_sums.keys()}
 
-    for entry in all_results:
-        for key, value in entry.items():
-            if key in ['ROUGE', 'ROUGE-HF', 'BERTSCORE']:
-                for sub_key, sub_value in value.items():
-                    if key == 'BERTSCORE':
-                        metric_sums[sub_key] += sub_value[0]
-                    else:
-                        metric_sums[sub_key] += sub_value
-                    metric_counts[sub_key] += 1
-            else:
-                metric_sums[key] += value
-                metric_counts[key] += 1
-
-    seed_averages = {k: metric_sums[k] / metric_counts[k] for k in metric_sums}
+    # Evaluate all results at once after collecting all outputs
+    try:
+        all_metrics = train_utils.evaluate_strings(gt_answers, gen_answers, args.device)
+    except Exception as e:
+        print('Error during batch evaluation:', str(e))
+        all_metrics = {
+            'BLEU': 0, 
+            'METEOR': 0.0, 
+            'ROUGE': {'rouge-1': 0.0, 'rouge-2': 0.0, 'rouge-l': 0.0}, 
+            'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]}
+        }
     
     return {
-        'metrics': seed_averages,
+        'metrics': all_metrics,
         'qa_results': {
             'questions': questions,
             'gt_answers': gt_answers,
             'gen_answers': gen_answers
         }
     }
-    

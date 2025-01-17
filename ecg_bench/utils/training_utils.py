@@ -126,39 +126,62 @@ class TrainingUtils:
     
     def calculate_bleu(self, references, hypotheses):
         smoother = SmoothingFunction()
-        return corpus_bleu([[r.split()] for r in references], [h.split() for h in hypotheses], smoothing_function = smoother.method1)
+        # Convert to list of lists for corpus_bleu
+        references = [[r.split()] for r in references]
+        hypotheses = [h.split() for h in hypotheses]
+        return corpus_bleu(references, hypotheses, smoothing_function=smoother.method1)
 
     def calculate_meteor(self, references, hypotheses):
-        return np.mean([meteor_score([r.split()], h.split()) for r, h in zip(references, hypotheses)])
+        # Calculate METEOR for the entire corpus at once
+        scores = [meteor_score([ref.split()], hyp.split()) for ref, hyp in zip(references, hypotheses)]
+        return np.mean(scores)
 
     def calculate_rouge(self, references, hypotheses):
         rouge = Rouge()
+        # Calculate ROUGE for all pairs at once
         scores = rouge.get_scores(hypotheses, references, avg=True)
         return {
             'rouge-1': scores['rouge-1']['f'],
             'rouge-2': scores['rouge-2']['f'],
             'rouge-l': scores['rouge-l']['f']
         }
-        
-        
+
     def calculate_bertscore(self, references, hypotheses, device):
         bertscore = load('bertscore')
-        results = bertscore.compute(predictions = hypotheses,
-                            references = references, lang = 'en', device = device)
+        # Calculate BERTScore for all pairs at once
+        results = bertscore.compute(
+            predictions=hypotheses,
+            references=references,
+            lang='en',
+            device=device
+        )
         return {
             'hf-prec': results['precision'],
             'hf-rec': results['recall'],
             'hf-f1': results['f1']
         }
-        
+
     def evaluate_strings(self, references, hypotheses, device):
         if len(references) != len(hypotheses):
             raise ValueError("The number of references and hypotheses must be the same.")
+        
+        # Filter out empty strings to avoid evaluation errors
+        valid_pairs = [(ref, hyp) for ref, hyp in zip(references, hypotheses) if ref and hyp]
+        if not valid_pairs:
+            return {
+                'BLEU': 0,
+                'METEOR': 0.0,
+                'ROUGE': {'rouge-1': 0.0, 'rouge-2': 0.0, 'rouge-l': 0.0},
+                'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]}
+            }
+            
+        valid_refs, valid_hyps = zip(*valid_pairs)
+        
         return {
-            'BLEU': self.calculate_bleu(references, hypotheses),
-            'METEOR': self.calculate_meteor(references, hypotheses),
-            'ROUGE': self.calculate_rouge(references, hypotheses),
-            'BERTSCORE': self.calculate_bertscore(references, hypotheses, device)
+            'BLEU': self.calculate_bleu(valid_refs, valid_hyps),
+            'METEOR': self.calculate_meteor(valid_refs, valid_hyps),
+            'ROUGE': self.calculate_rouge(valid_refs, valid_hyps),
+            'BERTSCORE': self.calculate_bertscore(valid_refs, valid_hyps, device)
         }
         
 
@@ -167,23 +190,56 @@ class TrainingUtils:
         statistical_results = {}
         
         for metric in metrics:
-            values = [result['metrics'][metric] * 100 for result in all_seeds_results]
+            # Get the metric values from all seeds
+            metric_values = [result['metrics'][metric] for result in all_seeds_results]
             
-            mean = np.mean(values)
-            std = np.std(values, ddof=1)  # ddof=1 for sample standard deviation
-            
-            confidence = 0.95
-            degrees_of_freedom = len(values) - 1
-            t_value = stats.t.ppf((1 + confidence) / 2, degrees_of_freedom)
-            margin_of_error = t_value * (std / np.sqrt(len(values)))
-            
-            conf_interval = (mean - margin_of_error, mean + margin_of_error)
-            
-            statistical_results[metric] = {
-                'mean': mean,
-                'std': std,
-                'conf_interval': conf_interval,
-                'raw_values': values
-            }
+            # Handle dictionary metrics (ROUGE and BERTSCORE)
+            if isinstance(metric_values[0], dict):
+                statistical_results[metric] = {}
+                # Calculate statistics for each sub-metric
+                for sub_metric in metric_values[0].keys():
+                    if isinstance(metric_values[0][sub_metric], list):
+                        # Handle BERTScore which returns lists
+                        values = [np.mean(result['metrics'][metric][sub_metric]) * 100 for result in all_seeds_results]
+                    else:
+                        # Handle ROUGE scores which are single values
+                        values = [result['metrics'][metric][sub_metric] * 100 for result in all_seeds_results]
+                    
+                    mean = np.mean(values)
+                    std = np.std(values, ddof=1)
+                    
+                    confidence = 0.95
+                    degrees_of_freedom = len(values) - 1
+                    t_value = stats.t.ppf((1 + confidence) / 2, degrees_of_freedom)
+                    margin_of_error = t_value * (std / np.sqrt(len(values)))
+                    
+                    conf_interval = (mean - margin_of_error, mean + margin_of_error)
+                    
+                    statistical_results[metric][sub_metric] = {
+                        'mean': mean,
+                        'std': std,
+                        'conf_interval': conf_interval,
+                        'raw_values': values
+                    }
+            else:
+                # Handle single value metrics (BLEU and METEOR)
+                values = [result['metrics'][metric] * 100 for result in all_seeds_results]
+                
+                mean = np.mean(values)
+                std = np.std(values, ddof=1)
+                
+                confidence = 0.95
+                degrees_of_freedom = len(values) - 1
+                t_value = stats.t.ppf((1 + confidence) / 2, degrees_of_freedom)
+                margin_of_error = t_value * (std / np.sqrt(len(values)))
+                
+                conf_interval = (mean - margin_of_error, mean + margin_of_error)
+                
+                statistical_results[metric] = {
+                    'mean': mean,
+                    'std': std,
+                    'conf_interval': conf_interval,
+                    'raw_values': values
+                }
         
         return statistical_results

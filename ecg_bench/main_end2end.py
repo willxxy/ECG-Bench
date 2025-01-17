@@ -239,7 +239,7 @@ def main(rank, world_size):
                                 shuffle = False,
                                 pin_memory = True)
         print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
-        seeds = [0]
+        seeds = [0, 1]
         all_seed_results = []
         checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.checkpoint}"
         for seed in seeds:
