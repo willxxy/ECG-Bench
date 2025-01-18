@@ -1,12 +1,13 @@
 import random
 import torch
 import torch.nn as nn
-from transformers import AutoProcessor, CLIPModel, AutoImageProcessor, \
+from transformers import AutoProcessor, CLIPModel, AutoImageProcessor, AutoModel, \
                             ViTForMaskedImageModeling, AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import logging
 logging.set_verbosity_error()
 import nltk
+nltk.download('wordnet')
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 from nltk.translate.meteor_score import meteor_score
 from rouge import Rouge
@@ -14,7 +15,6 @@ from evaluate import load
 import numpy as np
 from scipy import stats
 
-nltk.download('wordnet')
 
 class TrainingUtils:
     def __init__(self, args, fm, viz, ecg_tokenizer_utils = None):
@@ -76,6 +76,9 @@ class TrainingUtils:
             find_unused_parameters = False
             model_hidden_size = encoder.vit.config.hidden_size
             self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
+        
+        elif self.args.model == 'merl':
+            from ecg_bench.utils.model_utils import MERLPretrain, MERLFinetune
         
         elif self.args.model == 'llama-3.2-1b':
             from ecg_bench.models.llm.llama import Llama
@@ -243,3 +246,9 @@ class TrainingUtils:
                 }
         
         return statistical_results
+    
+    def get_lm(self):
+        ### lm is language model (different from llm) typically used for text encoder
+        lm = AutoModel.from_pretrained('ncbi/MedCPT-Query-Encoder', cache_dir = self.cache_dir)
+        lm_tokenizer = AutoTokenizer.from_pretrained('ncbi/MedCPT-Query-Encoder', cache_dir = self.cache_dir)
+        return lm, lm_tokenizer

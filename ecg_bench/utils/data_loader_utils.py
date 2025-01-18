@@ -39,6 +39,8 @@ class ECGDataset(Dataset):
                 return self.prepare_vit_input(ecg_signal)
             elif self.args.model == 'llama-3.2-1b':
                 return self.prepare_llama_input(ecg_signal, altered_text)
+            elif self.args.model == 'merl':
+                return self.prepare_raw_signal_input(ecg_signal)
             
         except Exception as e:
             print(e)
@@ -132,6 +134,12 @@ class ECGDataset(Dataset):
             'clip_att_mask': attention_mask,
             'clip_pixel': pixel_values
         }
+    
+    def prepare_raw_signal_input(self, ecg_signal):
+        normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
+        return {
+                'signal': normalized_signal.astype(np.float32)
+                }
     
     def prepare_vit_input(self, ecg_signal):
         image_signal = self.signal_to_image(ecg_signal)
