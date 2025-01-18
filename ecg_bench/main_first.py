@@ -140,7 +140,6 @@ def main(rank, world_size):
     
     encoder = model_object['encoder']
     encoder_tokenizer = model_object['encoder_tokenizer']
-    encoder = encoder.to(device)
     if args.dis:
         encoder = DDP(encoder, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
     

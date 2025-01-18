@@ -131,10 +131,13 @@ def get_resnet(resnet_type):
     
     
 class MERLPretrain(nn.Module):
-    def __init__(self, resnet_type, lm):
+    def __init__(self, resnet_type, lm, args, device):
         super(MERLPretrain, self).__init__()
-        self.resnet = get_resnet(resnet_type)
-        self.lm = lm
+        self.args = args
+        self.device = device
+        self.resnet = get_resnet(resnet_type).to(self.device)
+        self.lm = lm.to(self.device)
+        
         
         self.proj_out = 256
         self.proj_hidden = 256
@@ -209,29 +212,13 @@ class MERLPretrain(nn.Module):
             all_ecg1 = torch.cat(gathered_ecg1, dim=0)
             all_ecg2 = torch.cat(gathered_ecg2, dim=0)
         
-            cma_loss, _, _ = self.merl_loss(all_proj_ecg, all_proj_text)
-            uma_loss, _, _ = self.merl_loss(all_ecg1, all_ecg2)
+            cma_loss = self.merl_loss(all_proj_ecg, all_proj_text)
+            uma_loss = self.merl_loss(all_ecg1, all_ecg2)
         else:
-            cma_loss, _, _ = self.merl_loss(proj_ecg_emb, proj_text_emb)
-            uma_loss, _, _ = self.merl_loss(ecg_emb1, ecg_emb2)
+            cma_loss = self.merl_loss(proj_ecg_emb, proj_text_emb)
+            uma_loss = self.merl_loss(ecg_emb1, ecg_emb2)
         return cma_loss + uma_loss
-    
-    def precision_at_k(self, output: torch.Tensor, target: torch.Tensor, top_k=(1,)):
-        ''' Compute the accuracy over the k top predictions for the specified values of k'''
-        with torch.no_grad():
-            maxk = max(top_k)
-            batch_size = target.size(0)
 
-            _, pred = output.topk(maxk, 1, True, True)
-            pred = pred.t()
-            correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-            res = []
-            for k in top_k:
-                correct_k = correct[:k].contiguous(
-                ).view(-1).float().sum(0, keepdim=True)
-                res.append(correct_k.mul_(100.0 / batch_size))
-            return res
 
     def merl_loss(self, x, y, temperature=0.07):
         x = F.normalize(x, dim=-1)
@@ -239,19 +226,12 @@ class MERLPretrain(nn.Module):
 
         sim = torch.einsum('i d, j d -> i j', x, y) * 1 / temperature
 
-        labels = torch.arange(x.shape[0]).to(self.resnet.device)
+        labels = torch.arange(x.shape[0]).to(self.device)
 
         loss_t = F.cross_entropy(sim, labels) 
         loss_i = F.cross_entropy(sim.T, labels) 
 
-        i2t_acc1, i2t_acc5 = self.precision_at_k(
-            sim, labels, top_k=(1, 5))
-        t2i_acc1, t2i_acc5 = self.precision_at_k(
-            sim.T, labels, top_k=(1, 5))
-        acc1 = (i2t_acc1 + t2i_acc1) / 2.
-        acc5 = (i2t_acc5 + t2i_acc5) / 2.
-
-        return (loss_t + loss_i), acc1, acc5
+        return (loss_t + loss_i)
     
 class MERLFinetune(nn.Module):
     def __init__(self, resnet_type):

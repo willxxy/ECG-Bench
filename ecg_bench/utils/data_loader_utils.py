@@ -40,7 +40,7 @@ class ECGDataset(Dataset):
             elif self.args.model == 'llama-3.2-1b':
                 return self.prepare_llama_input(ecg_signal, altered_text)
             elif self.args.model == 'merl':
-                return self.prepare_raw_signal_input(ecg_signal)
+                return self.prepare_merl_input(ecg_signal, original_report)
             
         except Exception as e:
             print(e)
@@ -135,9 +135,18 @@ class ECGDataset(Dataset):
             'clip_pixel': pixel_values
         }
     
-    def prepare_raw_signal_input(self, ecg_signal):
+    def prepare_merl_input(self, ecg_signal, original_report):
         normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
+        merl_inputs = self.encoder_tokenizer(text = [original_report],
+                                             return_tensors = 'pt',
+                                             padding = 'max_length',
+                                             max_length = 64,
+                                             truncation = True)
+        input_ids = merl_inputs['input_ids'][0].contiguous()
+        attention_mask = merl_inputs['attention_mask'][0].contiguous()
         return {
+                'merl_input_ids': input_ids,
+                'merl_att_mask': attention_mask,
                 'signal': normalized_signal.astype(np.float32)
                 }
     

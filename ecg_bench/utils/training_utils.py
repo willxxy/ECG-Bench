@@ -53,7 +53,7 @@ class TrainingUtils:
     def create_model(self):
         if self.args.train == 'end2end' or self.args.inference == 'end2end':
             return self.get_llm()
-        elif self.args.train == 'first': # since we only train, no inference
+        elif self.args.train == 'first' and self.args.inference == None: # since we only train, no inference
             return self.get_encoder()
         elif self.args.train == 'second' or self.args.inference == 'second':
             return self.get_llm_encoder()
@@ -89,8 +89,8 @@ class TrainingUtils:
     def get_encoder(self):
         if self.args.model == 'clip':
             from ecg_bench.models.ecg_encoder.clip import CLIP
-            hf_encoder = CLIPModel.from_pretrained("openai/clip-vit-base-patch32", cache_dir = self.cache_dir)
-            encoder = CLIP(hf_encoder)
+            hf_encoder = CLIPModel.from_pretrained("openai/clip-vit-base-patch32", cache_dir = self.cache_dir).to(self.device)
+            encoder = CLIP(hf_encoder).to(self.device)
             encoder_tokenizer = AutoProcessor.from_pretrained("openai/clip-vit-base-patch32", cache_dir = self.cache_dir)
             find_unused_parameters = False
             model_hidden_size = encoder.clip.config.projection_dim
@@ -98,8 +98,8 @@ class TrainingUtils:
         
         elif self.args.model == 'vit':
             from ecg_bench.models.ecg_encoder.vit import ViT   
-            hf_encoder = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir) 
-            encoder = ViT(hf_encoder)
+            hf_encoder = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir).to(self.device) 
+            encoder = ViT(hf_encoder).to(self.device)
             encoder_tokenizer = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir, use_fast = True)
             find_unused_parameters = False
             model_hidden_size = encoder.vit.config.hidden_size
@@ -110,8 +110,8 @@ class TrainingUtils:
             from ecg_bench.utils.model_utils import MERLPretrain
             from ecg_bench.models.ecg_encoder.merl import MERL
             lm, encoder_tokenizer = self.get_lm('ncbi/MedCPT-Query-Encoder')
-            encoder = MERLPretrain('resnet101', lm.to(self.device)).to(self.device)
-            encoder = MERL(encoder, self.args).to(self.device)
+            encoder = MERLPretrain('resnet101', lm, self.args, self.device).to(self.device)
+            encoder = MERL(encoder).to(self.device)
             find_unused_parameters = True
             model_hidden_size = 256
             strict = False
