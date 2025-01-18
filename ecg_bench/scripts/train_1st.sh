@@ -5,7 +5,7 @@ echo "ecg_instruct_45k_mapped"
 python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=clip \
---gpus=3,5 \
+--gpus=4,5 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --dis \
 --train=first \
@@ -14,7 +14,7 @@ python main_first.py \
 python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=vit \
---gpus=3,5 \
+--gpus=4,5 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --dis \
 --train=first \
@@ -25,7 +25,7 @@ python main_first.py \
 python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=clip \
---device=cuda:3 \
+--device=cuda:4 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --train=first \
 --dev
@@ -33,7 +33,7 @@ python main_first.py \
 python main_first.py \
 --data=ecg_instruct_45k_mapped \
 --model=vit \
---device=cuda:3 \
+--device=cuda:4 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --train=first \
 --dev

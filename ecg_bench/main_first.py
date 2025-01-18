@@ -120,10 +120,10 @@ def main(rank, world_size):
     fm = FileManager()
     viz = VizUtil()
     ecg_tokenizer_utils = ECGByteTokenizer(args, fm)
-    train_utils = TrainingUtils(args, fm, viz, ecg_tokenizer_utils)
+    train_utils = TrainingUtils(args, fm, viz, device, ecg_tokenizer_utils)
     
     
-    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.train}_{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
+    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
     
     if args.log:

@@ -17,10 +17,11 @@ from scipy import stats
 
 
 class TrainingUtils:
-    def __init__(self, args, fm, viz, ecg_tokenizer_utils = None):
+    def __init__(self, args, fm, viz, device, ecg_tokenizer_utils = None):
         self.args = args
         self.fm = fm
         self.viz = viz
+        self.device = device
         self.ecg_tokenizer_utils = ecg_tokenizer_utils
         self.cache_dir = '../.huggingface'
     
@@ -50,13 +51,42 @@ class TrainingUtils:
         return lora_config
     
     def create_model(self):
-        encoder = None
-        encoder_tokenizer = None
-        encoder2 = None
-        encoder_tokenizer2 = None
-        llm = None
-        llm_tokenizer = None
+        if self.args.train == 'end2end' or self.args.inference == 'end2end':
+            return self.get_llm()
+        elif self.args.train == 'first': # since we only train, no inference
+            return self.get_encoder()
+        elif self.args.train == 'second' or self.args.inference == 'second':
+            return self.get_llm_encoder()
+    
+    def get_llm_encoder(self):
+        encoder_params = self.get_encoder()
+        llm_params = self.get_llm()
+        return {**encoder_params, **llm_params}
+    
+    def get_llm(self):
+        if self.args.model == 'llama-3.2-1b':
+            from ecg_bench.models.llm.llama import Llama
+            hf_llm = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir, 
+                                                          torch_dtype = torch.bfloat16).to(self.device)
+            llm_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
+            llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, list(self.ecg_tokenizer_utils.vocab.keys()))
+            if self.args.peft:
+                llm = get_peft_model(llm, self.get_lora_configs())
+                llm.print_trainable_parameters()
+            llm = Llama(llm, self.args).to(self.device)
+            model_hidden_size = llm.llm.config.hidden_size
+            find_unused_parameters = False
+            strict = True
+            
+        return {
+            'llm': llm,
+            'llm_tokenizer': llm_tokenizer,
+            'find_unused_parameters': find_unused_parameters,
+            'model_hidden_size': model_hidden_size,
+            'strict': strict
+        }
         
+    def get_encoder(self):
         if self.args.model == 'clip':
             from ecg_bench.models.ecg_encoder.clip import CLIP
             hf_encoder = CLIPModel.from_pretrained("openai/clip-vit-base-patch32", cache_dir = self.cache_dir)
@@ -64,9 +94,7 @@ class TrainingUtils:
             encoder_tokenizer = AutoProcessor.from_pretrained("openai/clip-vit-base-patch32", cache_dir = self.cache_dir)
             find_unused_parameters = False
             model_hidden_size = encoder.clip.config.projection_dim
-            print("Encoder Configs", encoder.clip.config)
-            print(f"Model Hidden Size: {model_hidden_size}")
-            print(f"Find Unused Parameters: {find_unused_parameters}")
+            strict = True
         
         elif self.args.model == 'vit':
             from ecg_bench.models.ecg_encoder.vit import ViT   
@@ -76,32 +104,26 @@ class TrainingUtils:
             find_unused_parameters = False
             model_hidden_size = encoder.vit.config.hidden_size
             self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
+            strict = True
         
         elif self.args.model == 'merl':
-            from ecg_bench.utils.model_utils import MERLPretrain, MERLFinetune
-        
-        elif self.args.model == 'llama-3.2-1b':
-            from ecg_bench.models.llm.llama import Llama
-            hf_llm = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir, torch_dtype = torch.bfloat16)
-            llm_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
-            llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, list(self.ecg_tokenizer_utils.vocab.keys()))
-            if self.args.peft:
-                llm = get_peft_model(llm, self.get_lora_configs())
-                llm.print_trainable_parameters()
-            llm = Llama(llm, self.args)
-            model_hidden_size = llm.llm.config.hidden_size
-            find_unused_parameters = False
+            from ecg_bench.utils.model_utils import MERLPretrain
+            from ecg_bench.models.ecg_encoder.merl import MERL
+            lm, encoder_tokenizer = self.get_lm('ncbi/MedCPT-Query-Encoder')
+            encoder = MERLPretrain('resnet101', lm.to(self.device)).to(self.device)
+            encoder = MERL(encoder, self.args).to(self.device)
+            find_unused_parameters = True
+            model_hidden_size = 256
+            strict = False
         
         return {
             'encoder': encoder,
             'encoder_tokenizer': encoder_tokenizer,
-            'encoder2': encoder2,
-            'encoder2_tokenizer': encoder_tokenizer2,
-            'llm': llm,
-            'llm_tokenizer': llm_tokenizer,
             'find_unused_parameters': find_unused_parameters,
             'model_hidden_size': model_hidden_size,
+            'strict': strict
         }
+        
         
     def count_parameters(self, model: nn.Module) -> int:
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -247,8 +269,8 @@ class TrainingUtils:
         
         return statistical_results
     
-    def get_lm(self):
+    def get_lm(self, hf_model_name):
         ### lm is language model (different from llm) typically used for text encoder
-        lm = AutoModel.from_pretrained('ncbi/MedCPT-Query-Encoder', cache_dir = self.cache_dir)
-        lm_tokenizer = AutoTokenizer.from_pretrained('ncbi/MedCPT-Query-Encoder', cache_dir = self.cache_dir)
+        lm = AutoModel.from_pretrained(hf_model_name, cache_dir = self.cache_dir)
+        lm_tokenizer = AutoTokenizer.from_pretrained(hf_model_name, cache_dir = self.cache_dir)
         return lm, lm_tokenizer

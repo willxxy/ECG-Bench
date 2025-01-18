@@ -117,24 +117,23 @@ class ResNet(nn.Module):
         out = self.layer4(out)
         return out
     
-def get_resnet(args):
-    if args.model == 'resnet':
+def get_resnet(resnet_type):
+    if resnet_type == 'resnet':
         return ResNet(BasicBlock, [2, 2, 2, 2])
-    elif args.model == 'resnet34':
+    elif resnet_type == 'resnet34':
         return ResNet(BasicBlock, [3, 4, 6, 3])
-    elif args.model == 'resnet50':
+    elif resnet_type == 'resnet50':
         return ResNet(Bottleneck, [3, 4, 6, 3])
-    elif args.model == 'resnet101':
+    elif resnet_type == 'resnet101':
         return ResNet(Bottleneck, [3, 4, 23, 3])
-    elif args.model == 'resnet152':
+    elif resnet_type == 'resnet152':
         return ResNet(Bottleneck, [3, 8, 36, 3])
     
     
 class MERLPretrain(nn.Module):
-    def __init__(self, training_utils, lm):
+    def __init__(self, resnet_type, lm):
         super(MERLPretrain, self).__init__()
-        self.training_utils = training_utils
-        self.resnet = get_resnet(self.training_utils.args)
+        self.resnet = get_resnet(resnet_type)
         self.lm = lm
         
         self.proj_out = 256
@@ -156,8 +155,8 @@ class MERLPretrain(nn.Module):
             nn.Linear(self.proj_hidden, self.proj_out),
         )
         
-    def forward(self, batch):
-        out = self.resnet(batch['signal'].to(self.resnet.device))
+    def forward(self, signal, input_ids, attention_mask):
+        out = self.resnet(signal)
         ecg_emb = self.downconv(out)
         proj_ecg_emb, _ = self.att_pool_head(ecg_emb)
         proj_ecg_emb = proj_ecg_emb.view(proj_ecg_emb.shape[0], -1)
@@ -167,7 +166,7 @@ class MERLPretrain(nn.Module):
         ecg_emb2 = self.dropout2(self.linear2(ecg_emb))        
         proj_ecg_emb = normalize(proj_ecg_emb, dim=-1)
         
-        text_emb = self.get_text_emb(batch)
+        text_emb = self.get_text_emb(input_ids, attention_mask)
         proj_text_emb = self.proj_t(text_emb.contiguous())
         proj_text_emb = normalize(proj_text_emb, dim=-1)
         
@@ -179,9 +178,9 @@ class MERLPretrain(nn.Module):
         )
     
     @torch.no_grad()
-    def get_text_emb(self, batch):
-        text_emb = self.lm(input_ids=batch['input_ids'].to(self.resnet.device),
-                           attention_mask=batch['att_mask'].to(self.resnet.device)).pooler_output
+    def get_text_emb(self, input_ids, attention_mask):
+        text_emb = self.lm(input_ids=input_ids,
+                           attention_mask=attention_mask).pooler_output
         return text_emb
 
     def calc_loss(self, ecg_emb1, ecg_emb2, proj_ecg_emb, proj_text_emb):
@@ -255,14 +254,13 @@ class MERLPretrain(nn.Module):
         return (loss_t + loss_i), acc1, acc5
     
 class MERLFinetune(nn.Module):
-    def __init__(self, training_utils):
+    def __init__(self, resnet_type):
         super(MERLFinetune, self).__init__()
-        self.training_utils = training_utils
-        self.resnet = get_resnet(self.training_utils.args)
+        self.resnet = get_resnet(resnet_type)
         self.combined_loss = 0
         
-    def forward(self, batch):
-        out = self.resnet(batch['signal'].to(self.resnet.device))
+    def forward(self, signal):
+        out = self.resnet(signal)
         
         return CombinedOutput(
             loss=self.combined_loss,
