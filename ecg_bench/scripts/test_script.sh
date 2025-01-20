@@ -3,7 +3,7 @@
 # Global settings
 GPUS="4,5"
 SINGLE_GPU="cuda:4"
-MODEL_NAME="merl"  # Options: all, llama-3.2-1b, clip, vit
+MODEL_NAME="all"  # Options: all, llama-3.2-1b, clip, vit
 
 # Function to run end2end tests
 run_end2end() {

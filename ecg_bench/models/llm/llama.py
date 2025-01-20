@@ -34,3 +34,7 @@ class Llama(nn.Module):
             )
         decoded_text = tokenizer.batch_decode(generated_ids[:, input_len:], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         return decoded_text 
+    
+    def get_llm_embeddings(self, batch):
+        out = self.llm.get_llm_embeddings(batch['input_ids'].to(self.llm.device))
+        return out
