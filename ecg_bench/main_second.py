@@ -145,7 +145,6 @@ def main(rank, world_size):
     
     llm = model_object['llm']
     llm_tokenizer = model_object['llm_tokenizer']
-    llm = llm.to(device)
     if args.dis:
         llm = DDP(llm, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
     
