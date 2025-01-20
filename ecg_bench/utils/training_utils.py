@@ -107,8 +107,7 @@ class TrainingUtils:
             strict = True
         
         elif self.args.model == 'merl':
-            from ecg_bench.utils.model_utils import MERLPretrain
-            from ecg_bench.models.ecg_encoder.merl import MERL
+            from ecg_bench.models.ecg_encoder.merl import MERL, MERLPretrain
             lm, encoder_tokenizer = self.get_lm('ncbi/MedCPT-Query-Encoder')
             encoder = MERLPretrain('resnet101', lm, self.args, self.device).to(self.device)
             encoder = MERL(encoder).to(self.device)
