@@ -88,7 +88,7 @@ def cleanup():
 
 def main(rank, world_size):
     args = get_args()
-    
+    args.encoder_checkpoint = None
     if args.dev:
         print('Running in Development Mode')
         args.epochs=2
@@ -131,7 +131,7 @@ def main(rank, world_size):
     train_utils = TrainingUtils(args, fm, viz, device, ecg_tokenizer_utils)
     
     print('Creating runs directory')
-    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
+    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
     
     if args.log:
@@ -164,7 +164,6 @@ def main(rank, world_size):
     if args.train == 'end2end' and args.inference == None:
         train_dataset = ECGDataset(
             json_data_file = train_data,
-            args = args,
             train_utils = train_utils,
             llm_tokenizer = llm_tokenizer)
         
@@ -229,7 +228,6 @@ def main(rank, world_size):
     elif args.train == None and args.inference == 'end2end':
         test_dataset = ECGDataset(
             json_data_file = test_data,
-            args = args,
             train_utils = train_utils,
             llm_tokenizer = llm_tokenizer)
             
@@ -240,7 +238,7 @@ def main(rank, world_size):
         print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
         seeds = [0, 1]
         all_seed_results = []
-        checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.checkpoint}"
+        checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.target_sf}/{args.seed}/{args.checkpoint}"
         for seed in seeds:
             print(f'Inferencing on seed {seed}')
             torch.manual_seed(seed)

@@ -12,6 +12,9 @@ class MERL(nn.Module):
     def __init__(self, merl):
         super(MERL, self).__init__()
         self.merl = merl
+        if self.merl.args.train == 'second':
+            self.avgpool = nn.AdaptiveAvgPool1d((1))
+    
     def forward(self, batch):
         if self.merl.args.train == 'first':
             out = self.merl(signal = batch['signal'].to(self.merl.device),
@@ -21,6 +24,13 @@ class MERL(nn.Module):
             out = self.merl(signal = batch['signal'].to(self.merl.device))
         return out
     
+    @torch.no_grad()
+    def get_embeddings(self, batch):
+        self.merl.eval()
+        out = self.merl(signal = batch['signal'].to(self.merl.device)).out
+        out = self.avgpool(out)
+        out = out.squeeze(2)
+        return out
     
 class MERLPretrain(nn.Module):
     def __init__(self, resnet_type, lm, args, device):
@@ -30,42 +40,45 @@ class MERLPretrain(nn.Module):
         self.resnet = get_resnet(resnet_type).to(self.device)
         self.lm = lm.to(self.device)
         
-        
-        self.proj_out = 256
-        self.proj_hidden = 256
-        self.downconv = nn.Conv1d(in_channels=2048, out_channels=self.proj_out, kernel_size=1)
-        self.att_pool_head = AttentionPool2d(spacial_dim=32,
-                                                    embed_dim=self.proj_out, 
-                                                    num_heads=4, 
-                                                    output_dim=self.proj_out)
-        self.avgpool = nn.AdaptiveAvgPool1d((1))
-        self.dropout1 = nn.Dropout(p=0.1)
-        self.dropout2 = nn.Dropout(p=0.1)
-        self.linear1 = nn.Linear(self.proj_out, self.proj_out, bias=False)
-        self.linear2 = nn.Linear(self.proj_out, self.proj_out, bias=False)
-        
-        self.proj_t = nn.Sequential(
-            nn.Linear(768, self.proj_hidden),
-            nn.GELU(),
-            nn.Linear(self.proj_hidden, self.proj_out),
-        )
-        
-    def forward(self, signal, input_ids, attention_mask):
+        if self.args.train == 'first':
+            self.proj_out = 256
+            self.proj_hidden = 256
+            self.downconv = nn.Conv1d(in_channels=2048, out_channels=self.proj_out, kernel_size=1)
+            self.att_pool_head = AttentionPool2d(spacial_dim=32,
+                                                        embed_dim=self.proj_out, 
+                                                        num_heads=4, 
+                                                        output_dim=self.proj_out)
+            self.avgpool = nn.AdaptiveAvgPool1d((1))
+            self.dropout1 = nn.Dropout(p=0.1)
+            self.dropout2 = nn.Dropout(p=0.1)
+            self.linear1 = nn.Linear(self.proj_out, self.proj_out, bias=False)
+            self.linear2 = nn.Linear(self.proj_out, self.proj_out, bias=False)
+            
+            self.proj_t = nn.Sequential(
+                nn.Linear(768, self.proj_hidden),
+                nn.GELU(),
+                nn.Linear(self.proj_hidden, self.proj_out),
+            )
+            
+    def forward(self, signal, input_ids = None, attention_mask = None):
         out = self.resnet(signal)
-        ecg_emb = self.downconv(out)
-        proj_ecg_emb, _ = self.att_pool_head(ecg_emb)
-        proj_ecg_emb = proj_ecg_emb.view(proj_ecg_emb.shape[0], -1)
+        if self.args.train == 'first':
+            ecg_emb = self.downconv(out)
+            proj_ecg_emb, _ = self.att_pool_head(ecg_emb)
+            proj_ecg_emb = proj_ecg_emb.view(proj_ecg_emb.shape[0], -1)
 
-        ecg_emb = self.avgpool(ecg_emb).view(ecg_emb.shape[0], -1)
-        ecg_emb1 = self.dropout1(self.linear1(ecg_emb))
-        ecg_emb2 = self.dropout2(self.linear2(ecg_emb))        
-        proj_ecg_emb = normalize(proj_ecg_emb, dim=-1)
-        
-        text_emb = self.get_text_emb(input_ids, attention_mask)
-        proj_text_emb = self.proj_t(text_emb.contiguous())
-        proj_text_emb = normalize(proj_text_emb, dim=-1)
-        
-        combined_loss = self.calc_loss(ecg_emb1, ecg_emb2, proj_ecg_emb, proj_text_emb)
+            ecg_emb = self.avgpool(ecg_emb).view(ecg_emb.shape[0], -1)
+            ecg_emb1 = self.dropout1(self.linear1(ecg_emb))
+            ecg_emb2 = self.dropout2(self.linear2(ecg_emb))        
+            proj_ecg_emb = normalize(proj_ecg_emb, dim=-1)
+            
+            text_emb = self.get_text_emb(input_ids, attention_mask)
+            proj_text_emb = self.proj_t(text_emb.contiguous())
+            proj_text_emb = normalize(proj_text_emb, dim=-1)
+            
+            combined_loss = self.calc_loss(ecg_emb1, ecg_emb2, proj_ecg_emb, proj_text_emb)
+        elif self.args.train == 'second':
+            combined_loss = 0
         
         return CombinedOutput(
             loss=combined_loss,
@@ -124,17 +137,3 @@ class MERLPretrain(nn.Module):
         loss_i = F.cross_entropy(sim.T, labels) 
 
         return (loss_t + loss_i)
-    
-class MERLFinetune(nn.Module):
-    def __init__(self, resnet_type):
-        super(MERLFinetune, self).__init__()
-        self.resnet = get_resnet(resnet_type)
-        self.combined_loss = 0
-        
-    def forward(self, signal):
-        out = self.resnet(signal)
-        
-        return CombinedOutput(
-            loss=self.combined_loss,
-            out = out
-        )

@@ -73,6 +73,10 @@ def get_args():
     parser.add_argument('--interpret', action = 'store_true', default = None, help = 'Please choose whether to interpret the model or not')
     parser.add_argument('--inference', type = str, default = None, help = 'Please choose the inference mode [second, end2end]')
     
+    ### For Second Stage
+    parser.add_argument('--encoder_checkpoint', type = str, default = None, help = 'Please choose the encoder checkpoint')
+    parser.add_argument('--encoder_data', type = str, default = None, help = 'Please choose the encoder data')
+    
     ### For inference
     parser.add_argument('--checkpoint', type = str, default = None, help = 'Please choose the checkpoint')
     
@@ -131,7 +135,7 @@ def main(rank, world_size):
     train_utils = TrainingUtils(args, fm, viz, device, ecg_tokenizer_utils)
     
     print('Creating runs directory')
-    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
+    args.save_path = f"./runs/{args.data}_{args.seg_len}_{args.target_sf}/{args.seed}/{args.model}_{args.batch_size}_{args.epochs}_{args.lr}_{args.beta1}_{args.beta2}_{args.eps}_{args.warmup}_{args.weight_decay}"
     fm.ensure_directory_exists(folder = args.save_path)
     
     if args.log:
@@ -143,15 +147,16 @@ def main(rank, world_size):
     print(f'Creating Model: {args.model}')
     model_object = train_utils.create_model()
     
-    llm = model_object['llm']
+    llava = model_object['llava']
     llm_tokenizer = model_object['llm_tokenizer']
+    encoder_tokenizer = model_object['encoder_tokenizer']
     if args.dis:
-        llm = DDP(llm, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
+        llava = DDP(llava, device_ids=[local_rank], find_unused_parameters=model_object['find_unused_parameters'])
     
-    print(f'Total number of parameters: {train_utils.count_parameters(llm)}')
+    print(f'Total number of parameters: {train_utils.count_parameters(llava)}')
     
     optimizer = ScheduledOptim(
-        Adam(filter(lambda x: x.requires_grad, llm.parameters()),
+        Adam(filter(lambda x: x.requires_grad, llava.parameters()),
             betas=(args.beta1, args.beta2), eps=args.eps, lr = args.lr, weight_decay=args.weight_decay), 
                     model_object['model_hidden_size'], args.warmup)
     
@@ -161,12 +166,12 @@ def main(rank, world_size):
     print('Length of Train Dataset:', len(train_data))
     print('Length of Test Dataset:', len(test_data))
     
-    if args.train == 'end2end' and args.inference == None:
+    if args.train == 'second' and args.inference == None:
         train_dataset = ECGDataset(
             json_data_file = train_data,
-            args = args,
             train_utils = train_utils,
-            llm_tokenizer = llm_tokenizer)
+            llm_tokenizer = llm_tokenizer,
+            encoder_tokenizer = encoder_tokenizer)
         
         if args.dis:
             train_sampler = DistributedSampler(train_dataset, 
@@ -189,7 +194,7 @@ def main(rank, world_size):
         
         for epoch in range(args.epochs):
             all_epochs.append(epoch)
-            train_dic = trainer(llm, train_loader, optimizer, args, epoch)
+            train_dic = trainer(llava, train_loader, optimizer, args, epoch)
             train_losses.append(train_dic['average_loss'])
             
             if args.log:
@@ -199,7 +204,7 @@ def main(rank, world_size):
                 })
             
             if train_dic['average_loss'] <= min(train_losses):
-                model_state_dict = llm.module.state_dict() if args.dis else llm.state_dict()
+                model_state_dict = llava.module.state_dict() if args.dis else llava.state_dict()
                 
                 checkpoint = {
                     'model': model_state_dict,
@@ -226,7 +231,7 @@ def main(rank, world_size):
         if args.dis:
             cleanup()
             
-    elif args.train == None and args.inference == 'end2end':
+    elif args.train == None and args.inference == 'second':
         test_dataset = ECGDataset(
             json_data_file = test_data,
             args = args,
@@ -240,7 +245,7 @@ def main(rank, world_size):
         print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
         seeds = [0, 1]
         all_seed_results = []
-        checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.num_merges}_{args.target_sf}/{args.seed}/{args.checkpoint}"
+        checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.target_sf}/{args.seed}/{args.checkpoint}"
         for seed in seeds:
             print(f'Inferencing on seed {seed}')
             torch.manual_seed(seed)
@@ -248,10 +253,10 @@ def main(rank, world_size):
             np.random.seed(seed)
             
             checkpoint = torch.load(f"{checkpoint_path}/best_model.pth", map_location=args.device)
-            llm.load_state_dict(checkpoint['model'])
+            llava.load_state_dict(checkpoint['model'])
             print('Model loaded')
             
-            seed_results = tester(llm, test_loader, llm_tokenizer, args, train_utils)
+            seed_results = tester(llava, test_loader, llm_tokenizer, args, train_utils)
             all_seed_results.append(seed_results)
             with open(f"{checkpoint_path}/seed_{seed}.json", 'w') as f:
                 json.dump({

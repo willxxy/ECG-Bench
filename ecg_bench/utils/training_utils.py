@@ -61,7 +61,18 @@ class TrainingUtils:
     def get_llm_encoder(self):
         encoder_params = self.get_encoder()
         llm_params = self.get_llm()
-        return {**encoder_params, **llm_params}
+        from ecg_bench.models.encoder_llm.llava_style import LLaVA
+        if 'vit' in self.args.model:
+            projection_dim = 768
+        elif 'clip' in self.args.model:
+            projection_dim = 512
+        elif 'merl' in self.args.model:
+            projection_dim = 2048
+        llava = LLaVA(llm_params['llm'], encoder_params['encoder'], projection_dim).to(self.device)
+        return_dict = {**encoder_params, **llm_params}
+        return_dict['llava'] = llava
+        return_dict['find_unused_parameters'] = False
+        return return_dict
     
     def get_llm(self):
         if self.args.model == 'llama-3.2-1b':
@@ -114,6 +125,12 @@ class TrainingUtils:
             find_unused_parameters = True
             model_hidden_size = 256
             strict = False
+        
+        if self.args.encoder_checkpoint != None:
+            encoder_checkpoint_path = f"./runs/{self.args.encoder_data}_{self.args.seg_len}_{self.args.target_sf}/{self.args.seed}/{self.args.encoder_checkpoint}"
+            encoder_checkpoint = torch.load(f'{encoder_checkpoint_path}/best_model.pth', map_location = self.device)
+            encoder.load_state_dict(encoder_checkpoint['model'], strict = strict)
+            encoder = encoder.to(torch.bfloat16) ### dtype of llm
         
         return {
             'encoder': encoder,

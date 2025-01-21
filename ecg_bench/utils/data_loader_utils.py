@@ -7,11 +7,11 @@ from PIL import Image
 
 class ECGDataset(Dataset):
     def __init__(self, json_data_file, 
-                 args, train_utils, encoder_tokenizer = None, 
+                 train_utils, encoder_tokenizer = None, 
                  encoder_tokenizer2 = None, llm_tokenizer = None):
         self.json_data_file = json_data_file
         self.train_utils = train_utils
-        self.args = args
+        self.args = self.train_utils.args
     
         self.encoder_tokenizer = encoder_tokenizer
         self.encoder_tokenizer2 = encoder_tokenizer2
@@ -47,13 +47,14 @@ class ECGDataset(Dataset):
             print(f"Skipping invalid data at index {idx}")
             return None
     
+    ### TRAINING INFERENCE PREPARATION FUNCTIONS ###
     def prepare_inference_end2end(self, tokenized_signal, tokenized_question, answer, question):
-        inference_seq = [self.bos_id] + self.sig_start_id + tokenized_signal + self.sig_end_id + tokenized_question
-        attention_mask = self.create_attention_mask(self.pad_id, inference_seq)
+        input_ids = [self.bos_id] + self.sig_start_id + tokenized_signal + self.sig_end_id + tokenized_question
+        attention_mask = self.create_attention_mask(input_ids)
         return {
             'answer': answer,
             'question': question,
-            'input_ids': torch.tensor(inference_seq, dtype=torch.int64),
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32)
         }
 
@@ -87,20 +88,11 @@ class ECGDataset(Dataset):
             'signal': signal,
         }
     
-    def create_special_tokens(self):
-        self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
-        self.bos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.bos_token)
-        self.eos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.eos_token)
-        self.sig_start_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_start>'])
-        self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
-        if self.args.train == 'second' or self.args.inference == 'second':
-            self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(['<signal>'])
-    
     def prepare_training_second(self, encoder_out, tokenized_question, tokenized_answer):
         ### Don't need to add eos or bos id since we do that in pad_to_max
-        tokenized_signal = self.sig_start_id + self.signal_id + self.sig_end_id + tokenized_question + tokenized_answer
+        input_ids = self.sig_start_id + self.signal_id + self.sig_end_id + tokenized_question + tokenized_answer
         labels = ([-100] * (3 + len(tokenized_question))) + tokenized_answer
-        input_ids = self.pad_to_max(tokenized_signal)        
+        input_ids = self.pad_to_max(input_ids)        
         signal_id_index = input_ids.index(self.signal_id[0])  # [0] because signal_id is a list
         labels = self.pad_to_max(labels)
         labels[labels == self.pad_id] = -100
@@ -120,9 +112,20 @@ class ECGDataset(Dataset):
             'signal_id_index': signal_id_index
         }
     
-    def prepare_inference_second(self, encoder_out, tokenized_question, tokenized_answer):
-        pass
+    def prepare_inference_second(self, encoder_out, tokenized_question, answer, question):
+        input_ids = [self.bos_id] + self.sig_start_id + self.signal_id + self.sig_end_id + tokenized_question
+        signal_id_index = input_ids.index(self.signal_id[0])
+        attention_mask = self.create_attention_mask(input_ids)
+        return {
+            'answer': answer,
+            'question': question,
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
+            'signal_id_index': signal_id_index,
+            'encoder_out': encoder_out
+        }
     
+    ### GENERAL INPUT PREPARATION FUNCTIONS ###
     def prepare_second_input(self, ecg_signal, altered_text, original_report = None):
         question, answer = self.get_qa(altered_text)
         tokenized_question = self.llm_tokenizer([question], return_tensors = 'np', add_special_tokens = False).input_ids[0].tolist()
@@ -153,7 +156,8 @@ class ECGDataset(Dataset):
             return self.prepare_training_end2end(tokenized_signal, tokenized_question, tokenized_answer, ecg_signal)
         if self.args.inference == 'end2end' and self.args.train == None:
             return self.prepare_inference_end2end(tokenized_signal, tokenized_question, answer, question)
-                
+    
+    ### MODEL SPECIFIC INPUT PREPARATION FUNCTIONS ###
     def prepare_clip_input(self, ecg_signal, original_report):
         image_signal = self.signal_to_image(ecg_signal)
         clip_inputs = self.encoder_tokenizer(text = [original_report],
@@ -198,13 +202,15 @@ class ECGDataset(Dataset):
             'vit_mask': mask
         }
     
+    ### GENERAL HELPER FUNCTIONS ###
+    
     def signal_to_image(self, signal):
         normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
         rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis = -1).astype(np.uint8)
         return Image.fromarray(rgb_norm_signal)
 
-    def create_attention_mask(self, numbers):
-        return [0 if num == self.pad_id else 1 for num in numbers]
+    def create_attention_mask(self, input_ids):
+        return [0 if num == self.pad_id else 1 for num in input_ids]
 
     def create_position_ids(self, padded_sequence):
         padded_sequence = torch.tensor(padded_sequence)
@@ -230,3 +236,12 @@ class ECGDataset(Dataset):
             return [self.pad_id] * (self.args.pad_to_max - len(tokenized_sequence)) + [self.bos_id] + list(tokenized_sequence) + [self.eos_id]
         else:
             return [self.bos_id] + list(tokenized_sequence[:self.args.pad_to_max]) + [self.eos_id]
+        
+    def create_special_tokens(self):
+        self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
+        self.bos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.bos_token)
+        self.eos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.eos_token)
+        self.sig_start_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_start>'])
+        self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
+        if self.args.train == 'second' or self.args.inference == 'second':
+            self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(['<signal>'])
