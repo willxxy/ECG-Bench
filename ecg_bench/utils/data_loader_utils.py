@@ -25,27 +25,29 @@ class ECGDataset(Dataset):
         return len(self.json_data_file)
 
     def __getitem__(self, idx):
-        try:
-            instance = self.json_data_file[idx]
-            np_path = instance['ecg_path']
-            ecg_path = self.train_utils.fm.open_npy(np_path)
-            ecg_signal = ecg_path['ecg']
-            original_report = ecg_path['report']
-            altered_text = instance['text']
+        # try:
+        instance = self.json_data_file[idx]
+        np_path = instance['ecg_path']
+        ecg_path = self.train_utils.fm.open_npy(np_path)
+        ecg_signal = ecg_path['ecg']
+        original_report = ecg_path['report']
+        altered_text = instance['text']
+        
+        if self.args.model == 'clip':
+            return self.prepare_clip_input(ecg_signal, original_report)
+        elif self.args.model == 'vit':
+            return self.prepare_vit_input(ecg_signal)
+        elif self.args.model == 'llama-3.2-1b':
+            return self.prepare_end2end_input(ecg_signal, altered_text)
+        elif self.args.model == 'merl':
+            return self.prepare_merl_input(ecg_signal, original_report)
+        elif '_' in self.args.model:
+            return self.prepare_second_input(ecg_signal, altered_text, original_report)
             
-            if self.args.model == 'clip':
-                return self.prepare_clip_input(ecg_signal, original_report)
-            elif self.args.model == 'vit':
-                return self.prepare_vit_input(ecg_signal)
-            elif self.args.model == 'llama-3.2-1b':
-                return self.prepare_end2end_input(ecg_signal, altered_text)
-            elif self.args.model == 'merl':
-                return self.prepare_merl_input(ecg_signal, original_report)
-            
-        except Exception as e:
-            print(e)
-            print(f"Skipping invalid data at index {idx}")
-            return None
+        # except Exception as e:
+        #     print(e)
+        #     print(f"Skipping invalid data at index {idx}")
+        #     return None
     
     ### TRAINING INFERENCE PREPARATION FUNCTIONS ###
     def prepare_inference_end2end(self, tokenized_signal, tokenized_question, answer, question):
@@ -89,14 +91,16 @@ class ECGDataset(Dataset):
         }
     
     def prepare_training_second(self, encoder_out, tokenized_question, tokenized_answer):
-        ### Don't need to add eos or bos id since we do that in pad_to_max
+        # Don't need to add eos or bos id since we do that in pad_to_max
         input_ids = self.sig_start_id + self.signal_id + self.sig_end_id + tokenized_question + tokenized_answer
         labels = ([-100] * (3 + len(tokenized_question))) + tokenized_answer
         input_ids = self.pad_to_max(input_ids)        
         signal_id_index = input_ids.index(self.signal_id[0])  # [0] because signal_id is a list
+        
         labels = self.pad_to_max(labels)
         labels[labels == self.pad_id] = -100
         labels[labels == self.bos_id] = -100
+        labels = torch.tensor(labels, dtype=torch.int64)
         attention_mask = self.create_attention_mask(input_ids)
         position_ids = self.create_position_ids(input_ids)
         
@@ -106,7 +110,7 @@ class ECGDataset(Dataset):
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
-            'labels': torch.tensor(labels, dtype=torch.int64),
+            'labels': labels,
             'position_ids': position_ids,
             'encoder_out': encoder_out,
             'signal_id_index': signal_id_index
@@ -140,7 +144,7 @@ class ECGDataset(Dataset):
         if self.args.train == 'second' and self.args.inference == None:
             return self.prepare_training_second(encoder_out, tokenized_question, tokenized_answer)
         if self.args.inference == 'second' and self.args.train == None:
-            return self.prepare_inference_second(encoder_out, tokenized_question, tokenized_answer)
+            return self.prepare_inference_second(encoder_out, tokenized_question, answer, question)
         
         
     def prepare_end2end_input(self, ecg_signal, altered_text, original_report = None):

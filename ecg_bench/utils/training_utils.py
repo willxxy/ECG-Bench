@@ -68,19 +68,23 @@ class TrainingUtils:
             projection_dim = 512
         elif 'merl' in self.args.model:
             projection_dim = 2048
-        llava = LLaVA(llm_params['llm'], encoder_params['encoder'], projection_dim).to(self.device)
+        llava = LLaVA(llm_params['llm'], encoder_params['encoder'], 
+                      projection_dim, llm_params['llm_tokenizer']).to(self.device)
         return_dict = {**encoder_params, **llm_params}
         return_dict['llava'] = llava
         return_dict['find_unused_parameters'] = False
         return return_dict
     
     def get_llm(self):
-        if self.args.model == 'llama-3.2-1b':
+        if 'llama-3.2-1b' in self.args.model:
             from ecg_bench.models.llm.llama import Llama
             hf_llm = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir, 
                                                           torch_dtype = torch.bfloat16).to(self.device)
             llm_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
-            llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, list(self.ecg_tokenizer_utils.vocab.keys()))
+            if self.args.train == 'end2end' or self.args.inference == 'end2end':
+                llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, list(self.ecg_tokenizer_utils.vocab.keys()))
+            elif self.args.train == 'second' or self.args.inference == 'second':
+                llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer)
             if self.args.peft:
                 llm = get_peft_model(llm, self.get_lora_configs())
                 llm.print_trainable_parameters()
@@ -98,7 +102,7 @@ class TrainingUtils:
         }
         
     def get_encoder(self):
-        if self.args.model == 'clip':
+        if 'clip' in self.args.model:
             from ecg_bench.models.encoder.clip import CLIP
             hf_encoder = CLIPModel.from_pretrained("openai/clip-vit-base-patch32", cache_dir = self.cache_dir).to(self.device)
             encoder = CLIP(hf_encoder).to(self.device)
@@ -107,7 +111,7 @@ class TrainingUtils:
             model_hidden_size = encoder.clip.config.projection_dim
             strict = True
         
-        elif self.args.model == 'vit':
+        elif 'vit' in self.args.model:
             from ecg_bench.models.encoder.vit import ViT   
             hf_encoder = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k", cache_dir = self.cache_dir).to(self.device) 
             encoder = ViT(hf_encoder).to(self.device)
@@ -117,7 +121,7 @@ class TrainingUtils:
             self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
             strict = True
         
-        elif self.args.model == 'merl':
+        elif 'merl' in self.args.model:
             from ecg_bench.models.encoder.merl import MERL, MERLPretrain
             lm, encoder_tokenizer = self.get_lm('ncbi/MedCPT-Query-Encoder')
             encoder = MERLPretrain('resnet101', lm, self.args, self.device).to(self.device)
@@ -153,12 +157,13 @@ class TrainingUtils:
             return True
         return False
     
-    def modify_llm_tokenizer(self, llm, llm_tokenizer, new_ids):
-        new_ids = [f'signal_{str(ids)}' for ids in new_ids]
-        llm_tokenizer.add_tokens(new_ids)
+    def modify_llm_tokenizer(self, llm, llm_tokenizer, new_ids = None):
+        if new_ids is not None:
+            new_ids = [f'signal_{str(ids)}' for ids in new_ids]
+            llm_tokenizer.add_tokens(new_ids)
         llm_tokenizer.add_tokens(['<sig_start>'], special_tokens=True)
         llm_tokenizer.add_tokens(['<sig_end>'], special_tokens=True)
-        if self.args.train == 'second':
+        if self.args.train == 'second' or self.args.inference == 'second':
             llm_tokenizer.add_tokens(['<signal>'], special_tokens=True)
         llm_tokenizer.add_special_tokens({"pad_token":"<pad>"})
         llm.config.pad_token_id = llm_tokenizer.pad_token_id

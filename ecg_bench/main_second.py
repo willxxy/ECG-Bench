@@ -234,9 +234,9 @@ def main(rank, world_size):
     elif args.train == None and args.inference == 'second':
         test_dataset = ECGDataset(
             json_data_file = test_data,
-            args = args,
             train_utils = train_utils,
-            llm_tokenizer = llm_tokenizer)
+            llm_tokenizer = llm_tokenizer,
+            encoder_tokenizer = encoder_tokenizer)
             
         test_loader = DataLoader(test_dataset,
                                 batch_size = 1,

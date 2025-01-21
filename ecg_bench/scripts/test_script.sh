@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Global settings
-GPUS="4,5"
-SINGLE_GPU="cuda:4"
+GPUS="6,7"
+SINGLE_GPU="cuda:6"
 MODEL_NAME="all"  # Options: all, llama-3.2-1b, clip, vit
 
 # Function to run end2end tests
