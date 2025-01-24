@@ -16,12 +16,9 @@ class LLaVA(nn.Module):
     def forward(self, batch):
         projected_embeds = self.get_projections(batch['encoder_out'])
         llm_embeddings = self.llm.get_llm_embeddings(batch['input_ids'])
-        
-        # Replace signal token embeddings with projected encoder outputs
         llm_embeddings[:, batch['signal_id_index'], :] = projected_embeds
         batch['inputs_embeds'] = llm_embeddings
         out = self.llm(batch)
-        
         return out
     
     def get_projections(self, encoder_out):

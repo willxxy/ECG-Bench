@@ -25,29 +25,29 @@ class ECGDataset(Dataset):
         return len(self.json_data_file)
 
     def __getitem__(self, idx):
-        # try:
-        instance = self.json_data_file[idx]
-        np_path = instance['ecg_path']
-        ecg_path = self.train_utils.fm.open_npy(np_path)
-        ecg_signal = ecg_path['ecg']
-        original_report = ecg_path['report']
-        altered_text = instance['text']
-        
-        if self.args.model == 'clip':
-            return self.prepare_clip_input(ecg_signal, original_report)
-        elif self.args.model == 'vit':
-            return self.prepare_vit_input(ecg_signal)
-        elif self.args.model == 'llama-3.2-1b':
-            return self.prepare_end2end_input(ecg_signal, altered_text)
-        elif self.args.model == 'merl':
-            return self.prepare_merl_input(ecg_signal, original_report)
-        elif '_' in self.args.model:
-            return self.prepare_second_input(ecg_signal, altered_text, original_report)
+        try:
+            instance = self.json_data_file[idx]
+            np_path = instance['ecg_path']
+            ecg_path = self.train_utils.fm.open_npy(np_path)
+            ecg_signal = ecg_path['ecg']
+            original_report = ecg_path['report']
+            altered_text = instance['text']
             
-        # except Exception as e:
-        #     print(e)
-        #     print(f"Skipping invalid data at index {idx}")
-        #     return None
+            if self.args.model == 'clip':
+                return self.prepare_clip_input(ecg_signal, original_report)
+            elif self.args.model == 'vit':
+                return self.prepare_vit_input(ecg_signal)
+            elif self.args.model == 'llama-3.2-1b':
+                return self.prepare_end2end_input(ecg_signal, altered_text)
+            elif self.args.model == 'merl':
+                return self.prepare_merl_input(ecg_signal, original_report)
+            elif '_' in self.args.model:
+                return self.prepare_second_input(ecg_signal, altered_text, original_report)
+            
+        except Exception as e:
+            print(e)
+            print(f"Skipping invalid data at index {idx}")
+            return None
     
     ### TRAINING INFERENCE PREPARATION FUNCTIONS ###
     def prepare_inference_end2end(self, tokenized_signal, tokenized_question, answer, question):
