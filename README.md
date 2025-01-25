@@ -3,42 +3,6 @@ Private repo for developing unified ECG generative benchmark
 
 when cloning repo (For transformers sake) we work on 4.47.1
 
-1. git clone repo
-2. cd ECG-Bench
-3. git submodule init
-4. git submodule update
-
-#
-Run tests in ECG-Bench
-example: python tests/test_file.py
-
-
-## Checklist
-[x] Preprocessing (preprocessing, percentiles, sampling)
-
-[ ] Preprocessing tests
-
-[ ] Visualizer (plot 1d, 2d, other things) 
-
-[ ] Visualizer tests
-
-[ ] Tokenizer (bpe for now)
-
-[ ] Tokenizer tests
-
-[ ] main pipeline
-    - [ ] .py files for pretraining and finetuning
-
-[ ] models (llm, encoders, etc.)
-
-[ ] runners
-    - [ ] .py files for training and evaluating
-
-[ ]  Add ECG instruct and datasets from PULSE paper.
-
-
-## Installation <a name="installation"></a>
-
 1. To install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.79.0 -y`
 
 2. Open a new terminal to set PATH for Rust installation.
@@ -73,4 +37,30 @@ example: python tests/test_file.py
 
 17. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
 
-NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.
+#
+Run tests in ECG-Bench
+example: python tests/test_file.py
+
+
+## Checklist
+[x] Preprocessing (preprocessing, percentiles, sampling)
+
+[ ] Preprocessing tests
+
+[X] Visualizer (plot 1d, 2d, other things) 
+
+[ ] Visualizer tests
+
+[ X] Tokenizer (bpe for now)
+
+[X ] Tokenizer tests
+
+[ X] main pipeline
+    - [ X] .py files for pretraining and finetuning
+
+[X ] models (llm, encoders, etc.)
+
+[ X] runners
+    - [ X] .py files for training and evaluating
+
+[ ]  Add ECG instruct and datasets from PULSE paper.
