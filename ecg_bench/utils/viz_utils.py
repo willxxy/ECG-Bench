@@ -1,5 +1,7 @@
 import ecg_plot
 import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.patches import Patch
 
 class VizUtil:
     @staticmethod
@@ -96,7 +98,8 @@ class VizUtil:
         return [tuple(rgb) for rgb in palette]
 
     @staticmethod
-    def visualize_bpe_encoding(signal, encoded_ids, segment_map, lead_index=0, lead_name=None, id_to_color=None):
+    def visualize_bpe_encoding(signal, encoded_ids, segment_map,
+                               lead_name=None, id_to_color=None, count = None):
         plt.figure(figsize=(20, 8))
         plt.rcParams.update({
             'font.size': 25,
@@ -126,7 +129,7 @@ class VizUtil:
                 ncol=2)
         
         plt.tight_layout()
-        plt.savefig(f'./pngs/ecg_encoding_visualization_{lead_index}.png',
+        plt.savefig(f'./pngs/ecg_encoding_visualization_{lead_name}_{count}.png',
                     bbox_inches='tight',
                     dpi=300)
         plt.close()

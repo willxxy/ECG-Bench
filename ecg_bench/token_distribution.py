@@ -22,6 +22,6 @@ def main(args):
     token_counts, token_lengths = ecg_tokenizer_utils.analyze_token_distribution(list_of_paths)
     print('Plotting token distribution...')
     viz.plot_distributions(token_counts, token_lengths, args.ecg_tokenizer.split('/')[-1].split('_')[1])
-
+    print('Finished Analyzing Token Distribution!')
 if __name__ == '__main__':
     main(get_args())

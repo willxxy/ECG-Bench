@@ -23,6 +23,7 @@ class ECGByteTokenizer:
         self.p1 = self.percentiles['p1']
         self.p99 = self.percentiles['p99']
         self.n = 1000 if self.args.dev else None
+        self.lead_order = ['I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
         if self.args.ecg_tokenizer != None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.ecg_tokenizer)
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')
@@ -152,3 +153,25 @@ class ECGByteTokenizer:
             token_lengths.append(length)
 
         return token_counts, token_lengths
+    
+    def track_encoding(self, single_lead_str):
+        ### Python version of Rust code
+        ids = list(single_lead_str.encode('utf-8'))
+        segment_map = [(i, i+1) for i in range(len(ids))]
+        for batch in tqdm(self.merges, desc = 'Tracking Encoding'):
+            pair, new_id = batch
+            new_ids = []
+            new_segment_map = []
+            i = 0
+            while i < len(ids):
+                if i < len(ids) - 1 and (ids[i], ids[i+1]) == pair:
+                    new_ids.append(new_id)
+                    new_segment_map.append((segment_map[i][0], segment_map[i+1][1]))
+                    i += 2
+                else:
+                    new_ids.append(ids[i])
+                    new_segment_map.append(segment_map[i])
+                    i += 1
+            ids = new_ids
+            segment_map = new_segment_map
+        return ids, segment_map
