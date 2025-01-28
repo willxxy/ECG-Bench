@@ -3,7 +3,7 @@
 # Global settings
 GPUS="5,6"
 SINGLE_GPU="cuda:5"
-MODEL_NAME="all"  # Options: all, llama-3.2-1b, clip, vit, merl, clip_llama-3.2-1b
+MODEL_NAME="clip_llama-3.2-1b"  # Options: all, llama-3.2-1b, clip, vit, merl, clip_llama-3.2-1b
 
 # Function to run end2end tests
 run_end2end() {
@@ -142,7 +142,8 @@ case $MODEL_NAME in
             echo "=========================================="
         done
         
-        # Add second stage inference after all other tests
+        # Set MODEL_NAME for second stage and run it
+        MODEL_NAME="clip_llama-3.2-1b"
         run_second
         ;;
     "llama-3.2-1b")
