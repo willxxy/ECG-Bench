@@ -131,18 +131,17 @@ class ECGByteTokenizer:
                     desc="Discretizing ECGs"))
         return ''.join(ecg_strings)
 
-    def analyze_single_ecg(self, path_merges):
-        path, merges = path_merges
-        signal = np.load(path)
+    def analyze_single_ecg(self, path):
+        signal = self.fm.open_npy(path)['ecg']
         single_lead_str = self._to_symbol_string(signal)
-        all_encoded_ids = list(self.encode_symbol(single_lead_str, merges))
+        all_encoded_ids = list(self.encode_symbol(single_lead_str, self.merges))
         return Counter(all_encoded_ids), len(all_encoded_ids)
 
-    def analyze_token_distribution(self, test_data, merges):
+    def analyze_token_distribution(self, test_data):
         with mp.Pool(self.args.num_processes) as pool:
             results = list(
                 tqdm(
-                    pool.imap(self.analyze_single_ecg, ((path, merges) for path in test_data)),
+                    pool.imap(self.analyze_single_ecg, (path for path in test_data)),
                     total=len(test_data),
                     desc=f'Analyzing token distribution with {self.args.num_processes} processes'))
 
