@@ -23,10 +23,6 @@ class ECGByteTokenizer:
         self.p1 = self.percentiles['p1']
         self.p99 = self.percentiles['p99']
         self.n = 1000 if self.args.dev else None
-        try:
-            self.num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
-        except:
-            print('Probably training NN')
         if self.args.ecg_tokenizer != None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.ecg_tokenizer)
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')
@@ -52,8 +48,8 @@ class ECGByteTokenizer:
         print(f"Encoded length: {len(ids)}")
         print(f"Compression ratio: {len(all_string_signals) / len(ids):.2f}X")
         print(f"Vocabulary size: {len(vocab)}")
-        
-        self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{self.num_sample_files}.pkl')
+        num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
+        self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}.pkl')
         print(f"Vocabulary and merges saved")
         
     def verify_tokenizer(self):
