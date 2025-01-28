@@ -187,7 +187,7 @@ def save_checkpoint(model, epoch, args, is_best=False):
     if is_best:
         print(f"Best model saved at epoch: {epoch+1}")
 
-def run_train(model, train_loader, optimizer, args, train_utils, viz):
+def run_train(model, train_loader, optimizer, args, viz):
     """Training loop for encoder"""
     all_epochs = []
     train_losses = []
@@ -313,7 +313,7 @@ def main(rank, world_size):
                 pin_memory=True)
             
             # Run appropriate training loop
-            run_train(model, data_loader, optimizer, args, train_utils, viz)
+            run_train(model, data_loader, optimizer, args, viz)
         
         elif args.inference:
             data_loader = DataLoader(
