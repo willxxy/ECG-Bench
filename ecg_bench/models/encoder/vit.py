@@ -15,8 +15,9 @@ class ViT(nn.Module):
     def get_embeddings(self, batch):
         self.vit.eval()
         out = self.vit(pixel_values = batch['vit_pixel'].to(self.vit.device),
-                        bool_masked_pos = batch['vit_mask'].to(self.vit.device))
-        all_hidden_states = torch.stack(out.all_hidden_states)
+                        bool_masked_pos = batch['vit_mask'].to(self.vit.device),
+                        output_hidden_states=True)
+        all_hidden_states = torch.stack(out.hidden_states)
         averaged_layers = torch.mean(all_hidden_states, dim=0)
         averaged_heads = torch.mean(averaged_layers, dim=1)
         return averaged_heads
