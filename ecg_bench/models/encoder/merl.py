@@ -27,7 +27,8 @@ class MERL(nn.Module):
     @torch.no_grad()
     def get_embeddings(self, batch):
         self.merl.eval()
-        out = self.merl(signal = batch['signal'].to(self.merl.device)).out
+        signal = batch['signal'].to(self.merl.device)
+        out = self.merl(signal=signal).out
         out = self.avgpool(out)
         out = out.squeeze(2)
         return out

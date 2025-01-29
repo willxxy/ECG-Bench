@@ -32,7 +32,9 @@ class TrainingUtils:
         n_train = int(n_samples * train_ratio)
         train_indices = indices[:n_train]
         test_indices = indices[n_train:]
-        return data[train_indices].tolist(), data[test_indices].tolist()
+        train_data = [data[i] for i in train_indices]
+        test_data = [data[i] for i in test_indices]
+        return train_data, test_data
 
     def get_lora_configs(self):
         if self.args.model == 'gpt2-xl':

@@ -105,6 +105,8 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        # Automatically convert input to match model's weight dtype
+        x = x.to(self.conv1.weight.dtype)
         out = torch.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
