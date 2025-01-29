@@ -20,7 +20,7 @@ from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
 from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
-from ecg_bench.utils.data_loader_utils import ECGDataset
+from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageECGDataset, End2EndECGDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
 from ecg_bench.runners.inference import tester
@@ -87,7 +87,6 @@ def get_args():
     return parser.parse_args()
 
 def setup_environment(rank, world_size, args):
-    """Setup distributed environment if needed"""
     if args.dis:
         print('Setting up Distributed Devices')
         gpu_ids = [int(id) for id in args.gpus.split(',')]
@@ -105,12 +104,10 @@ def setup_environment(rank, world_size, args):
     return device
 
 def cleanup():
-    """Simplified cleanup function"""
     if dist.is_initialized():
         dist.destroy_process_group()
 
 def initialize_system(args):
-    """Initialize system components and utilities"""
     print('Loading API key')
     with open('./../.huggingface/api_keys.txt', 'r') as file:
         api_key = file.readlines()[0].strip()
@@ -168,7 +165,6 @@ def save_config(args):
         yaml.dump(args_dict, f, default_flow_style=False)
 
 def save_checkpoint(model, epoch, args, is_best=False):
-    """Save model checkpoint"""
     model_state_dict = model.module.state_dict() if args.dis else model.state_dict()
     checkpoint = {
         'model': model_state_dict,
@@ -188,7 +184,6 @@ def save_checkpoint(model, epoch, args, is_best=False):
         print(f"Best model saved at epoch: {epoch+1}")
 
 def run_train(model, train_loader, optimizer, args, viz):
-    """Training loop for encoder"""
     all_epochs = []
     train_losses = []
     
@@ -209,7 +204,6 @@ def run_train(model, train_loader, optimizer, args, viz):
     viz.plot_train_val_loss(train_losses, dir_path=args.save_path)
 
 def run_inference(model, test_loader, tokenizer, args, train_utils):
-    """Run inference and save results"""
     print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
     seeds = [0, 1]
     all_seed_results = []
@@ -246,18 +240,15 @@ def main(rank, world_size):
     device = setup_environment(rank, world_size, args)
     fm, viz = initialize_system(args)
     
-    # Initialize tokenizer and training utils
     ecg_tokenizer_utils = ECGByteTokenizer(args, fm)
     train_utils = TrainingUtils(args, fm, viz, device, ecg_tokenizer_utils)
     
-    # Setup save path and wandb
     args.save_path = create_save_path(args)
     fm.ensure_directory_exists(folder=args.save_path)
     setup_wandb(args)
     save_config(args)
     
     try:
-        # Create model and optimizer
         print(f'Creating Model: {args.model}')
         model_object = train_utils.create_model()
         
@@ -267,7 +258,7 @@ def main(rank, world_size):
         elif args.train == 'second' or args.inference == 'second':
             model = model_object['llava']
             tokenizer = model_object['llm_tokenizer']
-        else:  # end2end
+        elif args.train == 'end2end' or args.inference == 'end2end':
             model = model_object['llm']
             tokenizer = model_object['llm_tokenizer']
         
@@ -281,7 +272,6 @@ def main(rank, world_size):
                  betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
             model_object['model_hidden_size'], args.warmup)
         
-        # Load and split dataset
         json_data_file = fm.open_json(f'./data/{args.data}.json')
         if args.inference:
             _, test_data = train_utils.split_dataset(json_data_file)
@@ -291,12 +281,22 @@ def main(rank, world_size):
             data = json_data_file
             print('Length of Dataset:', len(data))
         
-        # Create dataset and dataloader
-        dataset = ECGDataset(
-            json_data_file=data,
-            train_utils=train_utils,
-            llm_tokenizer=tokenizer if args.train != 'first' else None,
-            encoder_tokenizer=model_object.get('encoder_tokenizer'))
+        if args.train == 'first':
+            dataset = FirstStageECGDataset(
+                json_data_file=data,
+                train_utils=train_utils,
+                encoder_tokenizer=model_object.get('encoder_tokenizer'))
+        elif args.train == 'second' or args.inference == 'second':
+            dataset = SecondStageECGDataset(
+                json_data_file=data,
+                train_utils=train_utils,
+                llm_tokenizer=tokenizer,
+                encoder_tokenizer=model_object.get('encoder_tokenizer'))
+        elif args.train == 'end2end' or args.inference == 'end2end':
+            dataset = End2EndECGDataset(
+                json_data_file=data,
+                train_utils=train_utils,
+                llm_tokenizer=tokenizer)
         
         if args.train:
             if args.dis:
@@ -312,7 +312,6 @@ def main(rank, world_size):
                 sampler=sampler,
                 pin_memory=True)
             
-            # Run appropriate training loop
             run_train(model, data_loader, optimizer, args, viz)
         
         elif args.inference:

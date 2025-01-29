@@ -26,15 +26,13 @@ class TrainingUtils:
         self.cache_dir = '../.huggingface'
     
     def split_dataset(self, data, train_ratio=0.7):
+        data = np.array(data)
         n_samples = len(data)
+        indices = np.random.permutation(n_samples)
         n_train = int(n_samples * train_ratio)
-        indices = list(range(n_samples))
-        random.shuffle(indices)
         train_indices = indices[:n_train]
         test_indices = indices[n_train:]
-        train_data = [data[i] for i in train_indices]
-        test_data = [data[i] for i in test_indices]
-        return train_data, test_data
+        return data[train_indices].tolist(), data[test_indices].tolist()
 
     def get_lora_configs(self):
         if self.args.model == 'gpt2-xl':
