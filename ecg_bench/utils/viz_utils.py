@@ -2,7 +2,7 @@ import ecg_plot
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.patches import Patch
-
+import numpy as np
 class VizUtil:
     @staticmethod
     def plot_1d_ecg(ecg, title, save_path, sample_rate):

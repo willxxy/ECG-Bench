@@ -10,7 +10,7 @@ def get_args():
     parser.add_argument('--ecg_tokenizer', type = str, default = None, help = 'Please choose ECG tokenizer')
     parser.add_argument('--percentiles', type = str, default = None, help='Please specify the path to the percentiles')
     parser.add_argument('--list_of_paths', type = str, default = None, help='Please specify the path to the list of paths')
-    parser.add_argument('--num_plots', type = int, default = 10, help='Please specify the number of plots to generate')
+    parser.add_argument('--num_plots', type = int, default = 2, help='Please specify the number of plots to generate')
     parser.add_argument('--dev', action = 'store_true', default = None, help = 'Use this flag to run the script in development mode')
     return parser.parse_args()
 
@@ -40,7 +40,7 @@ def main(args):
                                        segment_map, ecg_tokenizer_utils.lead_order[lead], 
                                        global_id_to_color, count)
         count += 1
-            
+    print('Finished Tracking Encoding!')
 
 if __name__ == '__main__':
     main(get_args())
