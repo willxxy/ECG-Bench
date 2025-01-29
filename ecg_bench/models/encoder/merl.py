@@ -27,8 +27,7 @@ class MERL(nn.Module):
     @torch.no_grad()
     def get_embeddings(self, batch):
         self.merl.eval()
-        signal = batch['signal'].to(self.merl.device)
-        out = self.merl(signal=signal).out
+        out = self.merl(signal = batch['signal'].to(self.merl.device)).out
         out = self.avgpool(out)
         out = out.squeeze(2)
         return out
@@ -78,7 +77,7 @@ class MERLPretrain(nn.Module):
             proj_text_emb = normalize(proj_text_emb, dim=-1)
             
             combined_loss = self.calc_loss(ecg_emb1, ecg_emb2, proj_ecg_emb, proj_text_emb)
-        elif self.args.train == 'second':
+        elif self.args.train == 'second' or self.args.inference == 'second':
             combined_loss = 0
         
         return CombinedOutput(
