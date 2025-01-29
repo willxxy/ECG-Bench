@@ -1,10 +1,35 @@
 #!/bin/bash
 
 
-python main_end2end.py \
+# python main.py \
+# --data=pretrain_mimic_mapped \
+# --model=gemma-2b \
+# --gpus=4,6 \
+# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+# --ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
+# --dis \
+# --peft \
+# --train=end2end \
+# --dev
+
+# echo "----------------------------------------"
+
+
+# python main.py \
+# --data=pretrain_mimic_mapped \
+# --model=gemma-2b \
+# --device=cuda:6 \
+# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+# --ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
+# --peft \
+# --train=end2end \
+# --dev
+
+
+python main.py \
 --data=pretrain_mimic_mapped \
---model=llama-3.2-1b \
---gpus=4,5 \
+--model=opt-1.3b \
+--gpus=4,6 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
 --dis \
@@ -15,10 +40,35 @@ python main_end2end.py \
 echo "----------------------------------------"
 
 
-python main_end2end.py \
+python main.py \
 --data=pretrain_mimic_mapped \
---model=llama-3.2-1b \
---device=cuda:4 \
+--model=opt-1.3b \
+--device=cuda:6 \
+--percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+--ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
+--peft \
+--train=end2end \
+--dev
+
+
+python main.py \
+--data=pretrain_mimic_mapped \
+--model=gpt2-xl \
+--gpus=4,6 \
+--percentiles=./data/mimic_percentiles_2500_250_300000.npy \
+--ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
+--dis \
+--peft \
+--train=end2end \
+--dev
+
+echo "----------------------------------------"
+
+
+python main.py \
+--data=pretrain_mimic_mapped \
+--model=gpt2-xl \
+--device=cuda:6 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
 --peft \

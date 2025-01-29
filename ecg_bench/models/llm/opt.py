@@ -1,9 +1,9 @@
 import torch.nn as nn
 
 ### LLM FOR ECG-Byte
-class Llama(nn.Module):
+class opt(nn.Module):
     def __init__(self, llm, args):
-        super(Llama, self).__init__()
+        super(opt, self).__init__()
         self.args = args
         self.llm = llm
         if self.args.interpret:

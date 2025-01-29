@@ -37,7 +37,7 @@ class TrainingUtils:
         return train_data, test_data
 
     def get_lora_configs(self):
-        if self.args.model == 'gpt2-xl':
+        if 'gpt2' in self.args.model:
             target_modules = None # This automatically selects default modules
         else:
             target_modules = ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
@@ -76,29 +76,76 @@ class TrainingUtils:
         return return_dict
     
     def get_llm(self):
-        if 'llama-3.2-1b' in self.args.model:
-            from ecg_bench.models.llm.llama import Llama
-            hf_llm = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir, 
-                                                          torch_dtype = torch.bfloat16).to(self.device)
-            llm_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B", cache_dir = self.cache_dir)
-            if self.args.train == 'end2end' or self.args.inference == 'end2end':
-                llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, list(self.ecg_tokenizer_utils.vocab.keys()))
-            elif self.args.train == 'second' or self.args.inference == 'second':
-                llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer)
-            if self.args.peft:
-                llm = get_peft_model(llm, self.get_lora_configs())
-                llm.print_trainable_parameters()
-            llm = Llama(llm, self.args).to(self.device)
-            model_hidden_size = llm.llm.config.hidden_size
-            find_unused_parameters = False
-            strict = True
-            
+        # Model configuration mapping
+        model_configs = {
+            'Llama': {
+                'import_path': 'ecg_bench.models.llm.llama',
+                'class_name': 'Llama',
+                'hf_path': 'meta-llama'
+            },
+            'opt': {
+                'import_path': 'ecg_bench.models.llm.opt',
+                'class_name': 'opt',
+                'hf_path': 'facebook'
+            },
+            'gpt2': {
+                'import_path': 'ecg_bench.models.llm.gpt2',
+                'class_name': 'gpt2',
+                'hf_path': 'openai-community'
+            },
+            'gemma': {
+                'import_path': 'ecg_bench.models.llm.gemma',
+                'class_name': 'gemma',
+                'hf_path': 'google'
+            }
+        }
+
+        model_key = next((key for key in model_configs.keys() if key.lower() in self.args.model.lower()), None)
+        if not model_key:
+            raise ValueError(f"Unsupported model: {self.args.model}")
+        
+        config = model_configs[model_key]
+        
+        module = __import__(config['import_path'], fromlist=[config['class_name']])
+        model_class = getattr(module, config['class_name'])
+        
+        if self.args.train == 'second' or self.args.inference == 'second':
+            llm_model_name = self.args.model.split('_')[1]
+        else:
+            llm_model_name = self.args.model
+        
+        hf_llm = AutoModelForCausalLM.from_pretrained(
+            f"{config['hf_path']}/{llm_model_name}",
+            cache_dir=self.cache_dir,
+            torch_dtype=torch.bfloat16
+        ).to(self.device)
+        
+        llm_tokenizer = AutoTokenizer.from_pretrained(
+            f"{config['hf_path']}/{llm_model_name}",
+            cache_dir=self.cache_dir
+        )
+        
+        if self.args.train == 'end2end' or self.args.inference == 'end2end':
+            llm, llm_tokenizer = self.modify_llm_tokenizer(
+                hf_llm, 
+                llm_tokenizer, 
+                list(self.ecg_tokenizer_utils.vocab.keys())
+            )
+        elif self.args.train == 'second' or self.args.inference == 'second':
+            llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer)
+        
+        if self.args.peft:
+            llm = get_peft_model(llm, self.get_lora_configs())
+            llm.print_trainable_parameters()
+        
+        llm = model_class(llm, self.args).to(self.device)
+        
         return {
             'llm': llm,
             'llm_tokenizer': llm_tokenizer,
-            'find_unused_parameters': find_unused_parameters,
-            'model_hidden_size': model_hidden_size,
-            'strict': strict
+            'find_unused_parameters': False,
+            'model_hidden_size': llm.llm.config.hidden_size,
+            'strict': True
         }
         
     def get_encoder(self):
