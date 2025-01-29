@@ -12,7 +12,7 @@ class MERL(nn.Module):
     def __init__(self, merl):
         super(MERL, self).__init__()
         self.merl = merl
-        if self.merl.args.train == 'second':
+        if self.merl.args.train == 'second' or self.merl.args.inference == 'second':
             self.avgpool = nn.AdaptiveAvgPool1d((1))
     
     def forward(self, batch):

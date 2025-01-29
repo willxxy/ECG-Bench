@@ -18,7 +18,6 @@ def tester(model, dataloader, tokenizer, args, train_utils):
             
             try:
                 out = [model.generate(batch, tokenizer)]
-                # Instead of evaluating immediately, collect all outputs
                 gt_answers.append(answer[0])
                 gen_answers.append(out[0])
                 questions.append(batch['question'][0])
@@ -27,7 +26,6 @@ def tester(model, dataloader, tokenizer, args, train_utils):
                 print(f"Error type: {type(e).__name__}")
                 print(out)
                 print(answer)
-                # Add empty strings for failed generations to maintain alignment
                 gt_answers.append("")
                 gen_answers.append("")
                 questions.append(batch['question'][0])
@@ -39,7 +37,6 @@ def tester(model, dataloader, tokenizer, args, train_utils):
                 if dev_count == 25:
                     break
 
-    # Evaluate all results at once after collecting all outputs
     try:
         all_metrics = train_utils.evaluate_strings(gt_answers, gen_answers, args.device)
     except Exception as e:
