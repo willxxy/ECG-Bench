@@ -1,7 +1,6 @@
 # ECG-Bench
-Private repo for developing unified ECG generative benchmark
 
-when cloning repo (For transformers sake) we work on 4.47.1
+## Installation <a name="installation"></a>
 
 1. To install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.79.0 -y`
 
@@ -36,6 +35,68 @@ when cloning repo (For transformers sake) we work on 4.47.1
 16. `cd` into `ECG-Bench/ecg_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
 
 17. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
+
+
+**NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.**
+
+## Data <a name="data"></a>
+
+1. Please download the PTB-XL dataset through this [link](https://physionet.org/static/published-projects/ptb-xl/ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3.zip).
+
+2. Please create a `data` folder, unzip the zip file inside the `data` folder and rename the folder as `ptb`.
+
+### MIMIC
+
+1. Please download the Mimic IV ECG dataset through this [link](https://physionet.org/static/published-projects/mimic-iv-ecg/mimic-iv-ecg-diagnostic-electrocardiogram-matched-subset-1.0.zip).
+
+2. Unzip the zip file inside the `data` directory and rename the unzipped directory as `mimic`.
+
+### [ECG-QA](https://github.com/Jwoo5/ecg-qa)
+
+1. To download the ECG-QA dataset, please execute the following command in the `data` folder:
+
+`git clone https://github.com/Jwoo5/ecg-qa.git`
+
+2. We exactly follow the instructions in [this section of the repository](https://github.com/Jwoo5/ecg-qa?tab=readme-ov-file#usage-notes) for mapping the PTB-XL and MIMIC IV ECG dataset to the question and answers. `cd` into ecg-qa and execute the following commands in the terminal to prepare the ECG-QA dataset.
+
+3. To map the ECG-QA dataset to mimic and ptb `cd` inside the `data/ecg-qa` directory and execute the following scripts respectively.
+
+```
+python mapping_ptbxl_samples.py ecgqa/ptbxl \
+--ptbxl-data-dir ../ptb
+```
+
+```
+python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
+--mimic-iv-ecg-data-dir ../mimic
+```
+
+3. After mapping the datasets, you should have an output folder in the `data/ecg-qa` folder with the mapped `paraphrased` and `template` question and answers.
+
+### Pretrain MIMIC dataset curated by [ECG-Chat Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
+
+1. Next create a `data/pretrain_mimic` directory and download the `pretrain_mimic.json` file from this [dropbox link](https://www.dropbox.com/scl/fo/ccq5dxmdgg4shf02yjn8c/ANOQ1Hzj4KwHqa1b9r80uzc?rlkey=teysp3v6hg6o9uko2i4zbbjpn&e=1&st=exu3i9oo&dl=0).
+
+### Instruct 45k MIMIC dataset curated by [ECG-Chat Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
+
+1. Next create a `data/ecg_instruct_45k` directory and download the `ecg_instruct_45k.json` file from this [link](https://github.com/YubaoZhao/ECG-Chat/blob/master/llava/playground/data/ecg_instruct_45k.json).
+
+
+Once you are finished with these steps, it's time to preprocess the data!
+
+### Preprocessing
+
+1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others!
+
+
+## Main Methods <a name="methods"></a>
+
+### Training ECG-Byte <a name="ecg-byte"></a>
+
+1. Once you sampled the ECGs, you can simply run `bash scripts/train_tokenizer.sh` to train the tokenizer. We also provide a script to load in your trained tokenizer and see the encoding compression rate and original vs. decoded signal. Lastly, we provide basic configurations, however, please feel free to modify these.
+
+NOTE: We also provide a trained tokenizer at this [link](https://drive.google.com/drive/folders/1IFrg-XRRDhJ_xIUSxjcXwxvyPLdsbMR0?usp=sharing). Please feel free to use this or train your own!
+
 
 #
 Run tests in ECG-Bench
