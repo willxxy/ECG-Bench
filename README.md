@@ -84,6 +84,26 @@ done
 echo "All downloads and extractions completed"
 ```
 
+### CSN
+
+1. Create a `csn` folder inside the `data` directory.
+
+2. Inside `data/csn` execute the following command in the terminal:
+
+```
+wget https://physionet.org/static/published-projects/ecg-arrhythmia/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0.zip
+```
+
+### CPSC
+
+1. Create a `cpsc` folder inside the `data` directory.
+
+2. Inside `data/cpsc` execute the following command in the terminal:
+
+```
+wget https://physionet.org/static/published-projects/challenge-2020/classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2.zip
+```
+
 ### ECG-QA dataset curated by [ECG-QA, Oh et al.](https://github.com/Jwoo5/ecg-qa)
 
 1. To download the ECG-QA dataset, please execute the following command in the `data` folder:
