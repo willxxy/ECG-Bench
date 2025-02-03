@@ -51,7 +51,40 @@
 
 2. Unzip the zip file inside the `data` directory and rename the unzipped directory as `mimic`.
 
-### [ECG-QA](https://github.com/Jwoo5/ecg-qa)
+### Code-15
+
+1. First create a `code15` folder inside the `data` directory.
+
+2. Then inside `data/code15` execute the following bash script to download the data and unzip it:
+
+```
+#!/bin/bash
+
+for i in {0..19}; do
+    echo "Downloading part ${i}..."
+    wget -O "exams_part${i}.zip" "https://zenodo.org/records/4916206/files/exams_part${i}.zip?download=1"
+    
+    if [ $? -eq 0 ]; then
+        echo "Successfully downloaded part ${i}"
+        
+        echo "Extracting part ${i}..."
+        unzip -q "exams_part${i}.zip"
+        
+        if [ $? -eq 0 ]; then
+            echo "Successfully extracted part ${i}"
+            rm "exams_part${i}.zip"
+        else
+            echo "Error extracting part ${i}"
+        fi
+    else
+        echo "Error downloading part ${i}"
+    fi
+done
+
+echo "All downloads and extractions completed"
+```
+
+### ECG-QA dataset curated by [ECG-QA, Oh et al.](https://github.com/Jwoo5/ecg-qa)
 
 1. To download the ECG-QA dataset, please execute the following command in the `data` folder:
 
@@ -73,14 +106,18 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 
 3. After mapping the datasets, you should have an output folder in the `data/ecg-qa` folder with the mapped `paraphrased` and `template` question and answers.
 
-### Pretrain MIMIC dataset curated by [ECG-Chat Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
+### Pretrain MIMIC dataset curated by [ECG-Chat, Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
 
 1. Next create a `data/pretrain_mimic` directory and download the `pretrain_mimic.json` file from this [dropbox link](https://www.dropbox.com/scl/fo/ccq5dxmdgg4shf02yjn8c/ANOQ1Hzj4KwHqa1b9r80uzc?rlkey=teysp3v6hg6o9uko2i4zbbjpn&e=1&st=exu3i9oo&dl=0).
 
-### Instruct 45k MIMIC dataset curated by [ECG-Chat Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
+### Instruct 45k MIMIC dataset curated by [ECG-Chat, Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
 
 1. Next create a `data/ecg_instruct_45k` directory and download the `ecg_instruct_45k.json` file from this [link](https://github.com/YubaoZhao/ECG-Chat/blob/master/llava/playground/data/ecg_instruct_45k.json).
 
+
+### ECG Instruct Pulse dataset curated by [PULSE, Liu et al.](https://github.com/AIMedLab/PULSE)
+
+1. Create a 'data/ecg_instruct_pulse' directory and downlod the `ECGInstruct.json`from this [link](https://huggingface.co/datasets/PULSE-ECG/ECGInstruct/tree/main). Then rename it to `ecg_instruct_pulse.json`.
 
 Once you are finished with these steps, it's time to preprocess the data!
 
