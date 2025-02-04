@@ -67,4 +67,5 @@ for instance in tqdm(json_data, desc = 'Processing instances'):
         file_path, idx = code15_exam_mapping[exam_identifier]
         with h5py.File(file_path, 'r') as f:
             tracing = f['tracings'][idx]
-        
+        print(tracing.shape)
+        input()

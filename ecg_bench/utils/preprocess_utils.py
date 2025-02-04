@@ -7,6 +7,7 @@ from tqdm import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from scipy import signal
 import pywt
+import h5py
 from scipy import interpolate
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
@@ -36,21 +37,19 @@ class PreprocessECG:
         
         
         if self.args.map_data == None:
-            if self.args.data == 'code15':
-                self.code15_exam_mapping = self.build_code15_exam_mapping()
-            elif self.args.data in ['mimic', 'ptb']:
-                print(f"Preparing {args.data}")
-                if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
-                    print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
-                    self.prepare_df()
-                self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
-                self.df = self.fm.clean_dataframe(self.df)
-                if self.args.dev:
-                    self.df = self.df.iloc[:1000]
-                if self.args.toy:
-                    self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
-                print(self.df.head())
-                print('Dataframe prepared.')
+            print(f"Preparing {args.data}")
+            if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
+                print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
+                self.prepare_df()
+            self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
+            self.df = self.fm.clean_dataframe(self.df)
+            if self.args.dev:
+                self.df = self.df.iloc[:1000]
+            if self.args.toy:
+                self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
+            print(self.df.head())
+            print('Number of instances in dataframe:', len(self.df))
+            print('Dataframe prepared.')
         else:
             self.ecg_folder = Path(self.preprocessed_dir)
             self.available_ecgs = set(f.stem for f in self.ecg_folder.glob('*'))
@@ -81,6 +80,16 @@ class PreprocessECG:
             
             merged_df = merged_df.dropna(subset=report_columns, how='all')
             df = merged_df[['path', 'report']]    
+        elif self.args.data == 'code15':
+            exam_mapping = self.build_code15_exam_mapping()
+            df = pd.DataFrame([
+                {
+                    'exam_id': exam_id,
+                    'path': file_path,
+                    'idx': idx,
+                    'report': 'placeholder report'  # Empty report column to match other datasets
+                } 
+                for exam_id, (file_path, idx) in exam_mapping.items()])
             
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
@@ -253,14 +262,23 @@ class PreprocessECG:
     ### Preprocessing functions
     def _process_single_instance(self, idx):
         save_dic = {}
-        file_path = f"{self.add_path}/{self.df.iloc[idx]['path']}"
-        report = self.df.iloc[idx]['report']
-        
         try:
-            ecg, sf = self.fm.open_ecg(file_path)
-            assert sf == 500 and ecg.shape == (5000, 12)
+            if self.args.data in ['mimic', 'ptb']:
+                file_path = f"{self.add_path}/{self.df.iloc[idx]['path']}"
+                report = self.df.iloc[idx]['report']
+                ecg, sf = self.fm.open_ecg(file_path)
+                assert sf == 500 and ecg.shape == (5000, 12)
+            elif self.args.data == 'code15':
+                file_path = f"{self.df.iloc[idx]['path']}"
+                report = self.df.iloc[idx]['report']
+                tracing_idx = self.df.iloc[idx]['idx']
+                exam_id = self.df.iloc[idx]['exam_id']
+                sf = 400 # code15 has a sampling frequency of 400 Hz
+                with h5py.File(file_path, 'r') as f:
+                    ecg = f['tracings'][tracing_idx]
+                assert ecg.shape == (4096, 12) and sf == 400
             
-            if self.args.data == 'mimic':
+            if self.args.data == 'mimic' or self.args.data == 'code15':
                 ecg = self._reorder_indices(ecg)
                 
             filtered_ecg = self.advanced_ecg_filter(ecg, fs=sf)
@@ -294,7 +312,12 @@ class PreprocessECG:
                         'target_sf': self.args.target_sf,
                         'seg_len': self.args.seg_len
                     }
-                    save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_{j}.npy"
+                    if self.args.data == 'code15':
+                        save_dic['exam_id'] = exam_id
+                        save_dic['tracing_idx'] = tracing_idx
+                        save_path = f"{self.preprocessed_dir}/{exam_id}_{tracing_idx}_{j}.npy"
+                    else:
+                        save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_{j}.npy"
                     np.save(save_path, save_dic)
             else:
                 save_dic = {
@@ -305,7 +328,12 @@ class PreprocessECG:
                     'target_sf': self.args.target_sf,
                     'seg_len': self.args.seg_len
                 }
-                save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_0.npy"
+                if self.args.data == 'code15':
+                    save_dic['exam_id'] = exam_id
+                    save_dic['tracing_idx'] = tracing_idx
+                    save_path = f"{self.preprocessed_dir}/{exam_id}_{tracing_idx}_0.npy"
+                else:
+                    save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_0.npy"
                 np.save(save_path, save_dic)
                 
             return True
@@ -349,7 +377,10 @@ class PreprocessECG:
         return ecg
     
     def _reorder_indices(self, ecg):
-        current_order = ['I', 'II', 'III', 'aVR', 'aVF', 'aVL', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+        if self.args.data == 'mimic':
+            current_order = ['I', 'II', 'III', 'aVR', 'aVF', 'aVL', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+        elif self.args.data == 'code15':
+            current_order = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
         desired_order = ['I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
         order_mapping = {lead: index for index, lead in enumerate(current_order)}
         new_indices = [order_mapping[lead] for lead in desired_order]
