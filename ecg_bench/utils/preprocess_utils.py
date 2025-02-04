@@ -227,7 +227,7 @@ class PreprocessECG:
     def map_external_datasets(self):
         valid_instances = []
         
-        if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic']:
+        if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic', 'ecg_instruct_pulse']:
             data = self.fm.open_json(f'./data/{self.args.map_data}/{self.args.map_data}.json')
         elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
             paraphrased_jsons = glob.glob(f'./data/ecg-qa/output/{self.args.map_data.split("_")[1]}/paraphrased/*/*.json')
@@ -241,6 +241,11 @@ class PreprocessECG:
                 text = instance['conversations']
                 ecg_path = instance['ecg']
                 ecg_path = '_'.join(ecg_path.split('/'))
+            elif self.args.map_data == 'ecg_instruct_pulse':
+                text = instance['conversations']
+                parts = instance['image'].split('/')
+                ecg_path = parts[-1].split('-')[0]
+                
             elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
                 text = [instance['question_type'], instance['question'], instance['answer']]
                 ecg_path = instance['ecg_path'][0]
@@ -255,7 +260,7 @@ class PreprocessECG:
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f'Length of available ecgs: {len(self.available_ecgs)}')
         print(f"Valid instances: {len(valid_instances)}")
-        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_{self.args.seg_len}_{self.args.target_sf}_mapped.json')
+        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped.json')
             
     
     ### HELPER FUNCTIONS
@@ -315,7 +320,7 @@ class PreprocessECG:
                     if self.args.data == 'code15':
                         save_dic['exam_id'] = exam_id
                         save_dic['tracing_idx'] = tracing_idx
-                        save_path = f"{self.preprocessed_dir}/{exam_id}_{tracing_idx}_{j}.npy"
+                        save_path = f"{self.preprocessed_dir}/{exam_id}_{j}.npy"
                     else:
                         save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_{j}.npy"
                     np.save(save_path, save_dic)
@@ -331,7 +336,7 @@ class PreprocessECG:
                 if self.args.data == 'code15':
                     save_dic['exam_id'] = exam_id
                     save_dic['tracing_idx'] = tracing_idx
-                    save_path = f"{self.preprocessed_dir}/{exam_id}_{tracing_idx}_0.npy"
+                    save_path = f"{self.preprocessed_dir}/{exam_id}_0.npy"
                 else:
                     save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_0.npy"
                 np.save(save_path, save_dic)
