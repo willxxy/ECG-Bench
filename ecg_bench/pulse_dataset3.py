@@ -1,12 +1,40 @@
 import json
 from tqdm import tqdm
 import wfdb
+import h5py
+
+def build_code15_exam_mapping():
+    """
+    Builds a dictionary mapping exam identifiers to a tuple with the file path
+    and the index position inside that HDF5 file.
+    
+    Returns:
+        dict: A dictionary where the key is the exam_id (str) and the value is a tuple (file_path, index_in_file)
+    """
+    import h5py
+    mapping = {}
+    # Loop over exam parts (assuming parts 0 through 17)
+    for part in range(18):  
+        file_path = f'./data/code15/exams_part{part}.hdf5'
+        with h5py.File(file_path, 'r') as f:
+            exam_ids = f['exam_id'][:]  # exams in this file
+            # Build mapping for each exam in this file
+            for idx, eid in enumerate(exam_ids):
+                # If exam_id is a byte string, decode it
+                # print(type(eid))
+                # input()
+                eid = str(int(eid))
+                if isinstance(eid, bytes):
+                    eid = eid.decode('utf-8')
+                mapping[eid] = (file_path, idx)
+    return mapping
 
 def open_json_file(file_path):
     with open(file_path, 'r') as file:
         data = json.load(file)
     return data
 
+code15_exam_mapping = build_code15_exam_mapping()
 
 
 # Example usage
@@ -34,6 +62,8 @@ for instance in tqdm(json_data, desc = 'Processing instances'):
         signal, fields = wfdb.rdsamp(path_to_dataset)
     elif dataset_image_type == 'code15_v4':
         parts = instance['image'].split('/')
-        print(parts)
-        input()
+        exam_identifier = parts[-1].split('-')[0]
+        file_path, idx = code15_exam_mapping[exam_identifier]
+        with h5py.File(file_path, 'r') as f:
+            tracing = f['tracings'][idx]
         

@@ -663,3 +663,22 @@ class PreprocessECG:
             filtered_list = [item for item in loaded_file if item['question_type'] in question_types]
             data.extend(filtered_list)
         return data
+    
+    def build_code15_exam_mapping(self,):
+        import h5py
+        mapping = {}
+        # Loop over exam parts (assuming parts 0 through 17)
+        for part in range(18):  
+            file_path = f'./data/code15/exams_part{part}.hdf5'
+            with h5py.File(file_path, 'r') as f:
+                exam_ids = f['exam_id'][:]  # exams in this file
+                # Build mapping for each exam in this file
+                for idx, eid in enumerate(exam_ids):
+                    # If exam_id is a byte string, decode it
+                    # print(type(eid))
+                    # input()
+                    eid = str(int(eid))
+                    if isinstance(eid, bytes):
+                        eid = eid.decode('utf-8')
+                    mapping[eid] = (file_path, idx)
+        return mapping
