@@ -32,10 +32,7 @@ class PreprocessECG:
         self.args = args
         self.fm = fm
         self.preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
-        
         fm.ensure_directory_exists(folder = f'./pngs')
-        
-        
         if self.args.map_data == None:
             print(f"Preparing {args.data}")
             if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
@@ -244,7 +241,21 @@ class PreprocessECG:
             elif self.args.map_data == 'ecg_instruct_pulse':
                 text = instance['conversations']
                 parts = instance['image'].split('/')
-                ecg_path = parts[-1].split('-')[0]
+                dataset_image_type = parts[0]
+                if dataset_image_type in ['mimic_v4', 'mimic', 'ptb-xl']:
+                    filename = parts[-1]
+                    if dataset_image_type in ['mimic_v4', 'mimic']:
+                        base_filename = filename.split('-')[0]
+                        path_to_file = '_'.join(parts[1:-1] + [base_filename])
+                        ecg_path = f"files_{path_to_file}"
+                    elif dataset_image_type == 'ptb-xl':
+                        record_number = filename.split('_')[0]
+                        record_number = f"{record_number}_hr"
+                        subfolder = record_number[:2] + '000'
+                        ecg_path = f"records500_{subfolder}_{record_number}"
+                    
+                elif dataset_image_type == 'code15_v4':
+                    ecg_path = parts[-1].split('-')[0]
                 
             elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
                 text = [instance['question_type'], instance['question'], instance['answer']]
