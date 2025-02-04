@@ -60,6 +60,7 @@ for instance in tqdm(json_data, desc = 'Processing instances'):
         subfolder = record_number[:2] + '000'
         path_to_dataset = f'./data/ptb/records500/{subfolder}/{record_number}_hr'
         signal, fields = wfdb.rdsamp(path_to_dataset)
+    
     elif dataset_image_type == 'code15_v4':
         parts = instance['image'].split('/')
         exam_identifier = parts[-1].split('-')[0]

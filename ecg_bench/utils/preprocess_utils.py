@@ -36,18 +36,21 @@ class PreprocessECG:
         
         
         if self.args.map_data == None:
-            print(f"Preparing {args.data}")
-            if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
-                print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
-                self.prepare_df()
-            self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
-            self.df = self.fm.clean_dataframe(self.df)
-            if self.args.dev:
-                self.df = self.df.iloc[:1000]
-            if self.args.toy:
-                self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
-            print(self.df.head())
-            print('Dataframe prepared.')
+            if self.args.data == 'code15':
+                self.code15_exam_mapping = self.build_code15_exam_mapping()
+            elif self.args.data in ['mimic', 'ptb']:
+                print(f"Preparing {args.data}")
+                if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
+                    print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
+                    self.prepare_df()
+                self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
+                self.df = self.fm.clean_dataframe(self.df)
+                if self.args.dev:
+                    self.df = self.df.iloc[:1000]
+                if self.args.toy:
+                    self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
+                print(self.df.head())
+                print('Dataframe prepared.')
         else:
             self.ecg_folder = Path(self.preprocessed_dir)
             self.available_ecgs = set(f.stem for f in self.ecg_folder.glob('*'))
@@ -81,12 +84,28 @@ class PreprocessECG:
             
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
+    def build_code15_exam_mapping(self):
+        import h5py
+        mapping = {}
+        for part in range(18):  
+            file_path = f'./data/code15/exams_part{part}.hdf5'
+            with h5py.File(file_path, 'r') as f:
+                exam_ids = f['exam_id'][:]
+                for idx, eid in enumerate(exam_ids):
+                    if isinstance(eid, bytes):
+                        eid = eid.decode('utf-8')
+                    eid = str(int(eid))
+                    mapping[eid] = (file_path, idx)
+        return mapping
+    
     def preprocess_batch(self):
         self.fm.ensure_directory_exists(folder = self.preprocessed_dir)
         if self.args.data == 'mimic':
             self.add_path = './data/mimic'
         elif self.args.data == 'ptb':
             self.add_path = './data/ptb'
+        elif self.args.data == 'code15':
+            self.add_path = './data/code15'
         skipped_count = 0        
         try:
             with ProcessPoolExecutor(max_workers=self.args.num_cores) as executor:
@@ -663,22 +682,3 @@ class PreprocessECG:
             filtered_list = [item for item in loaded_file if item['question_type'] in question_types]
             data.extend(filtered_list)
         return data
-    
-    def build_code15_exam_mapping(self,):
-        import h5py
-        mapping = {}
-        # Loop over exam parts (assuming parts 0 through 17)
-        for part in range(18):  
-            file_path = f'./data/code15/exams_part{part}.hdf5'
-            with h5py.File(file_path, 'r') as f:
-                exam_ids = f['exam_id'][:]  # exams in this file
-                # Build mapping for each exam in this file
-                for idx, eid in enumerate(exam_ids):
-                    # If exam_id is a byte string, decode it
-                    # print(type(eid))
-                    # input()
-                    eid = str(int(eid))
-                    if isinstance(eid, bytes):
-                        eid = eid.decode('utf-8')
-                    mapping[eid] = (file_path, idx)
-        return mapping
