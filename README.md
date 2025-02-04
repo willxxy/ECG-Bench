@@ -60,7 +60,7 @@
 ```
 #!/bin/bash
 
-for i in {0..19}; do
+for i in {0..17}; do
     echo "Downloading part ${i}..."
     wget -O "exams_part${i}.zip" "https://zenodo.org/records/4916206/files/exams_part${i}.zip?download=1"
     

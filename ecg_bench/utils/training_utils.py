@@ -213,6 +213,8 @@ class TrainingUtils:
         if self.args.train == 'second' or self.args.inference == 'second':
             llm_tokenizer.add_tokens(['<signal>'], special_tokens=True)
         llm_tokenizer.add_special_tokens({"pad_token":"<pad>"})
+        llm_tokenizer.add_special_tokens({"im_start":"<im_start>"})
+        llm_tokenizer.add_special_tokens({"im_end":"<im_end>"})
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
         return llm, llm_tokenizer
