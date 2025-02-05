@@ -5,11 +5,10 @@ subset_names = ['arena', 'code15-test', 'cpsc-test', 'csn-test-no-cot', 'ecgqa-t
 
 for name in subset_names:
     dataset = load_dataset("PULSE-ECG/ECGBench", name=name, streaming=False, cache_dir='../.huggingface')
-    print(dataset['test'][0])
-    item = dataset['test'][0]
-    print(item['image_path'])
-    print(item['image'])
-    print(item['conversations'])
-    print('--------------------------------')
-    input()
+    print(len(dataset['test']))
+    # for item in dataset['test']:
+    #     file_path = item['image_path']
+    #     conversations = item['conversations']
+        
+    
     
