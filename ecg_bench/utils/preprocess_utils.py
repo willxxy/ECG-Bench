@@ -48,8 +48,17 @@ class PreprocessECG:
             print('Number of instances in dataframe:', len(self.df))
             print('Dataframe prepared.')
         else:
-            self.ecg_folder = Path(self.preprocessed_dir)
-            self.available_ecgs = set(f.stem for f in self.ecg_folder.glob('*'))
+            ecg_folder = Path(self.preprocessed_dir)
+            self.available_ecgs = set(f.stem for f in ecg_folder.glob('*'))
+            if self.args.map_data == 'ecg_instruct_pulse':
+                ### Crude way of doing all three code15, mimic, and ptb
+                ### since ecg_instruct_pulse has three different datasets
+                preprocessed_dir2 = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                ecg_folder2 = Path(preprocessed_dir2)
+                self.available_ecgs.update(set(f.stem for f in ecg_folder2.glob('*')))
+                preprocessed_dir3 = f"./data/mimic/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                ecg_folder3 = Path(preprocessed_dir3)
+                self.available_ecgs.update(set(f.stem for f in ecg_folder3.glob('*')))
     
     ### MAIN FUNCTIONS
     def prepare_df(self):
@@ -248,15 +257,16 @@ class PreprocessECG:
                         base_filename = filename.split('-')[0]
                         path_to_file = '_'.join(parts[1:-1] + [base_filename])
                         ecg_path = f"files_{path_to_file}"
+                        self.preprocessed_dir = f"./data/mimic/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                     elif dataset_image_type == 'ptb-xl':
                         record_number = filename.split('_')[0]
                         record_number = f"{record_number}_hr"
                         subfolder = record_number[:2] + '000'
                         ecg_path = f"records500_{subfolder}_{record_number}"
-                    
+                        self.preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                 elif dataset_image_type == 'code15_v4':
                     ecg_path = parts[-1].split('-')[0]
-                
+                    self.preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
             elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
                 text = [instance['question_type'], instance['question'], instance['answer']]
                 ecg_path = instance['ecg_path'][0]
