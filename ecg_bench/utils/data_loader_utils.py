@@ -90,16 +90,16 @@ class EncoderInputPreparation(BaseECGDataset):
         
     def prepare_siglip_input(self, ecg_signal, original_report):
         image_signal = self.signal_to_image(ecg_signal)
-        clip_inputs = self.encoder_tokenizer(text=[original_report],
+        siglip_inputs = self.encoder_tokenizer(text=[original_report],
                                            images=[image_signal],
                                            return_tensors='pt',
                                            padding='max_length',
                                            max_length=64,
                                            truncation=True)
         return {
-            'siglip_input_ids': clip_inputs['input_ids'][0].contiguous(),
-            'siglip_att_mask': clip_inputs['attention_mask'][0].contiguous(),
-            'siglip_pixel': clip_inputs['pixel_values'][0].contiguous()
+            'siglip_input_ids': siglip_inputs['input_ids'][0].contiguous(),
+            'siglip_att_mask': siglip_inputs['attention_mask'][0].contiguous(),
+            'siglip_pixel': siglip_inputs['pixel_values'][0].contiguous()
         }
     
     def prepare_merl_input(self, ecg_signal, original_report):
