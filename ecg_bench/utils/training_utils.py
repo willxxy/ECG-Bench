@@ -163,7 +163,7 @@ class TrainingUtils:
             encoder = SIGLIP(hf_encoder).to(self.device)
             encoder_tokenizer = AutoProcessor.from_pretrained("google/siglip-base-patch16-224", cache_dir = self.cache_dir, use_fast = True)
             find_unused_parameters = False
-            model_hidden_size = encoder.siglip.config.projection_dim
+            model_hidden_size = encoder.siglip.config.text_config.hidden_size
             strict = True
         elif 'vit' in self.args.model:
             from ecg_bench.models.encoder.vit import ViT   

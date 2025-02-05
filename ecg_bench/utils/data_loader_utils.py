@@ -96,9 +96,12 @@ class EncoderInputPreparation(BaseECGDataset):
                                            padding='max_length',
                                            max_length=64,
                                            truncation=True)
+        print(self.encoder_tokenizer.special_tokens_map)
+        ### siglip does not have attention mask??
+        attention_mask = (siglip_inputs['input_ids'][0] != self.encoder_tokenizer.pad_token_id).int()
         return {
             'siglip_input_ids': siglip_inputs['input_ids'][0].contiguous(),
-            'siglip_att_mask': siglip_inputs['attention_mask'][0].contiguous(),
+            'siglip_att_mask': attention_mask.contiguous(),
             'siglip_pixel': siglip_inputs['pixel_values'][0].contiguous()
         }
     
@@ -133,6 +136,8 @@ class FirstStageECGDataset(BaseECGDataset):
                 return self.encoder_prep.prepare_clip_input(ecg_signal, original_report)
             elif 'vit' in self.args.model:
                 return self.encoder_prep.prepare_vit_input(ecg_signal, self.args.num_patches)
+            elif 'siglip' in self.args.model:
+                return self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
             elif 'merl' in self.args.model:
                 return self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
         except Exception as e:
@@ -172,6 +177,8 @@ class SecondStageECGDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_vit_input(ecg_signal, self.args.num_patches)
         elif 'clip' in self.args.model:
             encoder_out = self.encoder_prep.prepare_clip_input(ecg_signal, original_report)
+        elif 'siglip' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
         
