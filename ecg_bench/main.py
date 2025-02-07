@@ -20,7 +20,8 @@ from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
 from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
-from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageECGDataset, End2EndECGDataset
+from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageECGDataset, End2EndECGDataset, \
+                                                End2EndECGChatDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
 from ecg_bench.runners.inference import tester
@@ -37,7 +38,8 @@ def get_args():
     data_group.add_argument('--pad_to_max', type=int, default=1020, help='Pad to max size')
     data_group.add_argument('--ecg_tokenizer', type=str, help='Tokenizer specification')
     data_group.add_argument('--percentiles', type=str, default=None, help='Percentiles computed during preprocessing')
-                        
+    data_group.add_argument('--system_prompt', type=str, default=None, help='System prompt')
+    
     ### Model
     model_group = parser.add_argument_group('Model')
     model_group.add_argument('--model', type=str, default=None, help='Model name')
@@ -83,7 +85,7 @@ def get_args():
     ckpt_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint path')
     ckpt_group.add_argument('--encoder_checkpoint', type=str, default=None, help='Encoder checkpoint path')
     ckpt_group.add_argument('--encoder_data', type=str, default=None, help='Encoder data path')
-    
+
     return parser.parse_args()
 
 def setup_environment(rank, world_size, args):
@@ -293,10 +295,16 @@ def main(rank, world_size):
                 llm_tokenizer=tokenizer,
                 encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'end2end' or args.inference == 'end2end':
-            dataset = End2EndECGDataset(
-                json_data_file=data,
-                train_utils=train_utils,
-                llm_tokenizer=tokenizer)
+            if args.data in ['ecg_instruct_45k_mapped']:
+                dataset = End2EndECGChatDataset(
+                    json_data_file=data,
+                    train_utils=train_utils,
+                    llm_tokenizer=tokenizer)
+            else:
+                dataset = End2EndECGDataset(
+                    json_data_file=data,
+                    train_utils=train_utils,
+                    llm_tokenizer=tokenizer)
         
         if args.train:
             if args.dis:

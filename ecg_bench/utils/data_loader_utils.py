@@ -2,7 +2,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import torch
 from PIL import Image
-
+from ecg_bench.utils.conversation_utils import get_conv_template
 
 class BaseECGDataset(Dataset):
     def __init__(self, json_data_file, train_utils, encoder_tokenizer=None, llm_tokenizer=None):
@@ -13,6 +13,8 @@ class BaseECGDataset(Dataset):
         self.llm_tokenizer = llm_tokenizer
         if llm_tokenizer is not None:
             self.create_special_tokens()
+        if self.args.data in ['ecg_instruct_45k_mapped']:
+            self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
         self.uniform_question = 'Could you please help me explain my ECG?'
     
     def __len__(self):
@@ -290,3 +292,112 @@ class End2EndECGDataset(BaseECGDataset):
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32)
         }
+        
+        
+class End2EndECGChatDataset(BaseECGDataset):
+    def __getitem__(self, idx):
+        try:
+            instance = self.json_data_file[idx]
+            np_path = instance['ecg_path']
+            ecg_path = self.train_utils.fm.open_npy(np_path)
+            ecg_signal = ecg_path['ecg']
+            altered_text = instance['text']
+            
+            return self.prepare_end2end_input(ecg_signal, altered_text)
+        except Exception as e:
+            print(e)
+            print(f"Skipping invalid data at index {idx}")
+            return None
+
+    def prepare_end2end_input(self, ecg_signal, altered_text):
+
+        if 'llama' in self.args.model:
+            conv = get_conv_template('llama-3')
+        conv.set_system_message(self.system_prompt)
+        
+        original_text_multiturn = altered_text.copy()
+        altered_text = []
+        
+        for message in original_text_multiturn:
+            if message['from'] == 'human' and '<ecg>' in message['value']:
+                altered_text.append(message)
+            else:
+                altered_text.append(message)
+                
+        for message in altered_text:
+            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            conv.append_message(role, message['value'])
+            
+        prompt = conv.get_prompt()
+        ecg_position = prompt.find("<ecg>")
+        prompt_before_ecg = prompt[:ecg_position]
+        prompt_after_ecg = prompt[ecg_position + len("<ecg>"):]
+        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
+        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+        
+        conversation_len = len(tokens_before) + len(tokens_after)
+        available_space = self.args.pad_to_max - conversation_len
+                
+        symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
+        encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
+                                                                          self.train_utils.ecg_tokenizer_utils.merges)
+        tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
+        
+        print('tokenized_signal', len(tokenized_signal))
+        print('available_space', available_space)
+        if len(tokenized_signal) > available_space:
+            ecg_tokens = tokenized_signal[:available_space]
+        else:
+            ecg_tokens = tokenized_signal
+        
+        print('ecg_tokens', len(ecg_tokens))
+        input_ids = tokens_before + ecg_tokens + tokens_after
+        print('tokens_before', len(tokens_before))
+        print('tokens_after', len(tokens_after))
+        labels = [-100] * len(input_ids)
+        
+        for i, message in enumerate(altered_text):
+            if message['from'] == 'gpt':
+                # Get the assistant's message
+                response = message['value']
+                # Find the response in the decoded text
+                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+                # Find these tokens in final_tokens and set their labels
+                for j in range(len(input_ids) - len(response_tokens) + 1):
+                    if input_ids[j:j+len(response_tokens)] == response_tokens:
+                        labels[j:j+len(response_tokens)] = response_tokens
+                        
+        eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        for i, token_id in enumerate(input_ids):
+            if token_id == eot_id:
+                labels[i] = eot_id
+        
+        print('input_ids', len(input_ids))
+        if len(input_ids) < self.args.pad_to_max:
+            padding_length = self.args.pad_to_max - len(input_ids)
+            print('padding_length', padding_length)
+            input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
+            labels = [-100] * padding_length + labels
+            
+        print('input_ids', len(input_ids))
+        print('labels', len(labels))
+        assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
+        assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
+        
+        labels = torch.tensor(labels, dtype=torch.int64)    
+        position_ids = self.create_position_ids(input_ids)
+        attention_mask = self.create_attention_mask(input_ids)
+        
+        ### TEST
+        decoded_text = self.llm_tokenizer.decode(input_ids, skip_special_tokens=False)
+        print("\nDecoded text:")
+        print(decoded_text)
+        input()
+        return {
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
+            'labels': labels,
+            'position_ids': position_ids,
+            'signal': ecg_signal,
+        }
+    

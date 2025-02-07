@@ -25,6 +25,11 @@ class FileManager:
             json.dump(data, f)
     
     @staticmethod
+    def get_system_prompt(system_prompt_path: Union[str, Path]):
+        with open(system_prompt_path, 'r', encoding='utf-8') as file:
+            return file.read().replace('\n', ' ')
+    
+    @staticmethod
     def open_npy(path: Union[str, Path]) -> np.ndarray:
         """Load a NumPy array from a .npy file."""
         return np.load(path, allow_pickle=True).item()

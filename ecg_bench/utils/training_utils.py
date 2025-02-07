@@ -215,14 +215,27 @@ class TrainingUtils:
         return False
     
     def modify_llm_tokenizer(self, llm, llm_tokenizer, new_ids = None):
+        # Regular tokens for signal IDs
         if new_ids is not None:
             new_ids = [f'signal_{str(ids)}' for ids in new_ids]
             llm_tokenizer.add_tokens(new_ids)
-        llm_tokenizer.add_tokens(['<sig_start>'], special_tokens=True)
-        llm_tokenizer.add_tokens(['<sig_end>'], special_tokens=True)
+        
+        # Special tokens added in more idiomatic way
+        special_tokens = {
+            'additional_special_tokens': [],
+            'pad_token': '<pad>'
+        }
         if self.args.train == 'second' or self.args.inference == 'second':
-            llm_tokenizer.add_tokens(['<signal>'], special_tokens=True)
-        llm_tokenizer.add_special_tokens({"pad_token":"<pad>"})
+            special_tokens['additional_special_tokens'].append('<signal>')
+        if self.args.data in ['ecg_instruct_45k_mapped']:
+            special_tokens['additional_special_tokens'].append('<|start_header_id|>')
+            special_tokens['additional_special_tokens'].append('<|end_header_id|>')
+            special_tokens['additional_special_tokens'].append('<|eot_id|>')
+        else:
+            ## We may not need this eventually
+            special_tokens['additional_special_tokens'].append('<sig_start>')
+            special_tokens['additional_special_tokens'].append('<sig_end>')
+        llm_tokenizer.add_special_tokens(special_tokens)
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
         return llm, llm_tokenizer
