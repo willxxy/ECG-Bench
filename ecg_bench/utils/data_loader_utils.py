@@ -96,9 +96,9 @@ class EncoderInputPreparation(BaseECGDataset):
                                            padding='max_length',
                                            max_length=64,
                                            truncation=True)
-        print(self.encoder_tokenizer.special_tokens_map)
         ### siglip does not have attention mask??
-        attention_mask = (siglip_inputs['input_ids'][0] != self.encoder_tokenizer.pad_token_id).int()
+        pad_token_id = 1 # so we define the pad token manually (This is the id for pad in siglip)
+        attention_mask = (siglip_inputs['input_ids'][0] != pad_token_id).int()
         return {
             'siglip_input_ids': siglip_inputs['input_ids'][0].contiguous(),
             'siglip_att_mask': attention_mask.contiguous(),
