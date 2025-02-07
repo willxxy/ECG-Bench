@@ -310,6 +310,13 @@ class End2EndECGChatDataset(BaseECGDataset):
             return None
 
     def prepare_end2end_input(self, ecg_signal, altered_text):
+        if self.args.train == 'end2end' and self.args.inference is None:
+            return self.prepare_training_end2end(ecg_signal, altered_text)
+        ## NOT IMPLEMENTED YET
+        # if self.args.inference == 'end2end' and self.args.train is None:
+        #     return self.prepare_inference_end2end(ecg_signal, altered_text)
+    
+    def prepare_training_end2end(self, ecg_signal, altered_text):
 
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
@@ -388,11 +395,6 @@ class End2EndECGChatDataset(BaseECGDataset):
         position_ids = self.create_position_ids(input_ids)
         attention_mask = self.create_attention_mask(input_ids)
         
-        ### TEST
-        decoded_text = self.llm_tokenizer.decode(input_ids, skip_special_tokens=False)
-        print("\nDecoded text:")
-        print(decoded_text)
-        input()
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
