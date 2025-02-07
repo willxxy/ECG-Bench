@@ -13,8 +13,12 @@ class BaseECGDataset(Dataset):
         self.llm_tokenizer = llm_tokenizer
         if llm_tokenizer is not None:
             self.create_special_tokens()
-        if self.args.data in ['ecg_instruct_45k_mapped']:
+        if self.args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
+            if self.args.data == 'ecg_instruct_45k_mapped':
+                self.ecg_placeholder = '<ecg>'
+            elif self.args.data == 'ecg_instruct_pulse_mapped':
+                self.ecg_placeholder = '<image>'
         self.uniform_question = 'Could you please help me explain my ECG?'
     
     def __len__(self):
@@ -317,7 +321,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         #     return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
-
+        # print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
@@ -326,7 +330,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         altered_text = []
         
         for message in original_text_multiturn:
-            if message['from'] == 'human' and '<ecg>' in message['value']:
+            if message['from'] == 'human' and self.ecg_placeholder in message['value']:
                 altered_text.append(message)
             else:
                 altered_text.append(message)
@@ -336,9 +340,9 @@ class End2EndECGChatDataset(BaseECGDataset):
             conv.append_message(role, message['value'])
             
         prompt = conv.get_prompt()
-        ecg_position = prompt.find("<ecg>")
+        ecg_position = prompt.find(self.ecg_placeholder)
         prompt_before_ecg = prompt[:ecg_position]
-        prompt_after_ecg = prompt[ecg_position + len("<ecg>"):]
+        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
         tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
         tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
         
@@ -350,17 +354,17 @@ class End2EndECGChatDataset(BaseECGDataset):
                                                                           self.train_utils.ecg_tokenizer_utils.merges)
         tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
         
-        print('tokenized_signal', len(tokenized_signal))
-        print('available_space', available_space)
+        # print('tokenized_signal', len(tokenized_signal))
+        # print('available_space', available_space)
         if len(tokenized_signal) > available_space:
             ecg_tokens = tokenized_signal[:available_space]
         else:
             ecg_tokens = tokenized_signal
         
-        print('ecg_tokens', len(ecg_tokens))
+        # print('ecg_tokens', len(ecg_tokens))
         input_ids = tokens_before + ecg_tokens + tokens_after
-        print('tokens_before', len(tokens_before))
-        print('tokens_after', len(tokens_after))
+        # print('tokens_before', len(tokens_before))
+        # print('tokens_after', len(tokens_after))
         labels = [-100] * len(input_ids)
         
         for i, message in enumerate(altered_text):
@@ -379,15 +383,15 @@ class End2EndECGChatDataset(BaseECGDataset):
             if token_id == eot_id:
                 labels[i] = eot_id
         
-        print('input_ids', len(input_ids))
+        # print('input_ids', len(input_ids))
         if len(input_ids) < self.args.pad_to_max:
             padding_length = self.args.pad_to_max - len(input_ids)
-            print('padding_length', padding_length)
+            # print('padding_length', padding_length)
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
             labels = [-100] * padding_length + labels
             
-        print('input_ids', len(input_ids))
-        print('labels', len(labels))
+        # print('input_ids', len(input_ids))
+        # print('labels', len(labels))
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
         

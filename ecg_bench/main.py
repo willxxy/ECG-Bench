@@ -295,7 +295,7 @@ def main(rank, world_size):
                 llm_tokenizer=tokenizer,
                 encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'end2end' or args.inference == 'end2end':
-            if args.data in ['ecg_instruct_45k_mapped']:
+            if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
                 dataset = End2EndECGChatDataset(
                     json_data_file=data,
                     train_utils=train_utils,
