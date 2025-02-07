@@ -68,6 +68,8 @@ class TrainingUtils:
             projection_dim = 512
         elif 'merl' in self.args.model:
             projection_dim = 2048
+        elif 'siglip' in self.args.model:
+            projection_dim = 768
         llava = LLaVA(llm_params['llm'], encoder_params['encoder'], 
                       projection_dim, llm_params['llm_tokenizer']).to(self.device)
         return_dict = {**encoder_params, **llm_params}
@@ -124,15 +126,17 @@ class TrainingUtils:
             f"{config['hf_path']}/{llm_model_name}",
             cache_dir=self.cache_dir
         )
-        
+    
         if self.args.train == 'end2end' or self.args.inference == 'end2end':
-            llm, llm_tokenizer = self.modify_llm_tokenizer(
+            vocab_keys = list(self.ecg_tokenizer_utils.vocab.keys())
+        elif self.args.train == 'second' or self.args.inference == 'second':
+            vocab_keys = None
+        
+        llm, llm_tokenizer = self.modify_llm_tokenizer(
                 hf_llm, 
                 llm_tokenizer, 
-                list(self.ecg_tokenizer_utils.vocab.keys())
+                vocab_keys
             )
-        elif self.args.train == 'second' or self.args.inference == 'second':
-            llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer)
         
         if self.args.peft:
             llm = get_peft_model(llm, self.get_lora_configs())
@@ -174,7 +178,6 @@ class TrainingUtils:
             model_hidden_size = encoder.vit.config.hidden_size
             self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
             strict = True
-        
         elif 'merl' in self.args.model:
             from ecg_bench.models.encoder.merl import MERL, MERLPretrain
             lm, encoder_tokenizer = self.get_lm('ncbi/MedCPT-Query-Encoder')
@@ -220,8 +223,6 @@ class TrainingUtils:
         if self.args.train == 'second' or self.args.inference == 'second':
             llm_tokenizer.add_tokens(['<signal>'], special_tokens=True)
         llm_tokenizer.add_special_tokens({"pad_token":"<pad>"})
-        llm_tokenizer.add_special_tokens({"im_start":"<im_start>"})
-        llm_tokenizer.add_special_tokens({"im_end":"<im_end>"})
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
         return llm, llm_tokenizer
