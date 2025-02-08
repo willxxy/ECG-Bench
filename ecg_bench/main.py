@@ -24,7 +24,7 @@ from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageE
                                                 End2EndECGChatDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
-from ecg_bench.runners.inference import tester
+from ecg_bench.runners.inference import tester, tester_chat
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)
@@ -221,7 +221,10 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
-        seed_results = tester(model, test_loader, tokenizer, args, train_utils)
+        if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+            seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
+        else:
+            seed_results = tester(model, test_loader, tokenizer, args, train_utils)
         all_seed_results.append(seed_results)
         
         with open(f"{checkpoint_path}/seed_{seed}.json", 'w') as f:

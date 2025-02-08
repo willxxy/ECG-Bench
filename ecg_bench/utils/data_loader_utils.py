@@ -297,7 +297,6 @@ class End2EndECGDataset(BaseECGDataset):
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32)
         }
         
-        
 class End2EndECGChatDataset(BaseECGDataset):
     def __getitem__(self, idx):
         try:
@@ -325,15 +324,6 @@ class End2EndECGChatDataset(BaseECGDataset):
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
         
-        original_text_multiturn = altered_text.copy()
-        altered_text = []
-        
-        for message in original_text_multiturn:
-            if message['from'] == 'human' and self.ecg_placeholder in message['value']:
-                altered_text.append(message)
-            else:
-                altered_text.append(message)
-                
         for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
             conv.append_message(role, message['value'])
@@ -407,4 +397,62 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_end2end(self, ecg_signal, altered_text):
-        pass
+        if 'llama' in self.args.model:
+            conv = get_conv_template('llama-3')
+        conv.set_system_message(self.system_prompt)
+        
+        for message in altered_text:
+            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            conv.append_message(role, message['value'])
+            
+        prompt = conv.get_prompt()
+        ecg_position = prompt.find(self.ecg_placeholder)
+        prompt_before_ecg = prompt[:ecg_position]
+        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
+        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
+        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+        
+        conversation_len = len(tokens_before) + len(tokens_after)
+        available_space = self.args.pad_to_max - conversation_len
+                
+        symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
+        encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
+                                                                          self.train_utils.ecg_tokenizer_utils.merges)
+        tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
+        
+        if len(tokenized_signal) > available_space:
+            ecg_tokens = tokenized_signal[:available_space]
+        else:
+            ecg_tokens = tokenized_signal
+        
+        input_ids = tokens_before + ecg_tokens + tokens_after
+        attention_mask = self.create_attention_mask(input_ids)
+        
+        # tokens = self.llm_tokenizer.convert_ids_to_tokens(input_ids)
+        # for idx, (token, token_id) in enumerate(zip(tokens, input_ids)):
+        #     print(f"{idx}: {token} -> {token_id}")
+        
+        assistant_ranges = []
+        current_start = None
+        system_eot_found = False  # Flag to skip system message EOT
+        
+        for idx, token_id in enumerate(input_ids):
+            if token_id == self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]:
+                if not system_eot_found:
+                    system_eot_found = True
+                    continue
+                if current_start is not None:
+                    assistant_ranges.append({
+                        'start': current_start,
+                        'end': idx - 1,  # The token before EOT
+                        'eot': idx
+                    })
+                    current_start = None
+            elif token_id == self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0] and system_eot_found:
+                current_start = idx
+        
+        return {
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
+            'assistant_ranges': assistant_ranges
+        }
