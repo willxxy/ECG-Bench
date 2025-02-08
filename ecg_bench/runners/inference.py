@@ -228,14 +228,15 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
             
             assistant_ranges = batch['assistant_ranges']
             # print('input_ids', input_ids)
-            print('input_ids.shape', gt_input_ids.shape)
+            # print('input_ids.shape', gt_input_ids.shape)
             # print('attention_mask', attention_mask)
-            print('attention_mask.shape', gt_attention_mask.shape)
-            print('assistant_ranges', assistant_ranges)
+            # print('attention_mask.shape', gt_attention_mask.shape)
+            # print('assistant_ranges', assistant_ranges)
             # input('eweeeeeee')
+            offset = 0
             for conv_turn in assistant_ranges:
-                start = conv_turn['start'] + 4 # skip start header, assist, end header, and \n
-                end = conv_turn['end'] + 1
+                start = conv_turn['start'] + 4 + offset # skip start header, assist, end header, and \n
+                end = conv_turn['end'] + 1 + offset
                 print('start', start)
                 print('end', end)
                 # input('eweeeeeee')
@@ -243,20 +244,38 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                 curr_input_ids = chat_input_ids[:, :start]
                 curr_attention_mask = chat_attention_mask[:, :start]
                 
-                print('curr_input_ids.shape', curr_input_ids.shape)
-                print('curr_attention_mask.shape', curr_attention_mask.shape)
+                # print('curr_input_ids.shape', curr_input_ids.shape)
+                # print('curr_attention_mask.shape', curr_attention_mask.shape)
                 print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
-                input('eweeeeeee')
                 
                 out = model.generate_chat(
                     input_ids=curr_input_ids,
                     attention_mask=curr_attention_mask,
                     tokenizer=tokenizer
                 )
-                print('out', out)
+                
+                chat_input_ids = torch.cat([
+                    chat_input_ids[:, :start],  # Keep conversation history up to start
+                    out[:, start:].cpu(),             # Add model's generated response
+                    gt_input_ids[:, end-offset:]       # Add remaining conversation prompts
+                ], dim=1)
+                
+                # print('chat_input_ids.shape', chat_input_ids.shape)
+                print('chat_input_ids', tokenizer.decode(chat_input_ids[0]))
+                # Update attention mask to match new input_ids length
+                chat_attention_mask = torch.ones_like(chat_input_ids)
+                
                 decoded_out = tokenizer.batch_decode(out[:, start:], skip_special_tokens=False)[0]
+                gt_out = tokenizer.batch_decode(gt_input_ids[:, start-offset:end-offset], skip_special_tokens=False)[0]
+                gt_answers.append(gt_out)
+                gen_answers.append(decoded_out)
+                offset += out[:, start:].size(1) - (end - start)
                 print('decoded_out', decoded_out)
-                input('eweeeeeee')
+                print('gt_out', gt_out)
+                print('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
+            input('-------------------------------------------------------------------------------')
+                
+                
 
             # for b_idx in range(len(batch['input_ids'])):
             #     print(f"\nConversation {b_idx} in batch:")
