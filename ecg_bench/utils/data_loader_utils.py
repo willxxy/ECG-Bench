@@ -316,9 +316,8 @@ class End2EndECGChatDataset(BaseECGDataset):
     def prepare_end2end_input(self, ecg_signal, altered_text):
         if self.args.train == 'end2end' and self.args.inference is None:
             return self.prepare_training_end2end(ecg_signal, altered_text)
-        ## NOT IMPLEMENTED YET
-        # if self.args.inference == 'end2end' and self.args.train is None:
-        #     return self.prepare_inference_end2end(ecg_signal, altered_text)
+        if self.args.inference == 'end2end' and self.args.train is None:
+            return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
         # print('altered_text', altered_text)
@@ -407,3 +406,5 @@ class End2EndECGChatDataset(BaseECGDataset):
             'signal': ecg_signal,
         }
     
+    def prepare_inference_end2end(self, ecg_signal, altered_text):
+        pass
