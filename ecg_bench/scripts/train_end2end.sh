@@ -12,9 +12,9 @@
 
 
 python main.py \
---data=ecg_instruct_pulse_mapped \
+--data=ecg_instruct_45k_mapped \
 --model=llama-3.2-1b \
---device=cuda:6 \
+--device=cuda:5 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
 --peft \

@@ -397,6 +397,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_end2end(self, ecg_signal, altered_text):
+        print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
@@ -411,45 +412,32 @@ class End2EndECGChatDataset(BaseECGDataset):
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
         tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
         tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
-        
-        conversation_len = len(tokens_before) + len(tokens_after)
-        available_space = self.args.pad_to_max - conversation_len
                 
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                           self.train_utils.ecg_tokenizer_utils.merges)
         tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
-        
-        if len(tokenized_signal) > available_space:
-            ecg_tokens = tokenized_signal[:available_space]
-        else:
-            ecg_tokens = tokenized_signal
-        
-        input_ids = tokens_before + ecg_tokens + tokens_after
+        input_ids = tokens_before + tokenized_signal + tokens_after
         attention_mask = self.create_attention_mask(input_ids)
         
         # tokens = self.llm_tokenizer.convert_ids_to_tokens(input_ids)
         # for idx, (token, token_id) in enumerate(zip(tokens, input_ids)):
         #     print(f"{idx}: {token} -> {token_id}")
         
-        assistant_ranges = []
-        current_start = None
-        system_eot_found = False  # Flag to skip system message EOT
+        print('gt input_ids', self.llm_tokenizer.decode(input_ids))
         
-        for idx, token_id in enumerate(input_ids):
-            if token_id == self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]:
-                if not system_eot_found:
-                    system_eot_found = True
-                    continue
-                if current_start is not None:
-                    assistant_ranges.append({
-                        'start': current_start,
-                        'end': idx - 1,  # The token before EOT
-                        'eot': idx
-                    })
-                    current_start = None
-            elif token_id == self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0] and system_eot_found:
-                current_start = idx
+        assistant_ranges = []
+        start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
+        assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
+        eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
+        
+        for i in range(len(input_ids)-1):  # -1 to safely check next token
+            if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
+                # Find next eot_id
+                for j in range(i, len(input_ids)):
+                    if input_ids[j] == eot_id:
+                        assistant_ranges.append({'start': i, 'end': j})
+                        break
         
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),

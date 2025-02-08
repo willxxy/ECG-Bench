@@ -2090,6 +2090,8 @@ if __name__ == "__main__":
     token_ids = llama_tokenizer.encode(conv.get_prompt())
     tokens = llama_tokenizer.convert_ids_to_tokens(token_ids)
 
+    print(llama_tokenizer.decode(token_ids))
+    
     print("\nTokenized prompt with corresponding token IDs:")
     for idx, (token, token_id) in enumerate(zip(tokens, token_ids)):
         print(f"{idx}: {token} -> {token_id}")
