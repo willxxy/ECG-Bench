@@ -147,7 +147,7 @@ Once you are finished with these steps, it's time to preprocess the data!
 
 ### Preprocessing
 
-1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others!
+1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others! For the ECG Instruct Pulse dataset, it uses the code15, mimic, and ptb datasets as the base datasets. However, the base data should only be flagged as code15. We hardcoded the other datasets to be mapped to the base data. This will be generalized in the future.
 
 
 ## Main Methods <a name="methods"></a>
