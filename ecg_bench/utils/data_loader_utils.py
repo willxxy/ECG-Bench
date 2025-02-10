@@ -481,7 +481,6 @@ class SecondStageECGChatDataset(BaseECGDataset):
             return self.prepare_inference_second(encoder_out, altered_text)
     
     def prepare_training_second(self, encoder_out, altered_text):
-        # print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
@@ -534,6 +533,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_second(self, encoder_out, altered_text):
+        print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)

@@ -81,14 +81,14 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                 assistant_ranges = batch['assistant_ranges']
                 if args.inference == 'second':
                     encoder_out = batch['encoder_out']
-                    signal_id_index = batch['signal_id_index']
+                    signal_id_index = batch['signal_id_index'].item()
                 offset = 0
                 for conv_turn in assistant_ranges:
                     start = conv_turn['start'] + 4 + offset
                     end = conv_turn['end'] + 1 + offset
                     curr_input_ids = chat_input_ids[:, :start]
                     curr_attention_mask = chat_attention_mask[:, :start]
-                    # print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
+                    print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
                     
                     if args.inference == 'second':
                         out = model.generate_chat(
@@ -115,8 +115,8 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                     gt_answers.append(gt_out)
                     gen_answers.append(decoded_out)
                     offset += out[:, start:].size(1) - (end - start)
-                    print('decoded_out', decoded_out)
-                    print('gt_out', gt_out)
+                    # print('decoded_out', decoded_out)
+                    # print('gt_out', gt_out)
             except Exception as e:
                 print('\nError occurred during evaluation:')
                 print(f"Error type: {type(e).__name__}")
@@ -128,6 +128,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
             
             len_of_batch += 1
             print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
+            input()
             
             if args.dev:
                 dev_count += 1
