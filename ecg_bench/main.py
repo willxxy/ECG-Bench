@@ -21,7 +21,7 @@ from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
 from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
 from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageECGDataset, End2EndECGDataset, \
-                                                End2EndECGChatDataset
+                                                End2EndECGChatDataset, SecondStageECGChatDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
 from ecg_bench.runners.inference import tester, tester_chat
@@ -292,11 +292,18 @@ def main(rank, world_size):
                 train_utils=train_utils,
                 encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'second' or args.inference == 'second':
-            dataset = SecondStageECGDataset(
-                json_data_file=data,
-                train_utils=train_utils,
-                llm_tokenizer=tokenizer,
-                encoder_tokenizer=model_object.get('encoder_tokenizer'))
+            if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+                dataset = SecondStageECGChatDataset(
+                    json_data_file=data,
+                    train_utils=train_utils,
+                    llm_tokenizer=tokenizer,
+                    encoder_tokenizer=model_object.get('encoder_tokenizer'))
+            else:
+                dataset = SecondStageECGDataset(
+                    json_data_file=data,
+                    train_utils=train_utils,
+                    llm_tokenizer=tokenizer,
+                    encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'end2end' or args.inference == 'end2end':
             if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
                 dataset = End2EndECGChatDataset(

@@ -47,7 +47,7 @@ class BaseECGDataset(Dataset):
             answer = ' '.join(answer) if isinstance(answer, list) else answer
         return question, answer
     
-    def pad_to_max(self, tokenized_sequence):
+    def pad_to_max_qa(self, tokenized_sequence):
         if len(tokenized_sequence) > self.args.pad_to_max:
             truncated_token = tokenized_sequence[:self.args.pad_to_max]
             full_token = [self.bos_id] + list(truncated_token) + [self.eos_id]
@@ -56,6 +56,15 @@ class BaseECGDataset(Dataset):
             return [self.pad_id] * (self.args.pad_to_max - len(tokenized_sequence)) + [self.bos_id] + list(tokenized_sequence) + [self.eos_id]
         else:
             return [self.bos_id] + list(tokenized_sequence[:self.args.pad_to_max]) + [self.eos_id]
+        
+    def pad_to_max_chat(self, tokenized_sequence):
+        if len(tokenized_sequence) > self.args.pad_to_max:
+            truncated_token = tokenized_sequence[:self.args.pad_to_max]
+            return list(truncated_token)
+        elif len(tokenized_sequence) < self.args.pad_to_max:
+            return [self.pad_id] * (self.args.pad_to_max - len(tokenized_sequence)) + list(tokenized_sequence)
+        else:
+            return list(tokenized_sequence[:self.args.pad_to_max]) # explicitly return truncated sequence in the case where the sequence is exactly the max length
         
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
@@ -196,10 +205,10 @@ class SecondStageECGDataset(BaseECGDataset):
     def prepare_training_second(self, encoder_out, tokenized_question, tokenized_answer):
         input_ids = self.sig_start_id + self.signal_id + self.sig_end_id + tokenized_question + tokenized_answer
         labels = ([-100] * (3 + len(tokenized_question))) + tokenized_answer
-        input_ids = self.pad_to_max(input_ids)        
+        input_ids = self.pad_to_max_qa(input_ids)        
         signal_id_index = input_ids.index(self.signal_id[0])
         
-        labels = self.pad_to_max(labels)
+        labels = self.pad_to_max_qa(labels)
         labels[labels == self.pad_id] = -100
         labels[labels == self.bos_id] = -100
         labels = torch.tensor(labels, dtype=torch.int64)
@@ -398,6 +407,148 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_end2end(self, ecg_signal, altered_text):
+        print('altered_text', altered_text)
+        if 'llama' in self.args.model:
+            conv = get_conv_template('llama-3')
+        conv.set_system_message(self.system_prompt)
+        
+        for message in altered_text:
+            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            conv.append_message(role, message_value)
+            
+        prompt = conv.get_prompt()
+        ecg_position = prompt.find(self.ecg_placeholder)
+        prompt_before_ecg = prompt[:ecg_position]
+        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
+        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
+        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+                
+        symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
+        encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
+                                                                          self.train_utils.ecg_tokenizer_utils.merges)
+        tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
+        input_ids = tokens_before + tokenized_signal + tokens_after
+        attention_mask = self.create_attention_mask(input_ids)
+        
+        # tokens = self.llm_tokenizer.convert_ids_to_tokens(input_ids)
+        # for idx, (token, token_id) in enumerate(zip(tokens, input_ids)):
+        #     print(f"{idx}: {token} -> {token_id}")
+        
+        print('gt input_ids', self.llm_tokenizer.decode(input_ids))
+        
+        assistant_ranges = []
+        start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
+        assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
+        eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
+        
+        for i in range(len(input_ids)-1):  # -1 to safely check next token
+            if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
+                # Find next eot_id
+                for j in range(i, len(input_ids)):
+                    if input_ids[j] == eot_id:
+                        assistant_ranges.append({'start': i, 'end': j})
+                        break
+        
+        return {
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
+            'assistant_ranges': assistant_ranges
+        }
+
+
+
+class SecondStageECGChatDataset(BaseECGDataset):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.llm_tokenizer is not None:
+            self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(['<signal>'])
+        self.encoder_prep = EncoderInputPreparation(self.encoder_tokenizer, self.train_utils)
+        
+    def __getitem__(self, idx):
+        try:
+            instance = self.json_data_file[idx]
+            np_path = instance['ecg_path']
+            ecg_path = self.train_utils.fm.open_npy(np_path)
+            ecg_signal = ecg_path['ecg']
+            altered_text = instance['text']
+            original_report = ecg_path['report']
+            
+            return self.prepare_second_input(ecg_signal, altered_text, original_report)
+        except Exception as e:
+            print(e)
+            print(f"Skipping invalid data at index {idx}")
+            return None
+
+    def prepare_second_input(self, ecg_signal, altered_text, original_report=None):
+        if 'vit' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_vit_input(ecg_signal, self.args.num_patches)
+        elif 'clip' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_clip_input(ecg_signal, original_report)
+        elif 'siglip' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
+        elif 'merl' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
+            
+        if self.args.train == 'second' and self.args.inference is None:
+            return self.prepare_training_second(encoder_out, altered_text)
+        if self.args.inference == 'second' and self.args.train is None:
+            return self.prepare_inference_second(encoder_out, altered_text)
+    
+    def prepare_training_second(self, encoder_out, altered_text):
+        # print('altered_text', altered_text)
+        if 'llama' in self.args.model:
+            conv = get_conv_template('llama-3')
+        conv.set_system_message(self.system_prompt)
+        
+        for message in altered_text:
+            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            conv.append_message(role, message_value)
+            
+        prompt = conv.get_prompt()
+        ecg_position = prompt.find(self.ecg_placeholder)
+        prompt_before_ecg = prompt[:ecg_position]
+        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
+        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
+        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+        input_ids = tokens_before + self.signal_id + tokens_after
+        labels = [-100] * len(input_ids)
+        
+        for i, message in enumerate(altered_text):
+            if message['from'] == 'gpt':
+                response = message['value']
+                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+                for j in range(len(input_ids) - len(response_tokens) + 1):
+                    if input_ids[j:j+len(response_tokens)] == response_tokens:
+                        labels[j:j+len(response_tokens)] = response_tokens
+        eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        for i, token_id in enumerate(input_ids):
+            if token_id == eot_id:
+                labels[i] = eot_id
+        
+        input_ids = self.pad_to_max_chat(input_ids)
+        signal_id_index = input_ids.index(self.signal_id[0])
+        labels = self.pad_to_max_chat(labels)
+        labels[labels == self.pad_id] = -100
+            
+        assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
+        assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
+        
+        labels = torch.tensor(labels, dtype=torch.int64)    
+        position_ids = self.create_position_ids(input_ids)
+        attention_mask = self.create_attention_mask(input_ids)
+        
+        return {
+            'input_ids': torch.tensor(input_ids, dtype=torch.int64),
+            'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
+            'labels': labels,
+            'position_ids': position_ids,
+            'encoder_out': encoder_out,
+            'signal_id_index': signal_id_index
+        }
+    
+    def prepare_inference_second(self, encoder_out, altered_text):
         print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
