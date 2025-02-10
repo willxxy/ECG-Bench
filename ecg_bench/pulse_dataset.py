@@ -5,10 +5,19 @@ subset_names = ['arena', 'code15-test', 'cpsc-test', 'csn-test-no-cot', 'ecgqa-t
 
 for name in subset_names:
     dataset = load_dataset("PULSE-ECG/ECGBench", name=name, streaming=False, cache_dir='../.huggingface')
+    print(name)
     print(len(dataset['test']))
-    # for item in dataset['test']:
-    #     file_path = item['image_path']
-    #     conversations = item['conversations']
-        
+    for item in dataset['test']:
+        file_path = item['image_path']
+        conversations = item['conversations']
+        if name == 'ecgqa-test':
+            for conv in conversations: # only ecgqa test
+                if isinstance(conv.get('value'), list):
+                    conv['value'] = ''.join(conv['value'])
+                
+        # print(conversations)
+        # print(file_path)
+        # break
+    print('--------------------------------')
     
     

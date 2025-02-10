@@ -326,7 +326,8 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            conv.append_message(role, message['value'])
+            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
         ecg_position = prompt.find(self.ecg_placeholder)
@@ -404,7 +405,8 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            conv.append_message(role, message['value'])
+            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
         ecg_position = prompt.find(self.ecg_placeholder)
