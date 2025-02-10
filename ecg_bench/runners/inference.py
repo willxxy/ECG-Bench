@@ -88,7 +88,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                     end = conv_turn['end'] + 1 + offset
                     curr_input_ids = chat_input_ids[:, :start]
                     curr_attention_mask = chat_attention_mask[:, :start]
-                    print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
+                    # print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
                     
                     if args.inference == 'second':
                         out = model.generate_chat(
