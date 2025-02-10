@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 class LLaVA(nn.Module):
@@ -33,3 +32,15 @@ class LLaVA(nn.Module):
         batch['inputs_embeds'] = llm_embeddings
         decoded_text = self.llm.generate(batch, tokenizer)
         return decoded_text 
+    
+    def generate_chat(self, input_ids, attention_mask, tokenizer, encoder_out=None, signal_id_index=None):
+        projected_embeds = self.get_projections(encoder_out)
+        llm_embeddings = self.llm.get_llm_embeddings(input_ids)
+        llm_embeddings[:, signal_id_index, :] = projected_embeds
+        out = self.llm.generate_chat(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            tokenizer=tokenizer,
+            inputs_embeds=llm_embeddings
+        )
+        return out

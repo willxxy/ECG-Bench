@@ -344,35 +344,24 @@ class End2EndECGChatDataset(BaseECGDataset):
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
         tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
         tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
-        
         conversation_len = len(tokens_before) + len(tokens_after)
         available_space = self.args.pad_to_max - conversation_len
-                
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                           self.train_utils.ecg_tokenizer_utils.merges)
         tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
-        
-        # print('tokenized_signal', len(tokenized_signal))
-        # print('available_space', available_space)
         if len(tokenized_signal) > available_space:
             ecg_tokens = tokenized_signal[:available_space]
         else:
             ecg_tokens = tokenized_signal
         
-        # print('ecg_tokens', len(ecg_tokens))
         input_ids = tokens_before + ecg_tokens + tokens_after
-        # print('tokens_before', len(tokens_before))
-        # print('tokens_after', len(tokens_after))
         labels = [-100] * len(input_ids)
         
         for i, message in enumerate(altered_text):
             if message['from'] == 'gpt':
-                # Get the assistant's message
                 response = message['value']
-                # Find the response in the decoded text
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
-                # Find these tokens in final_tokens and set their labels
                 for j in range(len(input_ids) - len(response_tokens) + 1):
                     if input_ids[j:j+len(response_tokens)] == response_tokens:
                         labels[j:j+len(response_tokens)] = response_tokens
@@ -382,15 +371,11 @@ class End2EndECGChatDataset(BaseECGDataset):
             if token_id == eot_id:
                 labels[i] = eot_id
         
-        # print('input_ids', len(input_ids))
         if len(input_ids) < self.args.pad_to_max:
             padding_length = self.args.pad_to_max - len(input_ids)
-            # print('padding_length', padding_length)
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
             labels = [-100] * padding_length + labels
             
-        # print('input_ids', len(input_ids))
-        # print('labels', len(labels))
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
         
@@ -549,7 +534,6 @@ class SecondStageECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_second(self, encoder_out, altered_text):
-        print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
@@ -565,35 +549,25 @@ class SecondStageECGChatDataset(BaseECGDataset):
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
         tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
         tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
-                
-        symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
-        encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
-                                                                          self.train_utils.ecg_tokenizer_utils.merges)
-        tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
-        input_ids = tokens_before + tokenized_signal + tokens_after
+        input_ids = tokens_before + self.signal_id + tokens_after
         attention_mask = self.create_attention_mask(input_ids)
-        
-        # tokens = self.llm_tokenizer.convert_ids_to_tokens(input_ids)
-        # for idx, (token, token_id) in enumerate(zip(tokens, input_ids)):
-        #     print(f"{idx}: {token} -> {token_id}")
-        
-        print('gt input_ids', self.llm_tokenizer.decode(input_ids))
         
         assistant_ranges = []
         start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
         assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
         eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
         
-        for i in range(len(input_ids)-1):  # -1 to safely check next token
+        for i in range(len(input_ids)-1):
             if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
-                # Find next eot_id
                 for j in range(i, len(input_ids)):
                     if input_ids[j] == eot_id:
                         assistant_ranges.append({'start': i, 'end': j})
                         break
-        
+        signal_id_index = input_ids.index(self.signal_id[0])
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
-            'assistant_ranges': assistant_ranges
+            'assistant_ranges': assistant_ranges,
+            'encoder_out': encoder_out,
+            'signal_id_index': signal_id_index
         }

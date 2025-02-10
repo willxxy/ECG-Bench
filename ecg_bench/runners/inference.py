@@ -79,6 +79,9 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                 chat_input_ids = gt_input_ids.clone()
                 chat_attention_mask = gt_attention_mask.clone()
                 assistant_ranges = batch['assistant_ranges']
+                if args.inference == 'second':
+                    encoder_out = batch['encoder_out']
+                    signal_id_index = batch['signal_id_index']
                 offset = 0
                 for conv_turn in assistant_ranges:
                     start = conv_turn['start'] + 4 + offset
@@ -86,11 +89,20 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                     curr_input_ids = chat_input_ids[:, :start]
                     curr_attention_mask = chat_attention_mask[:, :start]
                     # print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
-                    out = model.generate_chat(
-                        input_ids=curr_input_ids,
-                        attention_mask=curr_attention_mask,
-                        tokenizer=tokenizer
-                    )
+                    
+                    if args.inference == 'second':
+                        out = model.generate_chat(
+                            input_ids=curr_input_ids,
+                            attention_mask=curr_attention_mask,
+                            tokenizer=tokenizer,
+                            encoder_out=encoder_out,
+                            signal_id_index=signal_id_index)
+                    else:
+                        out = model.generate_chat(
+                            input_ids=curr_input_ids,
+                            attention_mask=curr_attention_mask,
+                            tokenizer=tokenizer)
+                    
                     chat_input_ids = torch.cat([
                         chat_input_ids[:, :start],
                         out[:, start:].cpu(),
@@ -103,8 +115,8 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                     gt_answers.append(gt_out)
                     gen_answers.append(decoded_out)
                     offset += out[:, start:].size(1) - (end - start)
-                    # print('decoded_out', decoded_out)
-                    # print('gt_out', gt_out)
+                    print('decoded_out', decoded_out)
+                    print('gt_out', gt_out)
             except Exception as e:
                 print('\nError occurred during evaluation:')
                 print(f"Error type: {type(e).__name__}")
