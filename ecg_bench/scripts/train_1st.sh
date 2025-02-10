@@ -4,7 +4,7 @@ echo "pretrain_mimic_mapped"
 
 python main.py \
 --data=pretrain_mimic_mapped \
---model=mtae \
+--model=mlae \
 --device=cuda:7 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --train=first \

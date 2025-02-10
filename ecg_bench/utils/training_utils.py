@@ -202,6 +202,15 @@ class TrainingUtils:
             model_hidden_size = 768
             strict = False
             encoder_tokenizer = None
+        elif 'mlae' in self.args.model:
+            from ecg_bench.models.encoder.mlae import mlae_vit_base_dec256d4b, MLAE_Ours
+            # THIS DOES PATCHES BY LEADS
+            encoder = mlae_vit_base_dec256d4b(device=self.device, num_leads=12, seq_len=self.args.seg_len, patch_size=1).to(self.device)
+            encoder = MLAE_Ours(encoder).to(self.device)
+            find_unused_parameters = True
+            model_hidden_size = 768
+            strict = False
+            encoder_tokenizer = None
         if self.args.encoder_checkpoint != None:
             encoder_checkpoint_path = f"./runs/{self.args.encoder_data}_{self.args.seg_len}_{self.args.target_sf}/{self.args.seed}/{self.args.encoder_checkpoint}"
             encoder_checkpoint = torch.load(f'{encoder_checkpoint_path}/best_model.pth', map_location = self.device)

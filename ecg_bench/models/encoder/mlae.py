@@ -4,8 +4,10 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
-
-from models.encoder.vit import TransformerBlock, ViT
+from collections import namedtuple
+CombinedOutput = namedtuple('CombinedOutput', ['loss', 'out'])
+from ecg_bench.models.encoder.st_mem import ViT, TransformerBlock
+from ecg_bench.models.encoder.mtae import MTAE
 
 
 __all__ = ['MLAE_ViT', 'mlae_vit_small', 'mlae_vit_base']
@@ -107,10 +109,6 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
-from models.encoder.mlae_vit import MLAE_ViT, TransformerBlock
-from models.mtae import MTAE
-
-
 __all__ = ['MLAE', 'mlae_vit_small_dec256d4b', 'mlae_vit_base_dec256d4b']
 
 
@@ -128,8 +126,10 @@ class MLAE(MTAE):
                  mlp_ratio: int = 4,
                  qkv_bias: bool = True,
                  norm_layer: nn.Module = nn.LayerNorm,
-                 norm_pix_loss: bool = False):
+                 norm_pix_loss: bool = False,
+                 device: str = 'cuda'):
         super(MTAE, self).__init__()
+        self.device = device
         self._repr_dict = {'seq_len': seq_len,
                            'patch_size': patch_size,
                            'num_leads': num_leads,
@@ -201,7 +201,7 @@ class MLAE(MTAE):
         return series
 
 
-def mlae_vit_small_dec256d4b(**kwargs):
+def mlae_vit_small_dec256d4b(device,**kwargs):
     model = MLAE(embed_dim=384,
                  depth=12,
                  num_heads=6,
@@ -210,11 +210,12 @@ def mlae_vit_small_dec256d4b(**kwargs):
                  decoder_num_heads=4,
                  mlp_ratio=4,
                  norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                 device=device,
                  **kwargs)
     return model
 
 
-def mlae_vit_base_dec256d4b(**kwargs):
+def mlae_vit_base_dec256d4b(device,**kwargs):
     model = MLAE(embed_dim=768,
                  depth=12,
                  num_heads=12,
@@ -223,5 +224,14 @@ def mlae_vit_base_dec256d4b(**kwargs):
                  decoder_num_heads=4,
                  mlp_ratio=4,
                  norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                 device=device,
                  **kwargs)
     return model
+
+class MLAE_Ours(nn.Module):
+    def __init__(self, mlae):
+        super(MLAE_Ours, self).__init__()
+        self.mlae = mlae
+    
+    def forward(self, batch):
+        return self.mlae(batch['signal'].to(self.mlae.device))
