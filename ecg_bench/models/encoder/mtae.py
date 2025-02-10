@@ -3,9 +3,9 @@ from functools import partial
 import torch
 import torch.nn as nn
 from einops import rearrange
-
-from models.encoder.vit import ViT, TransformerBlock
-
+from collections import namedtuple
+CombinedOutput = namedtuple('CombinedOutput', ['loss', 'out'])
+from ecg_bench.models.encoder.st_mem import ViT, TransformerBlock
 
 __all__ = ['MTAE', 'mtae_vit_small_dec256d4b', 'mtae_vit_base_dec256d4b']
 
@@ -45,8 +45,10 @@ class MTAE(nn.Module):
                  mlp_ratio: int = 4,
                  qkv_bias: bool = True,
                  norm_layer: nn.Module = nn.LayerNorm,
-                 norm_pix_loss: bool = False):
+                 norm_pix_loss: bool = False,
+                 device: str = 'cuda'):
         super().__init__()
+        self.device = device
         self._repr_dict = {'seq_len': seq_len,
                            'patch_size': patch_size,
                            'num_leads': num_leads,
@@ -222,13 +224,14 @@ class MTAE(nn.Module):
 
         for block in self.decoder_blocks:
             x = block(x)
+        x_latents = x.clone()
         x = self.decoder_norm(x)
         x = self.decoder_head(x)
 
         # remove cls embedding
         x = x[:, 1:, :]
 
-        return x
+        return x, x_latents
 
     def forward_loss(self, series, pred, mask):
         """
@@ -256,10 +259,13 @@ class MTAE(nn.Module):
         mask = None
 
         latent, mask, ids_restore = self.forward_encoder(series, mask_ratio)
-        pred = self.forward_decoder(latent, ids_restore)
+        pred, x_latents = self.forward_decoder(latent, ids_restore)
         recon_loss = self.forward_loss(series, pred, mask)
 
-        return {"loss": recon_loss, "pred": pred, "mask": mask}
+        return CombinedOutput(
+            loss=recon_loss,
+            out = x_latents
+        )
 
     def __repr__(self):
         print_str = f"{self.__class__.__name__}(\n"
@@ -269,7 +275,7 @@ class MTAE(nn.Module):
         return print_str
 
 
-def mtae_vit_small_dec256d4b(**kwargs):
+def mtae_vit_small_dec256d4b(device,**kwargs):
     model = MTAE(embed_dim=384,
                  depth=12,
                  num_heads=6,
@@ -278,11 +284,12 @@ def mtae_vit_small_dec256d4b(**kwargs):
                  decoder_num_heads=4,
                  mlp_ratio=4,
                  norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                 device=device,
                  **kwargs)
     return model
 
 
-def mtae_vit_base_dec256d4b(**kwargs):
+def mtae_vit_base_dec256d4b(device,**kwargs):
     model = MTAE(embed_dim=768,
                  depth=12,
                  num_heads=12,
@@ -291,5 +298,14 @@ def mtae_vit_base_dec256d4b(**kwargs):
                  decoder_num_heads=4,
                  mlp_ratio=4,
                  norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                 device=device,
                  **kwargs)
     return model
+
+class MTAE_Ours(nn.Module):
+    def __init__(self, mtae):
+        super(MTAE_Ours, self).__init__()
+        self.mtae = mtae
+    
+    def forward(self, batch):
+        return self.mtae(batch['signal'].to(self.mtae.device))

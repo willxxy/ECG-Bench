@@ -750,6 +750,5 @@ class ST_MEM_Ours(nn.Module):
         self.st_mem = st_mem
     
     def forward(self, batch):
-        out = self.st_mem(batch['signal'].to(self.st_mem.device))
-        return out
+        return self.st_mem(batch['signal'].to(self.st_mem.device))
         
