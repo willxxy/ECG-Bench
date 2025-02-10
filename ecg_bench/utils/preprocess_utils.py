@@ -51,14 +51,10 @@ class PreprocessECG:
             ecg_folder = Path(self.preprocessed_dir)
             self.available_ecgs = set(f.stem for f in ecg_folder.glob('*'))
             if self.args.map_data == 'ecg_instruct_pulse':
-                ### Crude way of doing all three code15, mimic, and ptb
-                ### since ecg_instruct_pulse has three different datasets
-                preprocessed_dir2 = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                ecg_folder2 = Path(preprocessed_dir2)
-                self.available_ecgs.update(set(f.stem for f in ecg_folder2.glob('*')))
-                preprocessed_dir3 = f"./data/mimic/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                ecg_folder3 = Path(preprocessed_dir3)
-                self.available_ecgs.update(set(f.stem for f in ecg_folder3.glob('*')))
+                # Handle all three datasets: code15, mimic, and ptb
+                for dataset in ['ptb', 'mimic']:
+                    preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                    self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
     
     ### MAIN FUNCTIONS
     def prepare_df(self):
