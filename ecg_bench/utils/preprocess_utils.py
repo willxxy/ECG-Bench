@@ -251,22 +251,22 @@ class PreprocessECG:
                 text = instance['conversations']
                 parts = instance['image'].split('/')
                 dataset_image_type = parts[0]
-                if dataset_image_type in ['mimic_v4', 'mimic', 'ptb-xl']:
-                    filename = parts[-1]
-                    if dataset_image_type in ['mimic_v4', 'mimic']:
-                        base_filename = filename.split('-')[0]
-                        path_to_file = '_'.join(parts[1:-1] + [base_filename])
-                        ecg_path = f"files_{path_to_file}"
-                        self.preprocessed_dir = f"./data/mimic/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    elif dataset_image_type == 'ptb-xl':
-                        record_number = filename.split('_')[0]
-                        record_number = f"{record_number}_hr"
-                        subfolder = record_number[:2] + '000'
-                        ecg_path = f"records500_{subfolder}_{record_number}"
-                        self.preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                elif dataset_image_type == 'code15_v4':
-                    ecg_path = parts[-1].split('-')[0]
-                    self.preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                filename = parts[-1]
+                if dataset_image_type in ['mimic_v4', 'mimic']:
+                    dataset_image_type = 'mimic'
+                    base_filename = filename.split('-')[0]
+                    path_to_file = '_'.join(parts[1:-1] + [base_filename])
+                    ecg_path = f"files_{path_to_file}"
+                elif dataset_image_type in ['ptb-xl']:
+                    dataset_image_type = 'ptb'
+                    record_number = filename.split('_')[0]
+                    record_number = f"{record_number}_hr"
+                    subfolder = record_number[:2] + '000'
+                    ecg_path = f"records500_{subfolder}_{record_number}"
+                elif dataset_image_type in ['code15_v4']:
+                    dataset_image_type = 'code15'
+                    ecg_path = filename.split('-')[0]
+                self.preprocessed_dir = f"./data/{dataset_image_type}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
             elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
                 text = [instance['question_type'], instance['question'], instance['answer']]
                 ecg_path = instance['ecg_path'][0]
