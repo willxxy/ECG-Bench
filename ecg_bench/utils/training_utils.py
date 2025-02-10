@@ -186,7 +186,14 @@ class TrainingUtils:
             find_unused_parameters = True
             model_hidden_size = 256
             strict = False
-        
+        elif 'st_mem' in self.args.model:
+            from ecg_bench.models.encoder.st_mem import st_mem_vit_base_dec256d4b, ST_MEM_Ours
+            encoder = st_mem_vit_base_dec256d4b(device=self.device, num_leads=12, seq_len=self.args.seg_len, patch_size=self.calculate_patch_size(self.args.seg_len)).to(self.device)
+            encoder = ST_MEM_Ours(encoder).to(self.device)
+            find_unused_parameters = True
+            model_hidden_size = 768
+            strict = False
+            encoder_tokenizer = None
         if self.args.encoder_checkpoint != None:
             encoder_checkpoint_path = f"./runs/{self.args.encoder_data}_{self.args.seg_len}_{self.args.target_sf}/{self.args.seed}/{self.args.encoder_checkpoint}"
             encoder_checkpoint = torch.load(f'{encoder_checkpoint_path}/best_model.pth', map_location = self.device)
@@ -200,7 +207,22 @@ class TrainingUtils:
             'model_hidden_size': model_hidden_size,
             'strict': strict
         }
-        
+    def calculate_patch_size(self, seq_len):
+        min_patches = 16
+        max_patches = 64        
+        factors = [i for i in range(1, seq_len + 1) if seq_len % i == 0]
+        patch_candidates = []
+        for patch_size in factors:
+            num_patches = seq_len // patch_size
+            if min_patches <= num_patches <= max_patches:
+                patch_candidates.append(patch_size)
+        if not patch_candidates:
+            target = int(np.sqrt(seq_len/32))
+            patch_size = min(factors, key=lambda x: abs(x - target))
+        else:
+            patch_size = min(patch_candidates, 
+                           key=lambda x: abs(seq_len//x - 32))
+        return patch_size
         
     def count_parameters(self, model: nn.Module) -> int:
         return sum(p.numel() for p in model.parameters() if p.requires_grad)

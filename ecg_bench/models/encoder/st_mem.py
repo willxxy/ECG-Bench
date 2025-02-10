@@ -18,7 +18,8 @@ import torch
 import torch.nn as nn
 from einops import rearrange, repeat, pack, unpack
 from einops.layers.torch import Rearrange
-
+from collections import namedtuple
+CombinedOutput = namedtuple('CombinedOutput', ['loss', 'out'])
 
 __all__ = ['ViT', 'vit_small', 'vit_base']
 
@@ -278,8 +279,6 @@ import torch.nn as nn
 from einops import rearrange
 from einops.layers.torch import Rearrange
 
-from models.encoder.vit import TransformerBlock
-
 
 __all__ = ['ST_MEM_ViT', 'st_mem_vit_small', 'st_mem_vit_base']
 
@@ -429,9 +428,6 @@ from functools import partial
 import torch
 import torch.nn as nn
 from einops import rearrange
-
-from models.encoder.st_mem_vit import ST_MEM_ViT, TransformerBlock
-
 from typing import Optional
 
 __all__ = ['ST_MEM', 'st_mem_vit_small_dec256d4b', 'st_mem_vit_base_dec256d4b']
@@ -473,8 +469,10 @@ class ST_MEM(nn.Module):
                  mlp_ratio: int = 4,
                  qkv_bias: bool = True,
                  norm_layer: nn.Module = nn.LayerNorm,
-                 norm_pix_loss: bool = False):
+                 norm_pix_loss: bool = False,
+                 device: str = 'cuda'):
         super().__init__()
+        self.device = device
         self._repr_dict = {'seq_len': seq_len,
                            'patch_size': patch_size,
                            'num_leads': num_leads,
@@ -665,15 +663,18 @@ class ST_MEM(nn.Module):
 
         # lead-wise decoding
         x_decoded = []
+        x_latents = []
         for i in range(self.num_leads):
             x_lead = x[:, i, :, :]
             for block in self.decoder_blocks:
                 x_lead = block(x_lead)
+            x_latents.append(x_lead)
             x_lead = self.decoder_norm(x_lead)
             x_lead = self.decoder_head(x_lead)
             x_decoded.append(x_lead[:, 1:-1, :])
         x = torch.stack(x_decoded, dim=1)
-        return x
+        x_latents = torch.stack(x_latents, dim=1)
+        return x, x_latents
 
     def forward_loss(self, series, pred, mask):
         """
@@ -701,10 +702,12 @@ class ST_MEM(nn.Module):
         mask = None
 
         latent, mask, ids_restore = self.forward_encoder(series, mask_ratio)
-        pred = self.forward_decoder(latent, ids_restore)
+        pred, x_latents = self.forward_decoder(latent, ids_restore)
         recon_loss = self.forward_loss(series, pred, mask)
-
-        return {"loss": recon_loss, "pred": pred, "mask": mask}
+        return CombinedOutput(
+            loss=recon_loss,
+            out = x_latents
+        )
 
     def __repr__(self):
         print_str = f"{self.__class__.__name__}(\n"
@@ -714,7 +717,7 @@ class ST_MEM(nn.Module):
         return print_str
 
 
-def st_mem_vit_small_dec256d4b(**kwargs):
+def st_mem_vit_small_dec256d4b(device,**kwargs):
     model = ST_MEM(embed_dim=384,
                    depth=12,
                    num_heads=6,
@@ -723,11 +726,12 @@ def st_mem_vit_small_dec256d4b(**kwargs):
                    decoder_num_heads=4,
                    mlp_ratio=4,
                    norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                   device=device,
                    **kwargs)
     return model
 
 
-def st_mem_vit_base_dec256d4b(**kwargs):
+def st_mem_vit_base_dec256d4b(device,**kwargs):
     model = ST_MEM(embed_dim=768,
                    depth=12,
                    num_heads=12,
@@ -736,5 +740,16 @@ def st_mem_vit_base_dec256d4b(**kwargs):
                    decoder_num_heads=4,
                    mlp_ratio=4,
                    norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                   device=device,
                    **kwargs)
     return model
+
+class ST_MEM_Ours(nn.Module):
+    def __init__(self, st_mem):
+        super(ST_MEM_Ours, self).__init__()
+        self.st_mem = st_mem
+    
+    def forward(self, batch):
+        out = self.st_mem(batch['signal'].to(self.st_mem.device))
+        return out
+        

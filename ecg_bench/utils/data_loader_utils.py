@@ -78,6 +78,9 @@ class EncoderInputPreparation(BaseECGDataset):
     def __init__(self, encoder_tokenizer, train_utils):
         super().__init__(json_data_file=None, train_utils=train_utils, encoder_tokenizer=encoder_tokenizer)
 
+    def prepare_st_mem_input(self, ecg_signal):
+        normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
+        return {'signal': normalized_signal.astype(np.float32)}
     def prepare_vit_input(self, ecg_signal, num_patches):
         image_signal = self.signal_to_image(ecg_signal)
         vit_inputs = self.encoder_tokenizer(images=image_signal,
@@ -155,6 +158,8 @@ class FirstStageECGDataset(BaseECGDataset):
                 return self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
             elif 'merl' in self.args.model:
                 return self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
+            elif 'st_mem' in self.args.model:
+                return self.encoder_prep.prepare_st_mem_input(ecg_signal)
         except Exception as e:
             print(e)
             print(f"Skipping invalid data at index {idx}")
@@ -196,6 +201,8 @@ class SecondStageECGDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
+        elif 'st_mem' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
         
         if self.args.train == 'second' and self.args.inference is None:
             return self.prepare_training_second(encoder_out, tokenized_question, tokenized_answer)
