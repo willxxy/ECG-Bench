@@ -70,6 +70,12 @@ class TrainingUtils:
             projection_dim = 2048
         elif 'siglip' in self.args.model:
             projection_dim = 768
+        elif 'stmem' in self.args.model:
+            projection_dim = 256
+        elif 'mtae' in self.args.model:
+            projection_dim = 256
+        elif 'mlae' in self.args.model:
+            projection_dim = 256
         llava = LLaVA(llm_params['llm'], encoder_params['encoder'], 
                       projection_dim, llm_params['llm_tokenizer']).to(self.device)
         return_dict = {**encoder_params, **llm_params}
@@ -186,7 +192,7 @@ class TrainingUtils:
             find_unused_parameters = True
             model_hidden_size = 256
             strict = False
-        elif 'st_mem' in self.args.model:
+        elif 'stmem' in self.args.model:
             from ecg_bench.models.encoder.st_mem import st_mem_vit_base_dec256d4b, ST_MEM_Ours
             encoder = st_mem_vit_base_dec256d4b(device=self.device, num_leads=12, seq_len=self.args.seg_len, patch_size=self.calculate_patch_size(self.args.seg_len)).to(self.device)
             encoder = ST_MEM_Ours(encoder).to(self.device)

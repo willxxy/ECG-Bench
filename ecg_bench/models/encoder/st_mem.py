@@ -700,8 +700,7 @@ class ST_MEM(nn.Module):
         recon_loss = 0
         pred = None
         mask = None
-
-        latent, mask, ids_restore = self.forward_encoder(series, mask_ratio)
+        latent, mask, ids_restore = self.forward_encoder(series.to(self.to_decoder_embedding.weight.dtype), mask_ratio)
         pred, x_latents = self.forward_decoder(latent, ids_restore)
         recon_loss = self.forward_loss(series, pred, mask)
         return CombinedOutput(
@@ -748,7 +747,15 @@ class ST_MEM_Ours(nn.Module):
     def __init__(self, st_mem):
         super(ST_MEM_Ours, self).__init__()
         self.st_mem = st_mem
-    
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1)) 
     def forward(self, batch):
         return self.st_mem(batch['signal'].to(self.st_mem.device))
-        
+    
+    @torch.no_grad()
+    def get_embeddings(self, batch):
+        self.st_mem.eval()
+        out = self.st_mem(batch['signal'].to(self.st_mem.device))
+        out = out.out.permute(0, 3, 1, 2)
+        out = self.avgpool(out)
+        out = out.squeeze(-1).squeeze(-1)
+        return out

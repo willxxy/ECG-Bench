@@ -158,7 +158,11 @@ class FirstStageECGDataset(BaseECGDataset):
                 return self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
             elif 'merl' in self.args.model:
                 return self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-            elif self.args.model in ['st_mem', 'mtae', 'mlae']:
+            elif 'stmem' in self.args.model:
+                return self.encoder_prep.prepare_st_mem_input(ecg_signal)
+            elif 'mtae' in self.args.model:
+                return self.encoder_prep.prepare_st_mem_input(ecg_signal)
+            elif 'mlae' in self.args.model:
                 return self.encoder_prep.prepare_st_mem_input(ecg_signal)
         except Exception as e:
             print(e)
@@ -201,7 +205,11 @@ class SecondStageECGDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-        elif self.args.model in ['st_mem', 'mtae', 'mlae']:
+        elif 'stmem' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
+        elif 'mtae' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
+        elif 'mlae' in self.args.model:
             encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
         
         if self.args.train == 'second' and self.args.inference is None:
@@ -481,6 +489,12 @@ class SecondStageECGChatDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
+        elif 'stmem' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
+        elif 'mtae' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
+        elif 'mlae' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
             
         if self.args.train == 'second' and self.args.inference is None:
             return self.prepare_training_second(encoder_out, altered_text)

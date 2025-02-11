@@ -232,6 +232,16 @@ class MLAE_Ours(nn.Module):
     def __init__(self, mlae):
         super(MLAE_Ours, self).__init__()
         self.mlae = mlae
+        self.avgpool = nn.AdaptiveAvgPool1d(1)
     
     def forward(self, batch):
         return self.mlae(batch['signal'].to(self.mlae.device))
+    
+    @torch.no_grad()
+    def get_embeddings(self, batch):
+        self.mlae.eval()
+        out = self.mlae(batch['signal'].to(self.mlae.device))
+        out = out.out.permute(0, 2, 1)
+        out = self.avgpool(out)
+        out = out.squeeze(-1)
+        return out
