@@ -14,6 +14,8 @@
 
 6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118`
 
+(for flash pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121) ## flash attn 2 needs >=12 cuda
+
 7. `git clone https://github.com/willxxy/ECG-Bench.git`
 
 8. `cd ECG-Bench`
@@ -27,6 +29,12 @@
 12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `pip install -e .`.
 
 13. Now `cd ../` and `pip install -e .`
+
+14. To install flash-attn please use the following command:
+
+`pip cache remove flash_attn`
+
+`pip install flash-attn==2.7.4.post1 --no-cache-dir`
 
 14. Run the `ECG-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
 

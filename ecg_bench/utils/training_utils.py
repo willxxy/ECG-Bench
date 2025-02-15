@@ -125,7 +125,8 @@ class TrainingUtils:
         hf_llm = AutoModelForCausalLM.from_pretrained(
             f"{config['hf_path']}/{llm_model_name}",
             cache_dir=self.cache_dir,
-            torch_dtype=torch.bfloat16
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
         ).to(self.device)
         
         llm_tokenizer = AutoTokenizer.from_pretrained(

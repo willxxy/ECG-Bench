@@ -29,3 +29,4 @@ evaluate==0.4.3
 pytest==8.3.4
 ecg_plot==0.2.8
 bert_score
+ninja==1.11.1.3

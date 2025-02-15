@@ -43,7 +43,7 @@ class PreprocessECG:
             if self.args.dev:
                 self.df = self.df.iloc[:1000]
             if self.args.toy:
-                self.df = self.df.sample(frac=0.25, random_state=42).reset_index(drop=True)
+                self.df = self.df.sample(frac=0.60, random_state=42).reset_index(drop=True)
             print(self.df.head())
             print('Number of instances in dataframe:', len(self.df))
             print('Dataframe prepared.')
