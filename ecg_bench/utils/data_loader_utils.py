@@ -407,7 +407,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_end2end(self, ecg_signal, altered_text):
-        print('altered_text', altered_text)
+        # print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
@@ -435,7 +435,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         # for idx, (token, token_id) in enumerate(zip(tokens, input_ids)):
         #     print(f"{idx}: {token} -> {token_id}")
         
-        print('gt input_ids', self.llm_tokenizer.decode(input_ids))
+        # print('gt input_ids', self.llm_tokenizer.decode(input_ids))
         
         assistant_ranges = []
         start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
@@ -554,7 +554,6 @@ class SecondStageECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_second(self, encoder_out, altered_text):
-        print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)

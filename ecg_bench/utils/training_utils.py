@@ -126,7 +126,7 @@ class TrainingUtils:
             f"{config['hf_path']}/{llm_model_name}",
             cache_dir=self.cache_dir,
             torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
+            attn_implementation=self.args.attn_implementation,
         ).to(self.device)
         
         llm_tokenizer = AutoTokenizer.from_pretrained(

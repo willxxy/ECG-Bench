@@ -58,6 +58,7 @@ def get_args():
     optim_group.add_argument('--weight_decay', type=float, default=1e-2, help='Weight decay')
     optim_group.add_argument('--patience', type=int, default=5, help='Patience for early stopping')
     optim_group.add_argument('--delta', type=float, default=0.1, help='Delta for early stopping')
+    optim_group.add_argument('--attn_implementation', type=str, default=None, help='Attention implementation')
     
     ### PEFT
     peft_group = parser.add_argument_group('PEFT')

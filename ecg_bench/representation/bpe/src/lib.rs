@@ -5,36 +5,46 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Instant;
 use rayon::ThreadPoolBuilder;
 use std::sync::Arc;
+use fxhash::FxHashMap;
 
-fn merge(ids: &[u32], pair: (u32, u32), new_id: u32) -> Vec<u32> {
-    // Merges the pair in the ids and returns a new vector
-    let mut new_ids = Vec::with_capacity(ids.len());
+#[inline(always)]
+fn merge(ids: &mut Vec<u32>, pair: (u32, u32), new_id: u32) {
     let mut i = 0;
+    let mut write = 0;
     while i < ids.len() {
-        if i < ids.len() - 1 && (ids[i], ids[i + 1]) == pair {
-            new_ids.push(new_id);
+        if i + 1 < ids.len() && (ids[i], ids[i + 1]) == pair {
+            ids[write] = new_id;
+            write += 1;
             i += 2;
         } else {
-            new_ids.push(ids[i]);
+            ids[write] = ids[i];
+            write += 1;
             i += 1;
         }
     }
-    new_ids
+    ids.truncate(write);
 }
 
-fn get_stats(ids: &[u32]) -> HashMap<(u32, u32), u32> {
-    // Identifies the most frequent pair of bytes in the ids
-    ids.par_windows(2)
-        .fold(HashMap::new, |mut acc, window| {
+fn get_stats(ids: &[u32]) -> FxHashMap<(u32, u32), u32> {
+    if ids.len() < 1000 {
+        let mut acc = FxHashMap::default();
+        for window in ids.windows(2) {
             *acc.entry((window[0], window[1])).or_insert(0) += 1;
-            acc
-        })
-        .reduce(HashMap::new, |mut acc1, acc2| {
-            for (k, v) in acc2 {
-                *acc1.entry(k).or_insert(0) += v;
-            }
-            acc1
-        })
+        }
+        acc
+    } else {
+        ids.par_windows(2)
+            .fold(FxHashMap::default, |mut acc, window| {
+                *acc.entry((window[0], window[1])).or_insert(0) += 1;
+                acc
+            })
+            .reduce(FxHashMap::default, |mut acc1, acc2| {
+                for (k, v) in acc2 {
+                    *acc1.entry(k).or_insert(0) += v;
+                }
+                acc1
+            })
+    }
 }
 
 fn byte_to_string(b: u8) -> String {
@@ -86,22 +96,17 @@ fn byte_pair_encoding(
         if let Some(best_pair) = best {
             let new_id = 256 + i as u32;
 
-            ids = merge(&ids, best_pair, new_id);
+            merge(&mut ids, best_pair, new_id);
 
             vocab.insert(
                 new_id,
                 vocab[&best_pair.0].clone() + &vocab[&best_pair.1],
             );
 
-            // Update vocab_tokens
-            let new_token = [
-                vocab_tokens[&best_pair.0].clone(),
-                vocab_tokens[&best_pair.1].clone(),
-            ]
-            .concat();
+            let mut new_token = vocab_tokens.get(&best_pair.0).unwrap().clone();
+            new_token.extend(vocab_tokens.get(&best_pair.1).unwrap());
             vocab_tokens.insert(new_id, new_token.clone());
 
-            // Store the new token sequence and its ID
             merges.push((new_token, new_id));
 
             pb.set_message(format!("Merge {}", i + 1));
@@ -151,12 +156,10 @@ fn encode_symbol(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>>
         trie_root.insert(&[b], b);
     }
 
-    // Add merged tokens to the trie
     for (token_sequence, token_id) in &merges {
         trie_root.insert(&token_sequence, *token_id);
     }
 
-    // Tokenize the input IDs using the trie
     let mut output_ids = Vec::new();
     let mut i = 0;
     while i < ids.len() {
@@ -181,7 +184,6 @@ fn encode_symbol(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>>
             output_ids.push(token_id);
             i += match_len;
         } else {
-            // No match found, use the original byte
             output_ids.push(ids[i]);
             i += 1;
         }

@@ -127,8 +127,8 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                 questions.append("")
             
             len_of_batch += 1
-            print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
-            input()
+            # print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
+            # input()
             
             if args.dev:
                 dev_count += 1
