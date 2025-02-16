@@ -7,7 +7,7 @@ from peft import LoraConfig, TaskType, get_peft_model
 from transformers import logging
 logging.set_verbosity_error()
 import nltk
-nltk.download('wordnet')
+nltk.download('wordnet', quiet = True)
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 from nltk.translate.meteor_score import meteor_score
 from rouge import Rouge
@@ -197,7 +197,7 @@ class TrainingUtils:
             from ecg_bench.models.encoder.st_mem import st_mem_vit_base_dec256d4b, ST_MEM_Ours
             encoder = st_mem_vit_base_dec256d4b(device=self.device, num_leads=12, seq_len=self.args.seg_len, patch_size=self.calculate_patch_size(self.args.seg_len)).to(self.device)
             encoder = ST_MEM_Ours(encoder).to(self.device)
-            find_unused_parameters = True
+            find_unused_parameters = False # first
             model_hidden_size = 768
             strict = False
             encoder_tokenizer = None
@@ -205,7 +205,7 @@ class TrainingUtils:
             from ecg_bench.models.encoder.mtae import mtae_vit_base_dec256d4b, MTAE_Ours
             encoder = mtae_vit_base_dec256d4b(device=self.device, num_leads=12, seq_len=self.args.seg_len, patch_size=self.calculate_patch_size(self.args.seg_len)).to(self.device)
             encoder = MTAE_Ours(encoder).to(self.device)
-            find_unused_parameters = True
+            find_unused_parameters = False # first
             model_hidden_size = 768
             strict = False
             encoder_tokenizer = None
@@ -214,7 +214,7 @@ class TrainingUtils:
             # THIS DOES PATCHES BY LEADS
             encoder = mlae_vit_base_dec256d4b(device=self.device, num_leads=12, seq_len=self.args.seg_len, patch_size=1).to(self.device)
             encoder = MLAE_Ours(encoder).to(self.device)
-            find_unused_parameters = True
+            find_unused_parameters = False # first
             model_hidden_size = 768
             strict = False
             encoder_tokenizer = None

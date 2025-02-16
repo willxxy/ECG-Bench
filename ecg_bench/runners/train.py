@@ -8,16 +8,20 @@ def trainer(model, dataloader, optimizer, args, epoch):
     model.train()
     if args.dis:
         dataloader.sampler.set_epoch(epoch)
+        show_progress = dist.get_rank() == 0
+    else:
+        show_progress = True
 
     total_loss = 0.0
     len_of_batch = 0
     dev_count = 0
     
-    progress_bar = tqdm(dataloader, desc=f'Training {args.model}')
+    progress_bar = tqdm(dataloader, desc=f'Training {args.model}', disable=not show_progress)
     
     for step, batch in enumerate(progress_bar):
         if batch is None:
-            print(f"Skipping invalid batch at step {step}")
+            if show_progress:
+                print(f"Skipping invalid batch at step {step}")
             continue
         
         optimizer.zero_grad()
@@ -64,7 +68,8 @@ def trainer(model, dataloader, optimizer, args, epoch):
                 break
 
     if len_of_batch == 0:
-        print("No valid batches for training.")
+        if show_progress:
+            print("No valid batches for training.")
         average_loss = float('inf')
     else:
         average_loss = total_loss / len_of_batch

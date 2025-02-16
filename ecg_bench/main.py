@@ -129,7 +129,7 @@ def initialize_system(args):
         print('Running in Development Mode')
         args.epochs = 2
         args.log = False
-        args.batch_size = 1  # Changed from 2 to 1
+        # args.batch_size = 1  # Changed from 2 to 1
     
     return FileManager(), VizUtil()
 
