@@ -30,3 +30,4 @@ pytest==8.3.4
 ecg_plot==0.2.8
 bert_score
 ninja==1.11.1.3
+gradio==5.16.2
