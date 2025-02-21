@@ -27,9 +27,9 @@ def main(args: argparse.Namespace):
     preprocessor = PreprocessECG(args, fm)
     
     if (args.data == 'mimic' or args.data == 'ptb' or args.data == 'code15') and (args.map_data == None):
-        # preprocessor.preprocess_batch()
+        preprocessor.preprocess_batch()
         if args.data == 'mimic' and args.seg_len == 2500:
-            # preprocessor.get_percentiles()
+            preprocessor.get_percentiles()
             preprocessor.stratified_sampling()
     
     if fm.ensure_directory_exists(folder = f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}'):
