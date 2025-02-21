@@ -3,11 +3,14 @@ import numpy as np
 import argparse
 import gc
 import torch
+torch.set_num_threads(6)
 import random
 import numpy as np
 import os
 from huggingface_hub import login
+from functools import partial
 
+from ecg_bench.utils.conversation_utils import get_conv_template
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
 from ecg_bench.utils.training_utils import TrainingUtils
@@ -62,6 +65,7 @@ def get_args():
 def setup_environment(args):
     print('Setting up Single Device')
     device = torch.device(args.device)
+    args.device = device
     return device
 
 def initialize_system(args):
@@ -87,47 +91,85 @@ def initialize_system(args):
     
     return FileManager(), VizUtil()
 
+def create_attention_mask(input_ids, pad_id):
+    return [0 if num == pad_id else 1 for num in input_ids]
 
-def end2end_chat(user_message, ecg_file, chat_history):
-    """
-    Simulate an end2end chat inference turn.
-    
-    Parameters:
-      - user_message (str): The latest message from the user.
-      - ecg_file (gr.File): An optional file upload containing ECG data.
-      - chat_history (list): A list of previous conversation turns (as (user, response) tuples).
-    
-    Returns:
-      - (str, list): An empty string to clear the text input and the updated chat history.
-    
-    In a production setting, here you would:
-        1. Process the ECG file into your (12, N) array.
-        2. Prepend or incorporate diagnostic information (via your conversation template)
-           and prepare the prompt using your End2EndECGChatDataset logic.
-        3. Run your model's generate_chat (or similar) method.
-        4. Append the model's reply to the history.
-    """
-    ecg_info = ""
-    # Process the ECG file if provided
+
+@torch.no_grad()
+def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
+    # Helper function to remove tokens with the specified prefix.
+    def strip_hidden_tokens(message, token_prefix="signal_"):
+        lines = message.split('\n')
+        filtered_lines = [line for line in lines if not line.startswith(token_prefix)]
+        return "\n".join(filtered_lines)
+
+    model.eval()
+    pad_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
+
+    if state["conv"] is None:
+        conv = get_conv_template('llama-3')
+        system_prompt = (
+            "You are an expert multimodal assistant capable of processing both natural language text and ECG signals. "
+            "When you receive input, first determine if it is text, ECG data, or both. For ECG signals, interpret them as "
+            "time-series data representing cardiac activity—analyzing features such as heart rate, rhythm, and potential abnormalities. "
+            "When both modalities are present, synthesize the information to provide integrated, expert cardiac electrophysiologist-level responses. "
+            "Your answers should be precise, concise, and informed by clinical signal analysis and natural language understanding. "
+            "Additionally, if the user asks a general question, you should answer it as a general assistant."
+        )
+        conv.set_system_message(system_prompt)
+        state["conv"] = conv
+    else:
+        conv = state["conv"]
+
+    # Process ECG file if provided.
     if ecg_file is not None:
         try:
-            # Try loading as numpy array (if a .npy file etc.)
             data = np.load(ecg_file.name)
-            ecg_info = f" [ECG shape: {data.shape}]"
+            symbol_signal = train_utils.ecg_tokenizer_utils._to_symbol_string(data)
+            encoded_signal = train_utils.ecg_tokenizer_utils.encode_symbol(
+                symbol_signal, train_utils.ecg_tokenizer_utils.merges
+            )
+            list_of_signal_tokens = [f'signal_{ids}' for ids in encoded_signal]
+            joined_signal_tokens = ''.join(list_of_signal_tokens)
+            # Create the full user message with signal tokens for model input.
+            full_user_message = joined_signal_tokens + '\n' + user_message
+            # Create a display message that removes the signal tokens.
+            display_user_message = strip_hidden_tokens(full_user_message)
         except Exception as e:
-            ecg_info = f" [ECG file error: {str(e)}]"
-    
-    # Append the (user) turn to the history
-    user_input = user_message + ecg_info
-    chat_history.append((user_input, None))
-    
-    # In a real system, use your model inference here.
-    # For demonstration, we simulate a response that echoes the user input.
-    response = f"Simulated Response: You said '{user_message}'" + ecg_info
-    chat_history[-1] = (chat_history[-1][0], response)
-    
-    # Return an empty string to clear the textbox and update the chat history.
-    return "", chat_history
+            print(str(e))
+            full_user_message = user_message
+            display_user_message = user_message
+    else:
+        full_user_message = user_message
+        display_user_message = user_message
+
+    # Append full user message to the conversation for model inference.
+    conv.append_message(conv.roles[0], full_user_message)
+
+    # Get the full prompt for inference.
+    prompt = conv.get_prompt()
+    tokenized_prompt = tokenizer.encode(prompt, add_special_tokens=False)
+    input_ids = torch.tensor(tokenized_prompt, dtype=torch.int64)
+    attention_mask = create_attention_mask(tokenized_prompt, pad_id)
+    attention_mask = torch.tensor(attention_mask, dtype=torch.float32)
+    assert input_ids.shape[0] == attention_mask.shape[0]
+
+    # Simulate a response.
+    response = model.generate_demo(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        tokenizer=tokenizer
+    )
+
+    # Append the assistant's response.
+    conv.append_message(conv.roles[1], response)
+
+    # Record the conversation history using the display (UI-friendly) version.
+    state["history"].append((display_user_message, response))
+
+    print('Full prompt:\n', conv.get_prompt())
+    print('--------------------------------')
+    return "", state["history"], None
 
 def main(args):
     device = setup_environment(args)
@@ -146,21 +188,21 @@ def main(args):
     # model.load_state_dict(checkpoint['model'])
     # print('Model loaded')
     
+    chat_fn = partial(end2end_chat, model=model, tokenizer=tokenizer, train_utils=train_utils)
+    
     # Define custom CSS to enforce equal height for both input boxes.
     with gr.Blocks(css="""
     .big_box {
-    height: 200px !important;
+        height: 200px !important;
     }
     """) as demo:
         gr.Markdown("# End2End ECG Chat Demo")
         
-        # State to hold the conversation history
-        state = gr.State([])
-
-        # Chatbot component to display the conversation history
+        # Initialize state as a dictionary to persist conversation.
+        state = gr.State({"conv": None, "history": []})
+        
         chatbot = gr.Chatbot()
-
-        # Create a row with columns to hold the file upload, text input and send button.
+        
         with gr.Row():
             with gr.Column(scale=1):
                 ecg_input = gr.File(
@@ -174,20 +216,21 @@ def main(args):
                     placeholder="Type your message here...",
                     elem_classes="big_box"
                 )
-            with gr.Column(scale=0.3):
+            with gr.Column(scale=1):
                 send_btn = gr.Button("Send")
         
-        # Wire up submission via both hitting Enter in the textbox and clicking the send button.
+
         text_input.submit(
-            fn=end2end_chat,
+            fn=chat_fn,
             inputs=[text_input, ecg_input, state],
-            outputs=[text_input, chatbot]
+            outputs=[text_input, chatbot, ecg_input]
         )
         send_btn.click(
-            fn=end2end_chat,
+            fn=chat_fn,
             inputs=[text_input, ecg_input, state],
-            outputs=[text_input, chatbot]
+            outputs=[text_input, chatbot, ecg_input]
         )
+
         
     demo.launch(share=True)
     
