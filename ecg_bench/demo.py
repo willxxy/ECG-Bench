@@ -5,13 +5,13 @@ import gc
 import torch
 torch.set_num_threads(6)
 import random
-import numpy as np
 import os
 from huggingface_hub import login
 from functools import partial
 import PIL.Image
 import io
 import base64
+import json  # for saving the structured log
 
 from ecg_bench.utils.conversation_utils import get_conv_template
 from ecg_bench.utils.dir_file_utils import FileManager
@@ -86,11 +86,14 @@ def initialize_system(args):
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     
+    if args.dev:
+        print('Running in Development Mode')
+        args.epochs = 2
+        args.log = False
     return FileManager(), VizUtil()
 
 def create_attention_mask(input_ids, pad_id):
     return [0 if num == pad_id else 1 for num in input_ids]
-
 
 @torch.no_grad()
 def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
@@ -136,9 +139,7 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
             )
             list_of_signal_tokens = [f'signal_{ids}' for ids in encoded_signal]
             joined_signal_tokens = ''.join(list_of_signal_tokens)
-            # Create the full user message with signal tokens for model input.
             full_user_message = joined_signal_tokens + '\n' + user_message
-            # Create a display message that removes the signal tokens.
             display_user_message = strip_hidden_tokens(full_user_message)
         except Exception as e:
             print(str(e))
@@ -149,10 +150,7 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
         full_user_message = user_message
         display_user_message = user_message
 
-    # Append full user message to the conversation for model inference.
     conv.append_message(conv.roles[0], full_user_message)
-
-    # Get the full prompt for inference.
     prompt = conv.get_prompt()
     tokenized_prompt = tokenizer.encode(prompt, add_special_tokens=False)
     input_ids = torch.tensor(tokenized_prompt, dtype=torch.int64)
@@ -160,26 +158,50 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
     attention_mask = torch.tensor(attention_mask, dtype=torch.float32)
     assert input_ids.shape[0] == attention_mask.shape[0]
 
-    # Simulate a response.
     response = model.generate_demo(
         input_ids=input_ids,
         attention_mask=attention_mask,
         tokenizer=tokenizer
     )
-
-    # Append the assistant's response.
     conv.append_message(conv.roles[1], response)
 
-    # Record the conversation history using the display (UI-friendly) version.
-    if img_markdown != None:
+    if img_markdown is not None:
         assistant_response = img_markdown + "\n\n" + response
     else:
         assistant_response = response
+
+    # Update the chat display history.
     state["history"].append((display_user_message, assistant_response))
+    
+    # Also update the structured log.
+    if "structured_history" not in state or state["structured_history"] is None:
+        state["structured_history"] = {}
+    turn_number = len(state["structured_history"]) + 1
+    state["structured_history"][f"turn_{turn_number}"] = {
+        "user_input": display_user_message,
+        "assistant_response": response,
+        "preference": None  # No preference given yet.
+    }
 
     print('Full prompt:\n', conv.get_prompt())
     print('--------------------------------')
     return "", state["history"], None
+
+# Callback functions for preference buttons.
+def record_feedback(feedback, state):
+    if "structured_history" in state and state["structured_history"]:
+        last_turn_key = f"turn_{len(state['structured_history'])}"
+        state["structured_history"][last_turn_key]["preference"] = feedback
+        # Optionally, save the structured log to a file.
+        with open("conversation_history.json", "w") as f:
+            json.dump(state["structured_history"], f, indent=2)
+    return state
+
+def record_good(state):
+    return record_feedback("good", state)
+
+def record_bad(state):
+    return record_feedback("bad", state)
 
 def main(args):
     device = setup_environment(args)
@@ -194,13 +216,8 @@ def main(args):
     model = model_object['llm']
     tokenizer = model_object['llm_tokenizer']
     
-    # checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
-    # model.load_state_dict(checkpoint['model'])
-    # print('Model loaded')
-    
     chat_fn = partial(end2end_chat, model=model, tokenizer=tokenizer, train_utils=train_utils)
     
-    # Define custom CSS to enforce equal height for both input boxes.
     with gr.Blocks(css="""
     .big_box {
         height: 200px !important;
@@ -210,9 +227,8 @@ def main(args):
     }
     """) as demo:
         gr.Markdown("# End2End ECG Chat Demo")
-        
-        # Initialize state as a dictionary to persist conversation.
-        state = gr.State({"conv": None, "history": []})
+        # Initialize state with conversation objects.
+        state = gr.State({"conv": None, "history": [], "structured_history": {}})
         
         chatbot = gr.Chatbot(elem_classes="chatbox")
         
@@ -232,7 +248,6 @@ def main(args):
             with gr.Column(scale=1):
                 send_btn = gr.Button("Send")
         
-
         text_input.submit(
             fn=chat_fn,
             inputs=[text_input, ecg_input, state],
@@ -243,7 +258,14 @@ def main(args):
             inputs=[text_input, ecg_input, state],
             outputs=[text_input, chatbot, ecg_input]
         )
-
+        
+        # Row for optional preference feedback.
+        with gr.Row():
+            good_btn = gr.Button("Good")
+            bad_btn = gr.Button("Bad")
+        
+        good_btn.click(record_good, inputs=[state], outputs=[state])
+        bad_btn.click(record_bad, inputs=[state], outputs=[state])
         
     demo.launch(share=True)
     
