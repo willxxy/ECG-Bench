@@ -9,6 +9,9 @@ import numpy as np
 import os
 from huggingface_hub import login
 from functools import partial
+import PIL.Image
+import io
+import base64
 
 from ecg_bench.utils.conversation_utils import get_conv_template
 from ecg_bench.utils.dir_file_utils import FileManager
@@ -125,6 +128,20 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
     if ecg_file is not None:
         try:
             data = np.load(ecg_file.name)
+            
+            train_utils.viz.plot_2d_ecg(data, "test", "./pngs/", sample_rate=250)
+            img = PIL.Image.open("./pngs/test.png")
+            max_width = 400
+            wpercent = max_width / float(img.size[0])
+            new_height = int(float(img.size[1]) * wpercent)
+            img = img.resize((max_width, new_height), PIL.Image.Resampling.LANCZOS)
+            
+            # Convert the image to base64
+            buffered = io.BytesIO()
+            img.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+            img_markdown = f"![ECG Plot](data:image/png;base64,{img_str})"
+            
             symbol_signal = train_utils.ecg_tokenizer_utils._to_symbol_string(data)
             encoded_signal = train_utils.ecg_tokenizer_utils.encode_symbol(
                 symbol_signal, train_utils.ecg_tokenizer_utils.merges
@@ -140,6 +157,7 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
             full_user_message = user_message
             display_user_message = user_message
     else:
+        img_markdown = None
         full_user_message = user_message
         display_user_message = user_message
 
@@ -165,7 +183,11 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
     conv.append_message(conv.roles[1], response)
 
     # Record the conversation history using the display (UI-friendly) version.
-    state["history"].append((display_user_message, response))
+    if img_markdown != None:
+        assistant_response = img_markdown + "\n\n" + response
+    else:
+        assistant_response = response
+    state["history"].append((display_user_message, assistant_response))
 
     print('Full prompt:\n', conv.get_prompt())
     print('--------------------------------')
