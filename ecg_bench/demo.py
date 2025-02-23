@@ -180,7 +180,8 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
     state["structured_history"][f"turn_{turn_number}"] = {
         "user_input": display_user_message,
         "assistant_response": response,
-        "preference": None  # No preference given yet.
+        "preference": None,  # No preference given yet.
+        "ecg_input" : "Yes" if ecg_file is not None else "No"
     }
 
     print('Full prompt:\n', conv.get_prompt())
@@ -191,11 +192,15 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
 def record_feedback(feedback, state):
     if "structured_history" in state and state["structured_history"]:
         last_turn_key = f"turn_{len(state['structured_history'])}"
-        state["structured_history"][last_turn_key]["preference"] = feedback
-        # Optionally, save the structured log to a file.
-        with open("conversation_history.json", "w") as f:
-            json.dump(state["structured_history"], f, indent=2)
-    return state
+        # Only record feedback if none exists for this turn
+        if state["structured_history"][last_turn_key]["preference"] is None:
+            state["structured_history"][last_turn_key]["preference"] = feedback
+            # Save the structured log to a file
+            with open("conversation_history.json", "w") as f:
+                json.dump(state["structured_history"], f, indent=2)
+            return state, f"✓ Feedback recorded: {feedback}"
+        return state, "Feedback already recorded for this response"
+    return state, ""
 
 def record_good(state):
     return record_feedback("good", state)
@@ -225,9 +230,14 @@ def main(args):
     .chatbox {
         height: 600px !important;
     }
+    .feedback_message {
+        text-align: center;
+        color: #4CAF50;
+        margin-top: 5px;
+    }
     """) as demo:
         gr.Markdown("# End2End ECG Chat Demo")
-        # Initialize state with conversation objects.
+        # Initialize state with conversation objects
         state = gr.State({"conv": None, "history": [], "structured_history": {}})
         
         chatbot = gr.Chatbot(elem_classes="chatbox")
@@ -248,6 +258,13 @@ def main(args):
             with gr.Column(scale=1):
                 send_btn = gr.Button("Send")
         
+        # Feedback row right below chatbox
+        with gr.Row():
+            with gr.Column(scale=1):
+                good_btn = gr.Button("👍 Good")
+                bad_btn = gr.Button("👎 Bad")
+            feedback_message = gr.Markdown(elem_classes="feedback_message")
+        
         text_input.submit(
             fn=chat_fn,
             inputs=[text_input, ecg_input, state],
@@ -259,13 +276,8 @@ def main(args):
             outputs=[text_input, chatbot, ecg_input]
         )
         
-        # Row for optional preference feedback.
-        with gr.Row():
-            good_btn = gr.Button("Good")
-            bad_btn = gr.Button("Bad")
-        
-        good_btn.click(record_good, inputs=[state], outputs=[state])
-        bad_btn.click(record_bad, inputs=[state], outputs=[state])
+        good_btn.click(record_good, inputs=[state], outputs=[state, feedback_message])
+        bad_btn.click(record_bad, inputs=[state], outputs=[state, feedback_message])
         
     demo.launch(share=True)
     
