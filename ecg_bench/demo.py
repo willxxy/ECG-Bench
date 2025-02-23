@@ -86,12 +86,6 @@ def initialize_system(args):
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     
-    if args.dev:
-        print('Running in Development Mode')
-        args.epochs = 2
-        args.log = False
-        # args.batch_size = 1  # Changed from 2 to 1
-    
     return FileManager(), VizUtil()
 
 def create_attention_mask(input_ids, pad_id):
@@ -131,16 +125,10 @@ def end2end_chat(user_message, ecg_file, state, model, tokenizer, train_utils):
             
             train_utils.viz.plot_2d_ecg(data, "test", "./pngs/", sample_rate=250)
             img = PIL.Image.open("./pngs/test.png")
-            max_width = 400
-            wpercent = max_width / float(img.size[0])
-            new_height = int(float(img.size[1]) * wpercent)
-            img = img.resize((max_width, new_height), PIL.Image.Resampling.LANCZOS)
-            
-            # Convert the image to base64
             buffered = io.BytesIO()
             img.save(buffered, format="PNG")
             img_str = base64.b64encode(buffered.getvalue()).decode()
-            img_markdown = f"![ECG Plot](data:image/png;base64,{img_str})"
+            img_markdown = f'<img src="data:image/png;base64,{img_str}" style="width:100%; max-width:100%;">'
             
             symbol_signal = train_utils.ecg_tokenizer_utils._to_symbol_string(data)
             encoded_signal = train_utils.ecg_tokenizer_utils.encode_symbol(
@@ -217,13 +205,16 @@ def main(args):
     .big_box {
         height: 200px !important;
     }
+    .chatbox {
+        height: 600px !important;
+    }
     """) as demo:
         gr.Markdown("# End2End ECG Chat Demo")
         
         # Initialize state as a dictionary to persist conversation.
         state = gr.State({"conv": None, "history": []})
         
-        chatbot = gr.Chatbot()
+        chatbot = gr.Chatbot(elem_classes="chatbox")
         
         with gr.Row():
             with gr.Column(scale=1):
