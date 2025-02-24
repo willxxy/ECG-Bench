@@ -196,7 +196,7 @@ def record_feedback(feedback, state):
         if state["structured_history"][last_turn_key]["preference"] is None:
             state["structured_history"][last_turn_key]["preference"] = feedback
             # Save the structured log to a file
-            with open("conversation_history.json", "w") as f:
+            with open("./data/conversation_history.json", "w") as f:
                 json.dump(state["structured_history"], f, indent=2)
             return state, f"✓ Feedback recorded: {feedback}"
         return state, "Feedback already recorded for this response"
