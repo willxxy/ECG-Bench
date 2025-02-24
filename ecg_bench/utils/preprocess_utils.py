@@ -277,7 +277,7 @@ class PreprocessECG:
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f'Length of available ecgs: {len(self.available_ecgs)}')
         print(f"Valid instances: {len(valid_instances)}")
-        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped.json')
+        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped_{self.args.seg_len}.json')
             
     
     ### HELPER FUNCTIONS

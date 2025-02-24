@@ -13,11 +13,11 @@ class BaseECGDataset(Dataset):
         self.llm_tokenizer = llm_tokenizer
         if llm_tokenizer is not None:
             self.create_special_tokens()
-        if self.args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+        if self.args.data in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
-            if self.args.data == 'ecg_instruct_45k_mapped':
+            if self.args.data == f'ecg_instruct_45k_mapped_{self.args.seg_len}':
                 self.ecg_placeholder = '<ecg>'
-            elif self.args.data == 'ecg_instruct_pulse_mapped':
+            elif self.args.data == f'ecg_instruct_pulse_mapped_{self.args.seg_len}':
                 self.ecg_placeholder = '<image>'
         self.uniform_question = 'Could you please help me explain my ECG?'
     
@@ -68,10 +68,13 @@ class BaseECGDataset(Dataset):
         
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
-        self.bos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.bos_token)
-        self.eos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.eos_token)
-        self.sig_start_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_start>'])
-        self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
+        if self.args.data in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
+            pass
+        else:
+            self.bos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.bos_token)
+            self.eos_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.eos_token)
+            self.sig_start_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_start>'])
+            self.sig_end_id = self.llm_tokenizer.convert_tokens_to_ids(['<sig_end>'])
 
 
 class EncoderInputPreparation(BaseECGDataset):
@@ -323,18 +326,20 @@ class End2EndECGDataset(BaseECGDataset):
         
 class End2EndECGChatDataset(BaseECGDataset):
     def __getitem__(self, idx):
-        try:
-            instance = self.json_data_file[idx]
-            np_path = instance['ecg_path']
-            ecg_path = self.train_utils.fm.open_npy(np_path)
-            ecg_signal = ecg_path['ecg']
-            altered_text = instance['text']
-            
-            return self.prepare_end2end_input(ecg_signal, altered_text)
-        except Exception as e:
-            print(e)
-            print(f"Skipping invalid data at index {idx}")
-            return None
+        # try:
+        instance = self.json_data_file[idx]
+        np_path = instance['ecg_path']
+        ecg_path = self.train_utils.fm.open_npy(np_path)
+        ecg_signal = ecg_path['ecg']
+        altered_text = instance['text']
+        # print('altered_text', altered_text)
+        # print('ecg_signal', ecg_signal.shape)
+        
+        return self.prepare_end2end_input(ecg_signal, altered_text)
+        # except Exception as e:
+        #     print(e)
+        #     print(f"Skipping invalid data at index {idx}")
+        #     return None
 
     def prepare_end2end_input(self, ecg_signal, altered_text):
         if self.args.train == 'end2end' and self.args.inference is None:
@@ -343,7 +348,6 @@ class End2EndECGChatDataset(BaseECGDataset):
             return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
-        # print('altered_text', altered_text)
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
@@ -359,40 +363,70 @@ class End2EndECGChatDataset(BaseECGDataset):
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
         tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
         tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
-        conversation_len = len(tokens_before) + len(tokens_after)
-        available_space = self.args.pad_to_max - conversation_len
+        
+        # print("--------------------------------")
+        # print(f"Initial tokens - before: {len(tokens_before)}, after: {len(tokens_after)}")
+        
+        # Process ECG signal tokens
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                           self.train_utils.ecg_tokenizer_utils.merges)
         tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
-        if len(tokenized_signal) > available_space:
-            ecg_tokens = tokenized_signal[:available_space]
-        else:
-            ecg_tokens = tokenized_signal
+        # print(f"Total signal tokens available: {len(tokenized_signal)}")
         
-        input_ids = tokens_before + ecg_tokens + tokens_after
+        # Reserve space for at least 500 signal tokens (or all if less than 500)
+        signal_tokens = tokenized_signal[:min(500, len(tokenized_signal))]
+        max_conv_tokens = self.args.pad_to_max - len(signal_tokens)
+        # print(f"Reserved signal tokens: {len(signal_tokens)}")
+        # print(f"Max conversation tokens: {max_conv_tokens}")
+        
+        # If conversation is too long, truncate it
+        if len(tokens_before) + len(tokens_after) > max_conv_tokens:
+            # print(f"Conversation too long ({len(tokens_before) + len(tokens_after)} > {max_conv_tokens}), truncating...")
+            # Allocate 2/3 to before and 1/3 to after if possible
+            max_after = max(max_conv_tokens // 3, 1)  # At least 1 token
+            tokens_after = tokens_after[:max_after]
+            tokens_before = tokens_before[-(max_conv_tokens - len(tokens_after)):]
+            # print(f"After truncation - before: {len(tokens_before)}, after: {len(tokens_after)}")
+        
+        # If we have extra space, use more signal tokens
+        total_used = len(tokens_before) + len(tokens_after) + len(signal_tokens)
+        if total_used < self.args.pad_to_max and len(signal_tokens) < len(tokenized_signal):
+            extra_signal = min(self.args.pad_to_max - total_used, len(tokenized_signal) - len(signal_tokens))
+            # print(f"Extra space available, adding {extra_signal} more signal tokens")
+            signal_tokens = tokenized_signal[:len(signal_tokens) + extra_signal]
+        
+        # Combine all tokens
+        input_ids = tokens_before + signal_tokens + tokens_after
+        # print(f"Combined tokens: {len(input_ids)} (target: {self.args.pad_to_max})")
+        
+        # Pad if needed
+        if len(input_ids) < self.args.pad_to_max:
+            padding_length = self.args.pad_to_max - len(input_ids)
+            # print(f"Adding {padding_length} padding tokens")
+            input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
+        
+        # Create labels (mark assistant responses)
         labels = [-100] * len(input_ids)
-        
-        for i, message in enumerate(altered_text):
+        for message in altered_text:
             if message['from'] == 'gpt':
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):
                     if input_ids[j:j+len(response_tokens)] == response_tokens:
                         labels[j:j+len(response_tokens)] = response_tokens
-                        
+        
+        # Mark EOT tokens in labels
         eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
                 labels[i] = eot_id
         
-        if len(input_ids) < self.args.pad_to_max:
-            padding_length = self.args.pad_to_max - len(input_ids)
-            input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
-            labels = [-100] * padding_length + labels
-            
+        # print(f"Final input_ids length: {len(input_ids)}")
+        # print(f"Final labels length: {len(labels)}")
+        # print("--------------------------------")
+        
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
-        assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
         
         labels = torch.tensor(labels, dtype=torch.int64)    
         position_ids = self.create_position_ids(input_ids)

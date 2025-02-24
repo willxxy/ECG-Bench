@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Define array of models
-models=("stmem" "clip" "siglip" "merl" "mlae" "vit" "mtae")
+# models=("stmem" "clip" "siglip" "merl" "mlae" "vit" "mtae")
+models=("mlae" "vit" "mtae")
 
 # Loop through each model
 for model in "${models[@]}"; do

@@ -1,4 +1,34 @@
-# ECG-Bench
+<h2 align="center">
+  ELM-Bench: A Unified Benchmark for Generative Electrocardiogram Language Models
+</h2>
+
+<div align="center">
+  <img src="./assets/ELM-Bench2.png" alt="Our pipeline.">
+</div>
+
+## Table of Contents
+1. [Overview](#overview)
+2. [Installation](#installation)
+3. [Data](#data)
+4. [Main Methods](#methods)
+  - [Training ECG-Byte](#ecg-byte)
+  - [Training LLM](#endtoend-train)
+  - [Inference LLM](#endtoend-inference)
+  - [Analysis of methods](#endtoend-analysis)
+  - [Training 1st Stage](#twostage-train1)
+  - [Training 2nd Stage](#twostage-train2)
+  - [Inferencing 2 Stage](#twostage-inference)
+5. [Known Issues + Tips](#issues)
+6. [Acknowledgements](#ack)
+
+
+## Overview <a name="overview"></a>
+This repository is the official implementation of [ELM-Bench: A Unified Benchmark for Generative Electrocardiogram Language Models]()
+by [William Jongwon Han](https://willxxy.github.io/), [Choajing Duan](https://www.linkedin.com/in/chaojing-duan-0b3266127), [Michael A. Rosenberg](https://scholar.google.com/citations?user=o0Y0GLcAAAAJ&hl=en), [Emerson Liu](https://www.linkedin.com/in/emerson-liu-950479/), and [Ding Zhao](https://www.meche.engineering.cmu.edu/directory/bios/zhao-ding.html).
+
+Please carefully read the below documentations to run the pipeline. If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
+
+All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVIDIA A6000 GPUs.
 
 ## Installation <a name="installation"></a>
 
@@ -6,15 +36,13 @@
 
 2. Open a new terminal to set PATH for Rust installation.
 
-3. After opening a new terminal, check the installation by running `rustc --version`.
+3. After opening a new terminal, check the Rust installation by running `rustc --version`.
 
 4. Create the conda virtual environment via `conda create -n ecg-bench python=3.10.15`.
 
 5. Activate the environment `conda activate ecg-bench`
 
-6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118`
-
-(for flash pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121) ## flash attn 2 needs >=12 cuda
+6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121`
 
 7. `git clone https://github.com/willxxy/ECG-Bench.git`
 
@@ -32,11 +60,11 @@
 
 14. To install flash-attn please use the following command:
 
-`pip cache remove flash_attn`
+    `pip cache remove flash_attn`
 
-`pip install flash-attn==2.7.4.post1 --no-cache-dir`
+    `pip install flash-attn==2.7.4.post1 --no-cache-dir`
 
-14. Run the `ECG-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
+15. Run the `ECG-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
 
 15. Run the `ECG-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
 

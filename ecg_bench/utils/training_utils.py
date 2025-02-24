@@ -273,7 +273,7 @@ class TrainingUtils:
         }
         if self.args.train == 'second' or self.args.inference == 'second':
             special_tokens['additional_special_tokens'].append('<signal>')
-        if self.args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+        if self.args.data in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
             special_tokens['additional_special_tokens'].append('<|start_header_id|>')
             special_tokens['additional_special_tokens'].append('<|end_header_id|>')
             special_tokens['additional_special_tokens'].append('<|eot_id|>')

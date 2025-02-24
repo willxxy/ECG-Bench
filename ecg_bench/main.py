@@ -222,7 +222,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
-        if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+        if args.data in [f'ecg_instruct_45k_mapped_{args.seg_len}', f'ecg_instruct_pulse_mapped_{args.seg_len}']:
             seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
         else:
             seed_results = tester(model, test_loader, tokenizer, args, train_utils)
@@ -293,7 +293,7 @@ def main(rank, world_size):
                 train_utils=train_utils,
                 encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'second' or args.inference == 'second':
-            if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+            if args.data in [f'ecg_instruct_45k_mapped_{args.seg_len}', f'ecg_instruct_pulse_mapped_{args.seg_len}']:
                 dataset = SecondStageECGChatDataset(
                     json_data_file=data,
                     train_utils=train_utils,
@@ -306,7 +306,7 @@ def main(rank, world_size):
                     llm_tokenizer=tokenizer,
                     encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'end2end' or args.inference == 'end2end':
-            if args.data in ['ecg_instruct_45k_mapped', 'ecg_instruct_pulse_mapped']:
+            if args.data in [f'ecg_instruct_45k_mapped_{args.seg_len}', f'ecg_instruct_pulse_mapped_{args.seg_len}']:
                 dataset = End2EndECGChatDataset(
                     json_data_file=data,
                     train_utils=train_utils,
