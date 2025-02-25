@@ -117,6 +117,10 @@ class PreprocessECG:
             self.add_path = './data/ptb'
         elif self.args.data == 'code15':
             self.add_path = './data/code15'
+        elif self.args.data == 'cpsc':
+            self.add_path = './data/cpsc'
+        elif self.args.data == 'csn':
+            self.add_path = './data/csn'
         skipped_count = 0        
         try:
             with ProcessPoolExecutor(max_workers=self.args.num_cores) as executor:

@@ -9,7 +9,7 @@
 ## Table of Contents
 1. [Overview](#overview)
 2. [Installation](#installation)
-3. [Data](#data)
+3. [ECG Datasets](#data)
 4. [Main Methods](#methods)
   - [Training ECG-Byte](#ecg-byte)
   - [Training LLM](#endtoend-train)
@@ -38,56 +38,62 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 3. After opening a new terminal, check the Rust installation by running `rustc --version`.
 
-4. Create the conda virtual environment via `conda create -n ecg-bench python=3.10.15`.
+4. Create the conda virtual environment via `conda create -n elm python=3.10.15`.
 
-5. Activate the environment `conda activate ecg-bench`
+5. Activate the environment `conda activate elm`
 
 6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121`
 
-7. `git clone https://github.com/willxxy/ECG-Bench.git`
+7. `git clone https://github.com/willxxy/ELM-Bench.git`
 
-8. `cd ECG-Bench`
+8. `cd ELM-Bench`
 
 9. `git submodule init`
 
 10. `git submodule update`
 
-11. Please `cd` into the `ECG-Bench/transformers` directory and `pip install -e .`.
+11. Please `cd` into the `ELM-Bench/transformers` directory and `pip install -e .`.
 
-12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `pip install -e .`.
+12. Now `cd ../` and `cd` into the `ELM-Bench/ecg-plot` directory and `pip install -e .`.
 
 13. Now `cd ../` and `pip install -e .`
 
-14. To install flash-attn please use the following command:
+14. We use [Flash Attention 2](https://arxiv.org/abs/2307.08691) to speed up training and inference, however, it is not required. To install flash-attn please use the following command:
 
     `pip cache remove flash_attn`
 
     `pip install flash-attn==2.7.4.post1 --no-cache-dir`
 
-15. Run the `ECG-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
+15. Run the `ELM-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
 
-15. Run the `ECG-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
+15. Run the `ELM-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
 
-16. `cd` into `ECG-Bench/ecg_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
+16. `cd` into `ELM-Bench/elm_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
 
 17. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
 
 
-**NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.**
+**NOTE: From now, all instructions will assume you are working from the `ELM-Bench/elm_bench` directory.**
 
-## Data <a name="data"></a>
+## ECG Datasets <a name="data"></a>
+
+### Base Datasets
+
+We regard base datasets as datasets that are solely used for later mapping of external datasets.
+
+#### PTB-XL
 
 1. Please download the PTB-XL dataset through this [link](https://physionet.org/static/published-projects/ptb-xl/ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3.zip).
 
 2. Please create a `data` folder, unzip the zip file inside the `data` folder and rename the folder as `ptb`.
 
-### MIMIC
+#### MIMIC
 
 1. Please download the Mimic IV ECG dataset through this [link](https://physionet.org/static/published-projects/mimic-iv-ecg/mimic-iv-ecg-diagnostic-electrocardiogram-matched-subset-1.0.zip).
 
 2. Unzip the zip file inside the `data` directory and rename the unzipped directory as `mimic`.
 
-### Code-15
+#### Code-15
 
 1. First create a `code15` folder inside the `data` directory.
 
@@ -120,7 +126,7 @@ done
 echo "All downloads and extractions completed"
 ```
 
-### CSN
+#### CSN
 
 1. Create a `csn` folder inside the `data` directory.
 
@@ -132,7 +138,7 @@ wget https://physionet.org/static/published-projects/ecg-arrhythmia/a-large-scal
 
 3. Unzip the file and inside of `data/csn/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0` move all of the contents outside to `data/csn`. Then you may delete the `a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0` folder.
 
-### CPSC
+#### CPSC
 
 1. Create a `cpsc` folder inside the `data` directory.
 
@@ -144,7 +150,11 @@ wget https://physionet.org/static/published-projects/challenge-2020/classificati
 
 3. Unzip the file and inside of `data/cpsc/classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2/training` move the `cpsc_2018` and `cpsc_2018_extra` folders into the `data/cpsc` directory. Then delete the `classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2` folder.
 
-### ECG-QA dataset curated by [ECG-QA, Oh et al.](https://github.com/Jwoo5/ecg-qa)
+### External Datasets
+
+External datasets are datasets that are mapped to the base datasets and subsequently used for all experiments.
+
+#### ECG-QA dataset curated by [ECG-QA, Oh et al.](https://github.com/Jwoo5/ecg-qa)
 
 1. To download the ECG-QA dataset, please execute the following command in the `data` folder:
 
@@ -166,7 +176,7 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 
 3. After mapping the datasets, you should have an output folder in the `data/ecg-qa` folder with the mapped `paraphrased` and `template` question and answers.
 
-### Pretrain MIMIC dataset curated by [ECG-Chat, Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
+#### Pretrain MIMIC dataset curated by [ECG-Chat, Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
 
 1. Next create a `data/pretrain_mimic` directory and download the `pretrain_mimic.json` file from this [dropbox link](https://www.dropbox.com/scl/fo/ccq5dxmdgg4shf02yjn8c/ANOQ1Hzj4KwHqa1b9r80uzc?rlkey=teysp3v6hg6o9uko2i4zbbjpn&e=1&st=exu3i9oo&dl=0).
 
@@ -175,7 +185,7 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 1. Next create a `data/ecg_instruct_45k` directory and download the `ecg_instruct_45k.json` file from this [link](https://github.com/YubaoZhao/ECG-Chat/blob/master/llava/playground/data/ecg_instruct_45k.json).
 
 
-### ECG Instruct Pulse dataset curated by [PULSE, Liu et al.](https://github.com/AIMedLab/PULSE)
+#### ECG Instruct Pulse dataset curated by [PULSE, Liu et al.](https://github.com/AIMedLab/PULSE)
 
 1. Create a 'data/ecg_instruct_pulse' directory and downlod the `ECGInstruct.json`from this [link](https://huggingface.co/datasets/PULSE-ECG/ECGInstruct/tree/main). Then rename it to `ecg_instruct_pulse.json`.
 
