@@ -11,6 +11,7 @@ import h5py
 from scipy import interpolate
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
+from datasets import load_dataset
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
@@ -33,6 +34,16 @@ class PreprocessECG:
         self.fm = fm
         self.preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
         fm.ensure_directory_exists(folder = f'./pngs')
+        
+        if (self.args.data == 'cpsc' or self.args.data == 'csn') or self.args.map_data == 'pulse_ecg_bench':
+            if self.args.data == 'cpsc':
+                self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='cpsc-test', streaming=False, cache_dir='./../.huggingface')
+            elif self.args.data == 'csn':
+                self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='csn-test-no-cot', streaming=False, cache_dir='./../.huggingface')
+            elif self.args.map_data == 'pulse_ecg_bench':
+                self.list_of_hf_datasets = ['cpsc-test', 'csn-test-no-cot', 'code15-test', 'ptb-test', 'ptb-test-report', 'ecgqa-test']
+                ### not yet
+        
         if self.args.map_data == None:
             print(f"Preparing {args.data}")
             if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
@@ -55,6 +66,7 @@ class PreprocessECG:
                 for dataset in ['ptb', 'mimic']:
                     preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                     self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
+            
     
     ### MAIN FUNCTIONS
     def prepare_df(self):
@@ -92,7 +104,37 @@ class PreprocessECG:
                     'report': 'placeholder report'  # Empty report column to match other datasets
                 } 
                 for exam_id, (file_path, idx) in exam_mapping.items()])
-            
+        elif self.args.data == 'cpsc':
+            cpsc_paths = glob.glob('./data/cpsc/*/*/*.hea')
+            cpsc_filename_to_path = {os.path.basename(path).split('.')[0]: path for path in cpsc_paths}
+            df = pd.DataFrame([])
+            for item in self.hf_dataset['test']:
+                file_path = item['image_path']
+                file_name = file_path.split('/')[-1].split('-')[0]
+                conversations = item['conversations']
+                if file_name in cpsc_filename_to_path:
+                    new_row = pd.DataFrame({
+                        'path': [cpsc_filename_to_path[file_name]],
+                        'report': [conversations],
+                        'orig_file_name': [file_name]
+                    })
+                    df = pd.concat([df, new_row], ignore_index=True)
+        elif self.args.data == 'csn':
+            csn_paths = glob.glob('./data/csn/WFDBRecords/*/*/*.hea')
+            csn_filename_to_path = {os.path.basename(path).split('.')[0]: path for path in csn_paths}
+            df = pd.DataFrame([])
+            for item in self.hf_dataset['test']:
+                file_path = item['image_path']
+                file_name = file_path.split('/')[-1].split('-')[0]
+                conversations = item['conversations']
+                if file_name in csn_filename_to_path:
+                    new_row = pd.DataFrame({
+                        'path': [csn_filename_to_path[file_name]],
+                        'report': [conversations],
+                        'orig_file_name': [file_name]
+                    })
+                    df = pd.concat([df, new_row], ignore_index=True)
+
         df.to_csv(f'./data/{self.args.data}/{self.args.data}.csv', index=False)
     
     def build_code15_exam_mapping(self):
