@@ -106,7 +106,7 @@ class PreprocessECG:
                 for exam_id, (file_path, idx) in exam_mapping.items()])
         elif self.args.data == 'cpsc':
             cpsc_paths = glob.glob('./data/cpsc/*/*/*.hea')
-            cpsc_filename_to_path = {os.path.basename(path).split('.')[0]: path for path in cpsc_paths}
+            cpsc_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') for path in cpsc_paths}
             df = pd.DataFrame([])
             for item in self.hf_dataset['test']:
                 file_path = item['image_path']
@@ -121,7 +121,7 @@ class PreprocessECG:
                     df = pd.concat([df, new_row], ignore_index=True)
         elif self.args.data == 'csn':
             csn_paths = glob.glob('./data/csn/WFDBRecords/*/*/*.hea')
-            csn_filename_to_path = {os.path.basename(path).split('.')[0]: path for path in csn_paths}
+            csn_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') for path in csn_paths}
             df = pd.DataFrame([])
             for item in self.hf_dataset['test']:
                 file_path = item['image_path']
@@ -345,6 +345,16 @@ class PreprocessECG:
                 with h5py.File(file_path, 'r') as f:
                     ecg = f['tracings'][tracing_idx]
                 assert ecg.shape == (4096, 12) and sf == 400
+            elif self.args.data == 'cpsc':
+                file_path = f"{self.df.iloc[idx]['path']}"
+                report = self.df.iloc[idx]['report']
+                ecg, sf = self.fm.open_ecg(file_path)
+                assert sf == 500
+            elif self.args.data == 'csn':
+                file_path = f"{self.df.iloc[idx]['path']}"
+                report = self.df.iloc[idx]['report']
+                ecg, sf = self.fm.open_ecg(file_path)
+                assert sf == 500 and ecg.shape == (5000, 12)
             
             if self.args.data == 'mimic' or self.args.data == 'code15':
                 ecg = self._reorder_indices(ecg)
@@ -457,7 +467,9 @@ class PreprocessECG:
     def wavelet_denoise(self, ecg, wavelet='db6', level=4, epsilon=1e-10):
         denoised_ecg = np.zeros_like(ecg)
         for i in range(ecg.shape[1]):
-            coeffs = pywt.wavedec(ecg[:, i], wavelet, level=level)
+            lead_signal = ecg[:, i]
+            
+            coeffs = pywt.wavedec(lead_signal, wavelet, level=level)
             median_abs = np.median(np.abs(coeffs[-level]))
             if median_abs == 0:
                 threshold = 0
@@ -469,7 +481,13 @@ class PreprocessECG:
                 return np.where(np.isfinite(thresholded) & (np.abs(c) > epsilon), thresholded, 0)
             
             new_coeffs = [coeffs[0]] + [safe_threshold(c) for c in coeffs[1:]]
-            denoised_ecg[:, i] = pywt.waverec(new_coeffs, wavelet)
+            reconstructed = pywt.waverec(new_coeffs, wavelet)
+            
+            # Ensure the reconstructed signal has the same length as the original
+            if len(reconstructed) != ecg.shape[0]:
+                reconstructed = signal.resample(reconstructed, ecg.shape[0])
+            
+            denoised_ecg[:, i] = reconstructed
         
         # Replace any remaining NaN or inf values with zeros
         denoised_ecg = np.nan_to_num(denoised_ecg, nan=0.0, posinf=0.0, neginf=0.0)
@@ -481,7 +499,13 @@ class PreprocessECG:
         quality_factor = 30.0
         for notch_freq in notch_freqs:
             b_notch, a_notch = signal.iirnotch(notch_freq, quality_factor, fs)
-            filtered_ecg = signal.filtfilt(b_notch, a_notch, filtered_ecg, axis=0)
+            # Apply filter to each lead separately to avoid shape issues
+            for i in range(filtered_ecg.shape[1]):
+                filtered_lead = signal.filtfilt(b_notch, a_notch, filtered_ecg[:, i])
+                # Ensure the filtered lead has the same length as the original
+                if len(filtered_lead) != filtered_ecg.shape[0]:
+                    filtered_lead = signal.resample(filtered_lead, filtered_ecg.shape[0])
+                filtered_ecg[:, i] = filtered_lead
 
         lowcut = 0.5
         nyquist = 0.5 * fs
@@ -490,12 +514,24 @@ class PreprocessECG:
         order = 4
 
         b_band, a_band = signal.butter(order, [low, high], btype='band')
-        filtered_ecg = signal.filtfilt(b_band, a_band, filtered_ecg, axis=0)
+        # Apply filter to each lead separately
+        for i in range(filtered_ecg.shape[1]):
+            filtered_lead = signal.filtfilt(b_band, a_band, filtered_ecg[:, i])
+            # Ensure the filtered lead has the same length as the original
+            if len(filtered_lead) != filtered_ecg.shape[0]:
+                filtered_lead = signal.resample(filtered_lead, filtered_ecg.shape[0])
+            filtered_ecg[:, i] = filtered_lead
 
         baseline_cutoff = 0.05
         baseline_low = baseline_cutoff / nyquist
         b_baseline, a_baseline = signal.butter(order, baseline_low, btype='high')
-        filtered_ecg = signal.filtfilt(b_baseline, a_baseline, filtered_ecg, axis=0)
+        # Apply filter to each lead separately
+        for i in range(filtered_ecg.shape[1]):
+            filtered_lead = signal.filtfilt(b_baseline, a_baseline, filtered_ecg[:, i])
+            # Ensure the filtered lead has the same length as the original
+            if len(filtered_lead) != filtered_ecg.shape[0]:
+                filtered_lead = signal.resample(filtered_lead, filtered_ecg.shape[0])
+            filtered_ecg[:, i] = filtered_lead
 
         return filtered_ecg
     

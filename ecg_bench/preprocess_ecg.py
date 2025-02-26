@@ -26,7 +26,7 @@ def main(args: argparse.Namespace):
     fm = FileManager()
     preprocessor = PreprocessECG(args, fm)
     
-    if (args.data == 'mimic' or args.data == 'ptb' or args.data == 'code15') and (args.map_data == None):
+    if (args.data == 'mimic' or args.data == 'ptb' or args.data == 'code15' or args.data == 'cpsc' or args.data == 'csn') and (args.map_data == None):
         preprocessor.preprocess_batch()
         if args.data == 'mimic' and args.seg_len == 2500:
             preprocessor.get_percentiles()
