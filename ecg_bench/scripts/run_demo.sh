@@ -1,7 +1,7 @@
 python demo.py \
 --model=llama-3.2-1b \
 --data=ecg_instruct_45k_mapped \
---device=cuda:7 \
+--device=cuda:5 \
 --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
 --ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
 --peft \
