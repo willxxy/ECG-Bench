@@ -19,4 +19,5 @@
 
 
 
-python preprocess_ecg.py --data=ptb --map_data=ecg_bench_pulse --seg_len=500
+# python preprocess_ecg.py --data=ptb --map_data=ecg_bench_pulse --seg_len=500
+python preprocess_ecg.py --data=code15 --map_data=ecg_instruct_pulse --seg_len=500

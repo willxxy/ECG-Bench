@@ -4,7 +4,7 @@ import os
 # Create a list of dataset subsets to process
 # subset_names = ['arena', 'code15-test', 'cpsc-test', 'csn-test-no-cot', 'ecgqa-test', 'g12-test-no-cot', 'mmmu-ecg', 'ptb-test', 'ptb-test-report']
 # to not include mmmu-ecg, arena, g12-test-no-cot
-subset_names = ['ecgqa-test']
+subset_names = ['ecgqa-test', 'ptb-test-report', 'ptb-test']
 
 # ecgqa-test, ptb-test-report, ptb-test goes to ptbxl
 
@@ -22,6 +22,9 @@ for name in subset_names:
             for conv in conversations: # only ecgqa test
                 if isinstance(conv.get('value'), list):
                     conv['value'] = ''.join(conv['value'])
+        print(file_path)
+        print(file_name)
+        break
                 
         # print(conversations)
         # print(file_path)

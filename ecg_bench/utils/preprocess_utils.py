@@ -330,9 +330,14 @@ class PreprocessECG:
                 elif dataset_image_type in ['ptb-xl']:
                     dataset_image_type = 'ptb'
                     record_number = filename.split('_')[0]
+                    print(record_number)
                     record_number = f"{record_number}_hr"
+                    print(record_number)
                     subfolder = record_number[:2] + '000'
+                    print(subfolder)
                     ecg_path = f"records500_{subfolder}_{record_number}"
+                    print(ecg_path)
+                    # input()
                 elif dataset_image_type in ['code15_v4']:
                     dataset_image_type = 'code15'
                     ecg_path = filename.split('-')[0]
@@ -347,11 +352,22 @@ class PreprocessECG:
                 text = instance['conversations']
                 file_path = instance['file_path']
                 file_name = instance['file_name']
+                name = instance['name']
                 print(file_name)
                 print(file_path)
-                input()
+                print(name)
+                if name in ['ecgqa-test', 'ptb-test-report', 'ptb-test']:
+                    self.preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                    subfolder = file_name[:2] + '000'
+                    ecg_path = f"records500_{subfolder}_{file_name}"
+                elif name == 'cpsc-test':
+                    self.preprocessed_dir = f"./data/cpsc/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                elif name == 'csn-test-no-cot':
+                    self.preprocessed_dir = f"./data/csn/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                elif name == 'code15-test':
+                    self.preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                 
-            for i in range(10): # at most we will have 10 segments if each segment is 1 sec
+            for i in range(100):
                 if f"{ecg_path}_{i}" in self.available_ecgs:
                     valid_instances.append({
                         'ecg_path' : f"{self.preprocessed_dir}/{ecg_path}_{i}.npy",
