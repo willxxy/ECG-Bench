@@ -35,68 +35,110 @@ class PreprocessECG:
         self.preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
         fm.ensure_directory_exists(folder = f'./pngs')
         
-        if (self.args.data == 'cpsc' or self.args.data == 'csn') or self.args.map_data == 'ecg_bench_pulse':
-            if self.args.data == 'cpsc':
-                self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='cpsc-test', streaming=False, cache_dir='./../.huggingface')
-            elif self.args.data == 'csn':
-                self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='csn-test-no-cot', streaming=False, cache_dir='./../.huggingface')
-            elif self.args.map_data == 'ecg_bench_pulse':
-                self.cpsc_paths = glob.glob('./data/cpsc/*/*/*.hea')
-                self.cpsc_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') for path in self.cpsc_paths}
-                self.csn_paths = glob.glob('./data/csn/WFDBRecords/*/*/*.hea')
-                self.csn_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') for path in self.csn_paths}
-                
-                if self.fm.ensure_directory_exists(file = f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json'):
-                    self.save_list_hf_datasets = self.fm.open_json(f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json')
-                else:
-                    self.list_of_hf_datasets = ['cpsc-test', 'csn-test-no-cot', 'code15-test', 'ptb-test', 'ptb-test-report', 'ecgqa-test']
-                    self.save_list_hf_datasets = []
-                    for name in tqdm(self.list_of_hf_datasets, desc = 'Loading ECGBench datasets'):
-                        dataset = load_dataset("PULSE-ECG/ECGBench", name=name, streaming=False, cache_dir='./../.huggingface')
-                        for item in dataset['test']:
-                            conversations = item['conversations']
-                            file_path = item['image_path']
-                            file_name = file_path.split('/')[-1].split('-')[0]
-                            if name == 'ecgqa-test':
-                                for conv in conversations: # only ecgqa test
-                                    if isinstance(conv.get('value'), list):
-                                        conv['value'] = ''.join(conv['value'])
-                            self.save_list_hf_datasets.append({
-                                'file_path': file_path,
-                                'file_name': file_name,
-                                'conversations': conversations,
-                                'name': name
-                            })
-                    self.fm.save_json(self.save_list_hf_datasets, f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json')
+        # Handle ECGBench datasets
+        if (self.args.data in ['cpsc', 'csn']) or self.args.map_data == 'ecg_bench_pulse':
+            self._initialize_ecg_bench_datasets()
         
-        if self.args.map_data == None:
-            print(f"Preparing {args.data}")
-            if fm.ensure_directory_exists(file = f'./data/{args.data}/{args.data}.csv') == False:
-                print(f"The {args.data} dataframe does not exist. Now preparing the dataframe...")
-                self.prepare_df()
-            self.df = pd.read_csv(f'./data/{args.data}/{args.data}.csv')
-            self.df = self.fm.clean_dataframe(self.df)
-            if self.args.dev:
-                self.df = self.df.iloc[:1000]
-            if self.args.toy:
-                self.df = self.df.sample(frac=0.60, random_state=42).reset_index(drop=True)
-            print(self.df.head())
-            print('Number of instances in dataframe:', len(self.df))
-            print('Dataframe prepared.')
-        else:       
-            self.available_ecgs = set()
-            if self.args.map_data == 'ecg_instruct_pulse':
-                for dataset in ['ptb', 'mimic', 'code15']:
-                    preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
-            elif self.args.map_data == 'ecg_bench_pulse':
-                for dataset in ['ptb', 'code15', 'csn', 'cpsc']:
-                    preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
-            else:
-                self.available_ecgs = set(f.stem for f in Path(self.preprocessed_dir).glob('*'))
+        # Initialize based on mapping mode
+        if self.args.map_data is None:
+            self._initialize_standard_mode()
+        else:
+            self._initialize_mapping_mode()
+
+    def _initialize_ecg_bench_datasets(self):
+        if self.args.data == 'cpsc':
+            self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='cpsc-test', 
+                                          streaming=False, cache_dir='./../.huggingface')
+        elif self.args.data == 'csn':
+            self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='csn-test-no-cot', 
+                                          streaming=False, cache_dir='./../.huggingface')
+        elif self.args.map_data == 'ecg_bench_pulse':
+            self._setup_ecg_bench_pulse_mapping()
+
+    def _setup_ecg_bench_pulse_mapping(self):
+        # Set up file paths
+        self.cpsc_paths = glob.glob('./data/cpsc/*/*/*.hea')
+        self.cpsc_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') 
+                                     for path in self.cpsc_paths}
+        self.csn_paths = glob.glob('./data/csn/WFDBRecords/*/*/*.hea')
+        self.csn_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') 
+                                    for path in self.csn_paths}
+        
+        # Load or create datasets
+        json_path = f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json'
+        if self.fm.ensure_directory_exists(file=json_path):
+            self.save_list_hf_datasets = self.fm.open_json(json_path)
+        else:
+            self._create_ecg_bench_pulse_datasets(json_path)
+
+    def _create_ecg_bench_pulse_datasets(self, json_path):
+        """Create and save ECG Bench Pulse datasets"""
+        self.list_of_hf_datasets = ['cpsc-test', 'csn-test-no-cot', 'code15-test', 
+                                   'ptb-test', 'ptb-test-report', 'ecgqa-test']
+        self.save_list_hf_datasets = []
+        
+        for name in tqdm(self.list_of_hf_datasets, desc='Loading ECGBench datasets'):
+            dataset = load_dataset("PULSE-ECG/ECGBench", name=name, 
+                                  streaming=False, cache_dir='./../.huggingface')
             
-    
+            for item in dataset['test']:
+                conversations = item['conversations']
+                file_path = item['image_path']
+                file_name = file_path.split('/')[-1].split('-')[0]
+                
+                # Handle ecgqa-test special case
+                if name == 'ecgqa-test':
+                    for conv in conversations:
+                        if isinstance(conv.get('value'), list):
+                            conv['value'] = ''.join(conv['value'])
+                
+                self.save_list_hf_datasets.append({
+                    'file_path': file_path,
+                    'file_name': file_name,
+                    'conversations': conversations,
+                    'name': name
+                })
+        
+        self.fm.save_json(self.save_list_hf_datasets, json_path)
+
+    def _initialize_standard_mode(self):
+        """Initialize for standard preprocessing mode"""
+        print(f"Preparing {self.args.data}")
+        
+        # Create dataframe if it doesn't exist
+        if not self.fm.ensure_directory_exists(file=f'./data/{self.args.data}/{self.args.data}.csv'):
+            print(f"The {self.args.data} dataframe does not exist. Now preparing the dataframe...")
+            self.prepare_df()
+        
+        # Load and process dataframe
+        self.df = pd.read_csv(f'./data/{self.args.data}/{self.args.data}.csv')
+        self.df = self.fm.clean_dataframe(self.df)
+        
+        # Handle development/toy modes
+        if self.args.dev:
+            self.df = self.df.iloc[:1000]
+        if self.args.toy:
+            self.df = self.df.sample(frac=0.60, random_state=42).reset_index(drop=True)
+        
+        print(self.df.head())
+        print('Number of instances in dataframe:', len(self.df))
+        print('Dataframe prepared.')
+
+    def _initialize_mapping_mode(self):
+        """Initialize for mapping mode"""
+        self.available_ecgs = set()
+        
+        if self.args.map_data == 'ecg_instruct_pulse':
+            for dataset in ['ptb', 'mimic', 'code15']:
+                preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
+        elif self.args.map_data == 'ecg_bench_pulse':
+            for dataset in ['ptb', 'code15', 'csn', 'cpsc']:
+                preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
+        else:
+            self.available_ecgs = set(f.stem for f in Path(self.preprocessed_dir).glob('*'))
+
     ### MAIN FUNCTIONS
     def prepare_df(self):
         if self.args.data == 'ptb':
@@ -304,83 +346,106 @@ class PreprocessECG:
     def map_external_datasets(self):
         valid_instances = []
         
-        if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic', 'ecg_instruct_pulse']:
-            data = self.fm.open_json(f'./data/{self.args.map_data}/{self.args.map_data}.json')
-        elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
-            paraphrased_jsons = glob.glob(f'./data/ecg-qa/output/{self.args.map_data.split("_")[1]}/paraphrased/*/*.json')
-            template_jsons = glob.glob(f'./data/ecg-qa/output/{self.args.map_data.split("_")[1]}/template/*/*.json')
-            path_to_all_jsons = paraphrased_jsons + template_jsons
-            print('Setting up ECG-QA data...')
-            data = self.setup_ecg_qa(path_to_all_jsons)
-        elif self.args.map_data == 'ecg_bench_pulse':
-            data = self.save_list_hf_datasets
+        data = self._load_mapping_data()
+        
+        for instance in tqdm(data, desc='Mapping external dataset'):
+            ecg_path, text, name = self._process_mapping_instance(instance)
             
-        for instance in tqdm(data, desc = 'Mapping external dataset'):
-            if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic']:
-                text = instance['conversations']
-                ecg_path = instance['ecg']
-                ecg_path = '_'.join(ecg_path.split('/'))
-                
-            elif self.args.map_data == 'ecg_instruct_pulse':
-                text = instance['conversations']
-                parts = instance['image'].split('/')
-                dataset_image_type = parts[0]
-                filename = parts[-1]
-                if dataset_image_type in ['mimic_v4', 'mimic']:
-                    dataset_image_type = 'mimic'
-                    base_filename = filename.split('-')[0]
-                    path_to_file = '_'.join(parts[1:-1] + [base_filename])
-                    ecg_path = f"files_{path_to_file}"
-                elif dataset_image_type in ['ptb-xl']:
-                    dataset_image_type = 'ptb'
-                    record_number = filename.split('_')[0]
-                    record_number = f"{record_number}_hr"
-                    subfolder = record_number[:2] + '000'
-                    ecg_path = f"records500_{subfolder}_{record_number}"
-                elif dataset_image_type in ['code15_v4']:
-                    dataset_image_type = 'code15'
-                    ecg_path = filename.split('-')[0]
-                self.preprocessed_dir = f"./data/{dataset_image_type}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                
-            elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
-                text = [instance['question_type'], instance['question'], instance['answer']]
-                ecg_path = instance['ecg_path'][0]
-                ecg_path = '_'.join(ecg_path.split('/')[2:])
-                
-            elif self.args.map_data == 'ecg_bench_pulse':
-                text = instance['conversations']
-                file_path = instance['file_path']
-                file_name = instance['file_name']
-                name = instance['name']
-                if name in ['ecgqa-test', 'ptb-test-report', 'ptb-test']:
-                    self.preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    subfolder = file_name[:2] + '000'
-                    ecg_path = f"records500_{subfolder}_{file_name}"
-                elif name == 'cpsc-test':
-                    self.preprocessed_dir = f"./data/cpsc/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    ecg_path = self.cpsc_filename_to_path[file_name]
-                    ecg_path = '_'.join(ecg_path.split('/'))
-                elif name == 'csn-test-no-cot':
-                    self.preprocessed_dir = f"./data/csn/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    ecg_path = self.csn_filename_to_path[file_name]
-                    ecg_path = '_'.join(ecg_path.split('/'))
-                elif name == 'code15-test':
-                    self.preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-                    ecg_path = file_name.split('-')[0]
-                
             for i in range(100):
                 if f"{ecg_path}_{i}" in self.available_ecgs:
                     valid_instances.append({
-                        'ecg_path' : f"{self.preprocessed_dir}/{ecg_path}_{i}.npy",
-                        'text' : text,
-                        'name' : name
+                        'ecg_path': f"{self.preprocessed_dir}/{ecg_path}_{i}.npy",
+                        'text': text,
+                        'name': name
                     })
+        
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f'Length of available ecgs: {len(self.available_ecgs)}')
         print(f"Valid instances: {len(valid_instances)}")
         self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped_{self.args.seg_len}.json')
+
+    def _load_mapping_data(self):
+        if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic', 'ecg_instruct_pulse']:
+            return self.fm.open_json(f'./data/{self.args.map_data}/{self.args.map_data}.json')
+        
+        elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
+            dataset_name = self.args.map_data.split("_")[1]
+            paraphrased_jsons = glob.glob(f'./data/ecg-qa/output/{dataset_name}/paraphrased/*/*.json')
+            template_jsons = glob.glob(f'./data/ecg-qa/output/{dataset_name}/template/*/*.json')
+            path_to_all_jsons = paraphrased_jsons + template_jsons
+            print('Setting up ECG-QA data...')
+            return self.setup_ecg_qa(path_to_all_jsons)
+        
+        elif self.args.map_data == 'ecg_bench_pulse':
+            return self.save_list_hf_datasets
+        
+        return []
+
+    def _process_mapping_instance(self, instance):
+        name = instance.get('name', '')
+        
+        if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic']:
+            text = instance['conversations']
+            ecg_path = '_'.join(instance['ecg'].split('/'))
             
-    
+        elif self.args.map_data == 'ecg_instruct_pulse':
+            text = instance['conversations']
+            ecg_path = self._get_ecg_instruct_pulse_path(instance)
+            
+        elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
+            text = [instance['question_type'], instance['question'], instance['answer']]
+            ecg_path = '_'.join(instance['ecg_path'][0].split('/')[2:])
+            
+        elif self.args.map_data == 'ecg_bench_pulse':
+            text = instance['conversations']
+            file_name = instance['file_name']
+            name = instance['name']
+            ecg_path = self._get_ecg_bench_pulse_path(name, file_name)
+        
+        return ecg_path, text, name
+
+    def _get_ecg_instruct_pulse_path(self, instance):
+        parts = instance['image'].split('/')
+        dataset_image_type = parts[0]
+        filename = parts[-1]
+        
+        if dataset_image_type in ['mimic_v4', 'mimic']:
+            dataset_image_type = 'mimic'
+            base_filename = filename.split('-')[0]
+            path_to_file = '_'.join(parts[1:-1] + [base_filename])
+            ecg_path = f"files_{path_to_file}"
+        elif dataset_image_type in ['ptb-xl']:
+            dataset_image_type = 'ptb'
+            record_number = filename.split('_')[0]
+            record_number = f"{record_number}_hr"
+            subfolder = record_number[:2] + '000'
+            ecg_path = f"records500_{subfolder}_{record_number}"
+        elif dataset_image_type in ['code15_v4']:
+            dataset_image_type = 'code15'
+            ecg_path = filename.split('-')[0]
+        
+        self.preprocessed_dir = f"./data/{dataset_image_type}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+        return ecg_path
+
+    def _get_ecg_bench_pulse_path(self, name, file_name):
+        if name in ['ecgqa-test', 'ptb-test-report', 'ptb-test']:
+            self.preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            subfolder = file_name[:2] + '000'
+            return f"records500_{subfolder}_{file_name}"
+        elif name == 'cpsc-test':
+            self.preprocessed_dir = f"./data/cpsc/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            ecg_path = self.cpsc_filename_to_path[file_name]
+            return '_'.join(ecg_path.split('/'))
+        elif name == 'csn-test-no-cot':
+            self.preprocessed_dir = f"./data/csn/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            ecg_path = self.csn_filename_to_path[file_name]
+            return '_'.join(ecg_path.split('/'))
+        elif name == 'code15-test':
+            self.preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            return file_name.split('-')[0]
+        
+        return ""
+
     ### HELPER FUNCTIONS
     ### Preprocessing functions
     def _process_single_instance(self, idx):
