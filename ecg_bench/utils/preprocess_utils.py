@@ -58,14 +58,14 @@ class PreprocessECG:
             print(self.df.head())
             print('Number of instances in dataframe:', len(self.df))
             print('Dataframe prepared.')
-        else:
-            ecg_folder = Path(self.preprocessed_dir)
-            self.available_ecgs = set(f.stem for f in ecg_folder.glob('*'))
+        else:       
+            self.available_ecgs = set()
             if self.args.map_data == 'ecg_instruct_pulse':
-                # Handle all three datasets: code15, mimic, and ptb
-                for dataset in ['ptb', 'mimic']:
+                for dataset in ['ptb', 'mimic', 'code15']:
                     preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                     self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
+            else:
+                self.available_ecgs = set(f.stem for f in Path(self.preprocessed_dir).glob('*'))
             
     
     ### MAIN FUNCTIONS
