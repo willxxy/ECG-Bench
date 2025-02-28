@@ -41,6 +41,10 @@ class PreprocessECG:
             elif self.args.data == 'csn':
                 self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='csn-test-no-cot', streaming=False, cache_dir='./../.huggingface')
             elif self.args.map_data == 'ecg_bench_pulse':
+                self.cpsc_paths = glob.glob('./data/cpsc/*/*/*.hea')
+                self.cpsc_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') for path in self.cpsc_paths}
+                self.csn_paths = glob.glob('./data/csn/WFDBRecords/*/*/*.hea')
+                self.csn_filename_to_path = {os.path.basename(path).split('.')[0]: path.replace('.hea', '') for path in self.csn_paths}
                 
                 if self.fm.ensure_directory_exists(file = f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json'):
                     self.save_list_hf_datasets = self.fm.open_json(f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json')
@@ -330,14 +334,9 @@ class PreprocessECG:
                 elif dataset_image_type in ['ptb-xl']:
                     dataset_image_type = 'ptb'
                     record_number = filename.split('_')[0]
-                    print(record_number)
                     record_number = f"{record_number}_hr"
-                    print(record_number)
                     subfolder = record_number[:2] + '000'
-                    print(subfolder)
                     ecg_path = f"records500_{subfolder}_{record_number}"
-                    print(ecg_path)
-                    # input()
                 elif dataset_image_type in ['code15_v4']:
                     dataset_image_type = 'code15'
                     ecg_path = filename.split('-')[0]
@@ -353,25 +352,28 @@ class PreprocessECG:
                 file_path = instance['file_path']
                 file_name = instance['file_name']
                 name = instance['name']
-                print(file_name)
-                print(file_path)
-                print(name)
                 if name in ['ecgqa-test', 'ptb-test-report', 'ptb-test']:
                     self.preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                     subfolder = file_name[:2] + '000'
                     ecg_path = f"records500_{subfolder}_{file_name}"
                 elif name == 'cpsc-test':
                     self.preprocessed_dir = f"./data/cpsc/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                    ecg_path = self.cpsc_filename_to_path[file_name]
+                    ecg_path = '_'.join(ecg_path.split('/'))
                 elif name == 'csn-test-no-cot':
                     self.preprocessed_dir = f"./data/csn/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                    ecg_path = self.csn_filename_to_path[file_name]
+                    ecg_path = '_'.join(ecg_path.split('/'))
                 elif name == 'code15-test':
                     self.preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                    ecg_path = file_name.split('-')[0]
                 
             for i in range(100):
                 if f"{ecg_path}_{i}" in self.available_ecgs:
                     valid_instances.append({
                         'ecg_path' : f"{self.preprocessed_dir}/{ecg_path}_{i}.npy",
-                        'text' : text
+                        'text' : text,
+                        'name' : name
                     })
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f'Length of available ecgs: {len(self.available_ecgs)}')

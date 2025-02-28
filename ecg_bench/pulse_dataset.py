@@ -4,7 +4,7 @@ import os
 # Create a list of dataset subsets to process
 # subset_names = ['arena', 'code15-test', 'cpsc-test', 'csn-test-no-cot', 'ecgqa-test', 'g12-test-no-cot', 'mmmu-ecg', 'ptb-test', 'ptb-test-report']
 # to not include mmmu-ecg, arena, g12-test-no-cot
-subset_names = ['ecgqa-test', 'ptb-test-report', 'ptb-test']
+subset_names = ['code15-test']
 
 # ecgqa-test, ptb-test-report, ptb-test goes to ptbxl
 
