@@ -35,14 +35,35 @@ class PreprocessECG:
         self.preprocessed_dir = f'./data/{self.args.data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}'
         fm.ensure_directory_exists(folder = f'./pngs')
         
-        if (self.args.data == 'cpsc' or self.args.data == 'csn') or self.args.map_data == 'pulse_ecg_bench':
+        if (self.args.data == 'cpsc' or self.args.data == 'csn') or self.args.map_data == 'ecg_bench_pulse':
             if self.args.data == 'cpsc':
                 self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='cpsc-test', streaming=False, cache_dir='./../.huggingface')
             elif self.args.data == 'csn':
                 self.hf_dataset = load_dataset("PULSE-ECG/ECGBench", name='csn-test-no-cot', streaming=False, cache_dir='./../.huggingface')
-            elif self.args.map_data == 'pulse_ecg_bench':
-                self.list_of_hf_datasets = ['cpsc-test', 'csn-test-no-cot', 'code15-test', 'ptb-test', 'ptb-test-report', 'ecgqa-test']
-                ### not yet
+            elif self.args.map_data == 'ecg_bench_pulse':
+                
+                if self.fm.ensure_directory_exists(file = f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json'):
+                    self.save_list_hf_datasets = self.fm.open_json(f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json')
+                else:
+                    self.list_of_hf_datasets = ['cpsc-test', 'csn-test-no-cot', 'code15-test', 'ptb-test', 'ptb-test-report', 'ecgqa-test']
+                    self.save_list_hf_datasets = []
+                    for name in tqdm(self.list_of_hf_datasets, desc = 'Loading ECGBench datasets'):
+                        dataset = load_dataset("PULSE-ECG/ECGBench", name=name, streaming=False, cache_dir='./../.huggingface')
+                        for item in dataset['test']:
+                            conversations = item['conversations']
+                            file_path = item['image_path']
+                            file_name = file_path.split('/')[-1].split('-')[0]
+                            if name == 'ecgqa-test':
+                                for conv in conversations: # only ecgqa test
+                                    if isinstance(conv.get('value'), list):
+                                        conv['value'] = ''.join(conv['value'])
+                            self.save_list_hf_datasets.append({
+                                'file_path': file_path,
+                                'file_name': file_name,
+                                'conversations': conversations,
+                                'name': name
+                            })
+                    self.fm.save_json(self.save_list_hf_datasets, f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json')
         
         if self.args.map_data == None:
             print(f"Preparing {args.data}")
@@ -62,6 +83,10 @@ class PreprocessECG:
             self.available_ecgs = set()
             if self.args.map_data == 'ecg_instruct_pulse':
                 for dataset in ['ptb', 'mimic', 'code15']:
+                    preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                    self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
+            elif self.args.map_data == 'ecg_bench_pulse':
+                for dataset in ['ptb', 'code15', 'csn', 'cpsc']:
                     preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
                     self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
             else:
@@ -283,12 +308,15 @@ class PreprocessECG:
             path_to_all_jsons = paraphrased_jsons + template_jsons
             print('Setting up ECG-QA data...')
             data = self.setup_ecg_qa(path_to_all_jsons)
+        elif self.args.map_data == 'ecg_bench_pulse':
+            data = self.save_list_hf_datasets
             
         for instance in tqdm(data, desc = 'Mapping external dataset'):
             if self.args.map_data in ['ecg_instruct_45k', 'pretrain_mimic']:
                 text = instance['conversations']
                 ecg_path = instance['ecg']
                 ecg_path = '_'.join(ecg_path.split('/'))
+                
             elif self.args.map_data == 'ecg_instruct_pulse':
                 text = instance['conversations']
                 parts = instance['image'].split('/')
@@ -309,10 +337,19 @@ class PreprocessECG:
                     dataset_image_type = 'code15'
                     ecg_path = filename.split('-')[0]
                 self.preprocessed_dir = f"./data/{dataset_image_type}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+                
             elif self.args.map_data in ['ecg-qa_mimic-iv-ecg', 'ecg-qa_ptbxl']:
                 text = [instance['question_type'], instance['question'], instance['answer']]
                 ecg_path = instance['ecg_path'][0]
                 ecg_path = '_'.join(ecg_path.split('/')[2:])
+                
+            elif self.args.map_data == 'ecg_bench_pulse':
+                text = instance['conversations']
+                file_path = instance['file_path']
+                file_name = instance['file_name']
+                print(file_name)
+                print(file_path)
+                input()
                 
             for i in range(10): # at most we will have 10 segments if each segment is 1 sec
                 if f"{ecg_path}_{i}" in self.available_ecgs:
