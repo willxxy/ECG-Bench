@@ -8,6 +8,7 @@ class BaseECGDataset(Dataset):
     def __init__(self, json_data_file, train_utils, encoder_tokenizer=None, llm_tokenizer=None):
         self.json_data_file = json_data_file
         self.train_utils = train_utils
+        self.viz = train_utils.viz
         self.args = self.train_utils.args
         self.encoder_tokenizer = encoder_tokenizer
         self.llm_tokenizer = llm_tokenizer
@@ -25,7 +26,9 @@ class BaseECGDataset(Dataset):
         return len(self.json_data_file)
 
     def signal_to_image(self, signal):
+        print('signal', signal.shape)
         normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
+        print('normalized_signal', normalized_signal.shape)
         rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
         return Image.fromarray(rgb_norm_signal)
 
