@@ -1,16 +1,17 @@
 import argparse
 import os
+import pandas as pd
 os.environ['OPENBLAS_NUM_THREADS'] = '4'
 os.environ['MKL_NUM_THREADS'] = '4'
 os.environ['VECLIB_MAXIMUM_THREADS'] = '4'
 os.environ['NUMEXPR_NUM_THREADS'] = '4'
 
 from ecg_bench.utils.dir_file_utils import FileManager
-from ecg_bench.utils.preprocess_utils import PreprocessECG
+from ecg_bench.utils.preprocess_utils_ref import PrepareDF, PreprocessBaseECG, PreprocessMapECG, SampleBaseECG
 
 def get_args():
     parser = argparse.ArgumentParser(description = "ECG preprocessing pipeline")
-    parser.add_argument('--data', type = str, default = None, help = 'Base dataset to preprocess')
+    parser.add_argument('--base_data', type = str, default = None, help = 'Base dataset to preprocess')
     parser.add_argument('--map_data', type = str, default = None, help = 'External dataset to map to base dataset')
     parser.add_argument('--seg_len', type = int, default = 500, help = 'Segment length')
     parser.add_argument('--target_sf', type = int, default = 250, help = 'Target sampling frequency')
@@ -24,24 +25,24 @@ def get_args():
     
 def main(args: argparse.Namespace):
     fm = FileManager()
-    preprocessor = PreprocessECG(args, fm)
-    
-    # Define supported datasets
-    supported_datasets = ['mimic', 'ptb', 'code15', 'cpsc', 'csn']
-    
-    # Process base dataset if specified and no mapping is requested
-    if args.data in supported_datasets and args.map_data is None:
-        preprocessor.preprocess_batch()
+    if args.map_data == None:
+        df_preparer = PrepareDF(args, fm)
         
-        # Special case for mimic with specific segment length
-        if args.data == 'mimic' and args.seg_len == 2500:
-            preprocessor.get_percentiles()
-            preprocessor.stratified_sampling()
+        if not fm.ensure_directory_exists(file=f'./data/{args.base_data}/{args.base_data}.csv'):
+            df_preparer.prepare_df()
+        df = df_preparer.get_df()
+        preprocess_base_ecg = PreprocessBaseECG(args, fm, df)
+        preprocess_base_ecg.preprocess_batch()
+        
+        if args.base_data == 'mimic' and args.seg_len == 2500 \
+            and not fm.ensure_directory_exists(file = f'./data/sampled_{args.num_tok_samples}_{args.max_clusters}.txt') \
+                and not fm.ensure_directory_exists(file = f'./data/{args.base_data}_percentiles_{args.seg_len}_{args.target_sf}_{args.num_percentiles}.npy'):
+            sample_base_ecg = SampleBaseECG(args, fm, df)
+            sample_base_ecg.get_percentiles()
+            sample_base_ecg.stratified_sampling()
+    else:
+        preprocess_map_ecg = PreprocessMapECG(args, fm)
+        preprocess_map_ecg.map_data()
     
-    # Map external dataset if requested and preprocessed directory exists
-    preprocessed_dir = f'./data/{args.data}/preprocessed_{args.seg_len}_{args.target_sf}'
-    if fm.ensure_directory_exists(folder=preprocessed_dir) and args.map_data is not None:
-        preprocessor.map_external_datasets()
-
 if __name__ == '__main__':
     main(get_args())
