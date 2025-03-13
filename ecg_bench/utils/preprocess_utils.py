@@ -23,6 +23,9 @@ SUPPORTED_BASE_DATASETS = ['ptb', 'mimic', 'code15', 'cpsc', 'csn']
 SUPPORTED_MAPPED_DATASETS = ['ecg_bench_pulse', 'ecg_instruct_pulse', 'pretrain_mimic', 'ecg_instruct_45k', 'ecg-qa_ptbxl', 'ecg-qa_mimic-iv-ecg']
 
 class PrepareDF:
+    '''
+    Main class for preparing all base datas in a easy to understand dataframe format
+    '''
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
@@ -210,6 +213,9 @@ class PrepareDF:
 
 
 class PreprocessBaseECG:
+    '''
+    Main class for preprocessing all base datas
+    '''
     def __init__(self, args, fm, df):
         self.args = args
         self.fm = fm
@@ -452,6 +458,9 @@ class PreprocessBaseECG:
         return np.array(ecg_data_segmented), text_data_segmented   
 
 class SampleBaseECG:
+    '''
+    Main class for sampling base datas for percentiles and sapmles for tokenizer training
+    '''
     def __init__(self, args, fm, df):
         self.args = args
         self.fm = fm
@@ -763,6 +772,9 @@ class SampleBaseECG:
         
 
 class PreprocessMapECG:
+    '''
+    Main class for mapping external datasets to base datas
+    '''
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
