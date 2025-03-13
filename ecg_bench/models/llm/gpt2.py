@@ -78,6 +78,20 @@ class gpt2(nn.Module):
             )
         return out
     
+    def generate_demo(self, input_ids, attention_mask, tokenizer):
+        input_ids = input_ids.unsqueeze(0)
+        attention_mask = attention_mask.unsqueeze(0)
+        input_len = input_ids.shape[1]
+        generated_ids = self.llm.generate(
+            input_ids=input_ids.to(self.llm.device),
+            attention_mask=attention_mask.to(self.llm.device),
+            max_new_tokens=128,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0],
+        )
+        decoded_text = tokenizer.batch_decode(generated_ids[:, input_len:], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        return decoded_text
+    
     def get_llm_embeddings(self, input_ids):
         out = self.llm.get_input_embeddings()(input_ids.to(self.llm.device))
         return out
