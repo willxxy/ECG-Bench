@@ -272,7 +272,7 @@ class PreprocessBaseECG:
                 file_path = f"{self.df.iloc[idx]['path']}"
                 report = self.df.iloc[idx]['report']
                 ecg, sf = self.fm.open_ecg(file_path)
-                assert sf == 500
+                assert sf == 500 # cant assert shape because the shape is variable
             elif self.args.base_data == 'csn':
                 file_path = f"{self.df.iloc[idx]['path']}"
                 report = self.df.iloc[idx]['report']
