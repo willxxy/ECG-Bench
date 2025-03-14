@@ -64,9 +64,11 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
     `pip install flash-attn==2.7.4.post1 --no-cache-dir`
 
-15. Install the `llm-blender` package by running the following command:
+15. Install the `llm-blender` and `trl[judges]` packagesby running the following commands:
 
     `pip install git+https://github.com/yuchenlin/LLM-Blender.git`
+
+    `pip install trl[judges]`
 
 16. Run the `ELM-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
 

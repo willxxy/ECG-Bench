@@ -213,13 +213,13 @@ def run_train(model, train_loader, optimizer, args, viz):
     viz.plot_train_val_loss(train_losses, dir_path=args.save_path)
     
     
-def run_post_train(model, test_loader, tokenizer, args, optimizer, blender, dpo, ref_model, viz):
+def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz):
     all_epochs = []
     train_losses = []
     
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
-        train_dic = post_trainer_dpo(model, test_loader, tokenizer, args, optimizer, epoch, blender, dpo, ref_model)
+        train_dic = post_trainer_dpo(model, test_loader, tokenizer, args, optimizer, epoch, judger, dpo, ref_model)
         train_losses.append(train_dic['average_loss'])
         
         if args.log:
@@ -368,12 +368,13 @@ def main(rank, world_size):
                 pin_memory=True)
             
             if args.post_train:
-                blender = llm_blender.Blender()
-                blender.loadranker("llm-blender/PairRM", device = model.device, cache_dir = './../.huggingface')
+                ### FROM LLM-BLENDER
+                judger = llm_blender.Blender()
+                judger.loadranker("llm-blender/PairRM", device = model.device, cache_dir = './../.huggingface')
                 dpo = DPO(beta = args.dpo_beta)
                 ref_model = copy.deepcopy(model)
                 ref_model.eval()
-                run_post_train(model, data_loader, tokenizer, args, optimizer, blender, dpo, ref_model, viz)
+                run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)
             else:
                 run_inference(model, data_loader, tokenizer, args, train_utils)
         

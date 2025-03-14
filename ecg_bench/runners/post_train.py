@@ -4,7 +4,7 @@ import torch.distributed as dist
 import gc
 import wandb
 
-def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, blender, dpo, ref_model):
+def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, judger, dpo, ref_model):
     if args.dis:
         dataloader.sampler.set_epoch(epoch)
     total_loss = 0.0
@@ -126,7 +126,7 @@ def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, blend
                 offset2 += out2[:, start2:].size(1) - (end2 - start2)
                 
                 # Compare the two generated responses using the current prompt
-                judge_results = blender.compare([prompt], 
+                judge_results = judger.judge([prompt], 
                                                [decoded_out1],
                                                [decoded_out2])
                 
