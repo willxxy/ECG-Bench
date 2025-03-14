@@ -15,3 +15,11 @@ lead_names = ['I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5
 
 from utils.viz_utils import VizUtil
 VizUtil.plot_2d_ecg(ecg, '', 'test', 250)
+
+image = VizUtil.get_plot_as_image(ecg, 250)
+print(image)
+print(image.shape)
+
+from PIL import Image
+img = Image.fromarray(image)
+img.save('test_from_array.png')

@@ -13,6 +13,10 @@ class VizUtil:
     def plot_2d_ecg(ecg, title, save_path, sample_rate):
         ecg_plot.plot(ecg, title=title, sample_rate=sample_rate)
         ecg_plot.save_as_png(file_name=title, path=save_path)
+    
+    @staticmethod
+    def get_plot_as_image(ecg, sample_rate, title = ''):
+        return ecg_plot.get_plot_as_image(ecg, title=title, sample_rate=sample_rate)
         
     @staticmethod
     def plot_train_val_loss(train_loss, val_loss = None, dir_path = None):
