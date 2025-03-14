@@ -3,8 +3,10 @@ import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), "../ecg-image-kit/codes/ecg-image-generator"))
 from gen_ecg_image_from_np import generate_ecg_image
+import glob
+path_to_npy = glob.glob('./data/mimic/preprocessed_1250_250/*.npy')[0]
 
-test_file = np.load('./data/ptb/preprocessed_500_250/records500_09000_09537_hr_1.npy', allow_pickle = True).item()
+test_file = np.load(path_to_npy, allow_pickle = True).item()
 print(test_file.keys())
 ecg = test_file['ecg']
 print(ecg.shape)

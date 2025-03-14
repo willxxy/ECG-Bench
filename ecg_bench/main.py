@@ -15,6 +15,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 import json
 import yaml
+import copy
+import llm_blender
 
 from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
@@ -25,6 +27,8 @@ from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageE
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
 from ecg_bench.runners.inference import tester, tester_chat
+from ecg_bench.runners.post_train import post_trainer_dpo
+from ecg_bench.utils.post_train_utils import DPO
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)
@@ -59,6 +63,7 @@ def get_args():
     optim_group.add_argument('--patience', type=int, default=5, help='Patience for early stopping')
     optim_group.add_argument('--delta', type=float, default=0.1, help='Delta for early stopping')
     optim_group.add_argument('--attn_implementation', type=str, default=None, help='Attention implementation')
+    optim_group.add_argument('--dpo_beta', type=float, default=0.5, help='DPO beta')
     
     ### PEFT
     peft_group = parser.add_argument_group('PEFT')
@@ -71,6 +76,7 @@ def get_args():
     mode_group = parser.add_argument_group('Mode and Environment')
     mode_group.add_argument('--train', type=str, choices=['first', 'second', 'end2end'], help='Training mode')
     mode_group.add_argument('--inference', type=str, choices=['second', 'end2end'], help='Inference mode')
+    mode_group.add_argument('--post_train', action='store_true', default=None, help='Post-training mode')
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')
     mode_group.add_argument('--log', action='store_true', default=None, help='Enable logging')
@@ -193,6 +199,27 @@ def run_train(model, train_loader, optimizer, args, viz):
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
         train_dic = trainer(model, train_loader, optimizer, args, epoch)
+        train_losses.append(train_dic['average_loss'])
+        
+        if args.log:
+            wandb.log({
+                'train_epoch_loss': train_dic['average_loss'],
+                'epoch': epoch
+            })
+        
+        if train_dic['average_loss'] <= min(train_losses):
+            save_checkpoint(model, epoch, args, is_best=True)
+    
+    viz.plot_train_val_loss(train_losses, dir_path=args.save_path)
+    
+    
+def run_post_train(model, test_loader, tokenizer, args, optimizer, blender, dpo, ref_model, viz):
+    all_epochs = []
+    train_losses = []
+    
+    for epoch in range(args.epochs):
+        all_epochs.append(epoch)
+        train_dic = post_trainer_dpo(model, test_loader, tokenizer, args, optimizer, epoch, blender, dpo, ref_model)
         train_losses.append(train_dic['average_loss'])
         
         if args.log:
@@ -340,7 +367,15 @@ def main(rank, world_size):
                 shuffle=False,
                 pin_memory=True)
             
-            run_inference(model, data_loader, tokenizer, args, train_utils)
+            if args.post_train:
+                blender = llm_blender.Blender()
+                blender.loadranker("llm-blender/PairRM", device = model.device, cache_dir = './../.huggingface')
+                dpo = DPO(beta = args.dpo_beta)
+                ref_model = copy.deepcopy(model)
+                ref_model.eval()
+                run_post_train(model, data_loader, tokenizer, args, optimizer, blender, dpo, ref_model, viz)
+            else:
+                run_inference(model, data_loader, tokenizer, args, train_utils)
         
     finally:
         if args.log:

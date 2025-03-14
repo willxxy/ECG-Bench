@@ -65,7 +65,6 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
     dev_count = 0
     gt_answers = []
     gen_answers = []
-    questions = []
     
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(dataloader, desc=f'Testing {args.model}', position=0, leave=True)):
@@ -124,7 +123,6 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                 print(f"Error location: {e.__traceback__.tb_lineno}")
                 gt_answers.append("")
                 gen_answers.append("")
-                questions.append("")
             
             len_of_batch += 1
             # print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
@@ -159,7 +157,6 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
     return {
         'metrics': all_metrics,
         'qa_results': {
-            'questions': questions,
             'gt_answers': gt_answers,
             'gen_answers': gen_answers
         }

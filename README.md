@@ -64,13 +64,17 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
     `pip install flash-attn==2.7.4.post1 --no-cache-dir`
 
-15. Run the `ELM-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
+15. Install the `llm-blender` package by running the following command:
 
-15. Run the `ELM-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
+    `pip install git+https://github.com/yuchenlin/LLM-Blender.git`
 
-16. `cd` into `ELM-Bench/elm_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
+16. Run the `ELM-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
 
-17. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
+17. Run the `ELM-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
+
+18. `cd` into `ELM-Bench/elm_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
+
+19. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
 
 
 **NOTE: From now, all instructions will assume you are working from the `ELM-Bench/elm_bench` directory.**
