@@ -4,6 +4,3 @@
 [submodule "ecg-plot"]
 	path = ecg-plot
 	url = https://github.com/willxxy/ecg-plot
-[submodule "ecg-image-kit"]
-	path = ecg-image-kit
-	url = https://github.com/willxxy/ecg-image-kit

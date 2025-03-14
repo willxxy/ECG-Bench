@@ -8,6 +8,111 @@ import cv2
 import glob
 import heapq
 from skimage import util
+import time
+
+def get_simple_creases(img_shape, num_horizontal=3, num_vertical=2, angle_variation=5, thickness=5, intensity=0.2, seed=None):
+    """Generate simple creases much faster than the complex coordinate calculation
+    
+    Parameters:
+    -----------
+    img_shape : tuple
+        (height, width) of the image
+    num_horizontal : int
+        Number of horizontal creases
+    num_vertical : int
+        Number of vertical creases
+    angle_variation : int
+        Maximum random angle variation in degrees
+    thickness : int
+        Thickness of creases
+    intensity : float
+        Intensity of the creases (0-1)
+    seed : int
+        Random seed for reproducibility
+        
+    Returns:
+    --------
+    numpy.ndarray
+        Crease mask as a float32 array
+    """
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+    
+    height, width = img_shape[:2]
+    creases = np.ones((height, width), dtype=np.float32)
+    
+    # Add horizontal creases
+    if num_horizontal > 0:
+        h_spacing = height // (num_horizontal + 1)
+        for i in range(1, num_horizontal + 1):
+            y = i * h_spacing
+            # Add slight randomness to position
+            y += random.randint(-h_spacing//4, h_spacing//4)
+            # Add slight angle variation
+            angle = random.uniform(-angle_variation, angle_variation)
+            
+            # Create points for the line
+            x1, y1 = 0, y
+            x2, y2 = width, y + int(np.tan(np.radians(angle)) * width)
+            
+            # Draw the main crease line
+            cv2.line(creases, (x1, y1), (x2, y2), 1.0 + intensity, thickness)
+            
+            # Draw parallel lines with decreasing intensity
+            for offset in range(1, 3):
+                cv2.line(creases, (x1, y1 - offset*thickness), 
+                         (x2, y2 - offset*thickness), 1.0 + intensity*0.7, thickness)
+                cv2.line(creases, (x1, y1 + offset*thickness), 
+                         (x2, y2 + offset*thickness), 1.0 + intensity*0.7, thickness)
+    
+    # Add vertical creases
+    if num_vertical > 0:
+        v_spacing = width // (num_vertical + 1)
+        for i in range(1, num_vertical + 1):
+            x = i * v_spacing
+            # Add slight randomness to position
+            x += random.randint(-v_spacing//4, v_spacing//4)
+            # Add slight angle variation
+            angle = random.uniform(-angle_variation, angle_variation)
+            
+            # Create points for the line
+            x1, y1 = x, 0
+            x2, y2 = x + int(np.tan(np.radians(angle)) * height), height
+            
+            # Draw the main crease line
+            cv2.line(creases, (x1, y1), (x2, y2), 1.0 + intensity, thickness)
+            
+            # Draw parallel lines with decreasing intensity
+            for offset in range(1, 3):
+                cv2.line(creases, (x1 - offset*thickness, y1), 
+                         (x2 - offset*thickness, y2), 1.0 + intensity*0.7, thickness)
+                cv2.line(creases, (x1 + offset*thickness, y1), 
+                         (x2 + offset*thickness, y2), 1.0 + intensity*0.7, thickness)
+    
+    # Apply Gaussian blur to make creases look more natural
+    creases = cv2.GaussianBlur(creases, (5, 5), 0)
+    
+    return creases
+
+def get_simple_wrinkles(img_shape, intensity=0.2, seed=None):
+    """Generate simple wrinkles texture much faster than quilting"""
+    if seed is not None:
+        np.random.seed(seed)
+    
+    # Create noise
+    noise = np.random.rand(img_shape[0], img_shape[1])
+    
+    # Apply Gaussian blur to create wrinkle-like patterns
+    wrinkles = cv2.GaussianBlur(noise, (21, 21), 0)
+    
+    # Normalize to [0, 1]
+    wrinkles = (wrinkles - wrinkles.min()) / (wrinkles.max() - wrinkles.min())
+    
+    # Adjust contrast
+    wrinkles = np.power(wrinkles, 0.5) * intensity + (1 - intensity)
+    
+    return wrinkles
 
 def L2OverlapDiff(patch, block_size, overlap, res, y, x):
     error = 0
@@ -241,7 +346,7 @@ def getCoords(angle,n,hh,ww):
 
 def get_creased_from_array(img_array, ifWrinkles=False, ifCreases=False, 
                           crease_angle=0, num_creases_vertically=3, 
-                          num_creases_horizontally=2, bbox=False):
+                          num_creases_horizontally=2, bbox=False, fast_mode=True):
     """
     Apply creases and wrinkles to an image array without using temporary files.
     
@@ -273,67 +378,82 @@ def get_creased_from_array(img_array, ifWrinkles=False, ifCreases=False,
     hh, ww = img.shape[:2]
     
     if ifWrinkles:
-        
-        # Import the quilt function here to avoid circular imports
+        # if fast_mode:
+        #     wrinkles = get_simple_wrinkles((hh, ww), seed=0)
+        # else:
+        # # Import the quilt function here to avoid circular imports
         wrinklesImg = quilt(img, 250, (1,1), 'Cut')
         wrinklesImg = cv2.cvtColor(wrinklesImg, cv2.COLOR_BGR2GRAY)
         wrinklesImg = wrinklesImg.astype("float32") / 255.0
         
-        # Resize wrinkles to same size as ecg input image
+        # # Resize wrinkles to same size as ecg input image
         wrinkles = cv2.resize(wrinklesImg, (ww, hh), fx=0, fy=0)
-        # Shift image brightness so mean is (near) mid gray
+        # # Shift image brightness so mean is (near) mid gray
         mean = np.mean(wrinkles)
         shift = mean - 0.4
         wrinkles = cv2.subtract(wrinkles, shift)
-    
+
     if ifCreases:
+        if fast_mode:
+            # Use simplified creases generation (much faster)
+            creases = get_simple_creases(
+                img.shape, 
+                num_horizontal=num_creases_horizontally,
+                num_vertical=num_creases_vertically,
+                angle_variation=crease_angle if crease_angle < 45 else 5,
+                seed=0
+            )
+            # Convert to 3-channel for multiplication
+            folds_creases = cv2.cvtColor(creases, cv2.COLOR_GRAY2BGR)
+        else:
+            # Use the original complex method
+            coords1, coords2 = getCoords(crease_angle, num_creases_horizontally, hh, ww)
+            coords3, coords4 = getCoords(90+crease_angle, num_creases_vertically, hh, ww)
+            
+            creases = np.full((hh, ww), 1, dtype=np.float32)
+            if num_creases_horizontally != 0:
+                for i in range(len(coords1)):
+                    x1 = coords1[i][0]
+                    x2 = coords2[i][0]
+                    y1 = coords1[i][1]
+                    y2 = coords2[i][1]
+                    # Drawing lines
+                    if (x1-10) < 0:
+                        cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
+                        cv2.line(creases, (x1, y1-5), (x2, y2-5), 1.15, 5)
+                        cv2.line(creases, (x1, y1+5), (x2, y2+5), 1.15, 5)
+                        cv2.line(creases, (x1, y1+10), (x2, y2+10), 1.05, 5)
+                        cv2.line(creases, (x1, y1-10), (x2, y2-10), 1.05, 5)
+                    else:
+                        cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
+                        cv2.line(creases, (x1-5, y1), (x2-5, y2), 1.15, 5)
+                        cv2.line(creases, (x1+5, y1), (x2+5, y2), 1.15, 5)
+                        cv2.line(creases, (x1-10, y1), (x2-10, y2), 1.05, 5)
+                        cv2.line(creases, (x1+10, y1), (x2+10, y2), 1.05, 5)
+            
+            if num_creases_vertically != 0:
+                for i in range(len(coords3)):
+                    x1 = coords3[i][0]
+                    x2 = coords4[i][0]
+                    y1 = coords3[i][1]
+                    y2 = coords4[i][1]
+                    if (x1-10) < 0:
+                        cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
+                        cv2.line(creases, (x1, y1-5), (x2, y2-5), 1.15, 5)
+                        cv2.line(creases, (x1, y1+5), (x2, y2+5), 1.15, 5)
+                        cv2.line(creases, (x1, y1+10), (x2, y2+10), 1.05, 5)
+                        cv2.line(creases, (x1, y1-10), (x2, y2-10), 1.05, 5)
+                    else:
+                        cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
+                        cv2.line(creases, (x1-5, y1), (x2-5, y2), 1.15, 5)
+                        cv2.line(creases, (x1+5, y1), (x2+5, y2), 1.15, 5)
+                        cv2.line(creases, (x1-10, y1), (x2-10, y2), 1.05, 5)
+                        cv2.line(creases, (x1+10, y1), (x2+10, y2), 1.05, 5)
+            
+            # Blur folds and crease array
+            folds_creases = cv2.GaussianBlur(creases, (3, 3), 0)
+            folds_creases = cv2.cvtColor(folds_creases, cv2.COLOR_GRAY2BGR)
         
-        coords1, coords2 = getCoords(crease_angle, num_creases_horizontally, hh, ww)
-        coords3, coords4 = getCoords(90+crease_angle, num_creases_vertically, hh, ww)
-        
-        creases = np.full((hh, ww), 1, dtype=np.float32)
-        if num_creases_horizontally != 0:
-            for i in range(len(coords1)):
-                x1 = coords1[i][0]
-                x2 = coords2[i][0]
-                y1 = coords1[i][1]
-                y2 = coords2[i][1]
-                # Drawing lines
-                if (x1-10) < 0:
-                    cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
-                    cv2.line(creases, (x1, y1-5), (x2, y2-5), 1.15, 5)
-                    cv2.line(creases, (x1, y1+5), (x2, y2+5), 1.15, 5)
-                    cv2.line(creases, (x1, y1+10), (x2, y2+10), 1.05, 5)
-                    cv2.line(creases, (x1, y1-10), (x2, y2-10), 1.05, 5)
-                else:
-                    cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
-                    cv2.line(creases, (x1-5, y1), (x2-5, y2), 1.15, 5)
-                    cv2.line(creases, (x1+5, y1), (x2+5, y2), 1.15, 5)
-                    cv2.line(creases, (x1-10, y1), (x2-10, y2), 1.05, 5)
-                    cv2.line(creases, (x1+10, y1), (x2+10, y2), 1.05, 5)
-        
-        if num_creases_vertically != 0:
-            for i in range(len(coords3)):
-                x1 = coords3[i][0]
-                x2 = coords4[i][0]
-                y1 = coords3[i][1]
-                y2 = coords4[i][1]
-                if (x1-10) < 0:
-                    cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
-                    cv2.line(creases, (x1, y1-5), (x2, y2-5), 1.15, 5)
-                    cv2.line(creases, (x1, y1+5), (x2, y2+5), 1.15, 5)
-                    cv2.line(creases, (x1, y1+10), (x2, y2+10), 1.05, 5)
-                    cv2.line(creases, (x1, y1-10), (x2, y2-10), 1.05, 5)
-                else:
-                    cv2.line(creases, (x1, y1), (x2, y2), 1.25, 5)
-                    cv2.line(creases, (x1-5, y1), (x2-5, y2), 1.15, 5)
-                    cv2.line(creases, (x1+5, y1), (x2+5, y2), 1.15, 5)
-                    cv2.line(creases, (x1-10, y1), (x2-10, y2), 1.05, 5)
-                    cv2.line(creases, (x1+10, y1), (x2+10, y2), 1.05, 5)
-        
-        # Blur folds and crease array
-        folds_creases = cv2.GaussianBlur(creases, (3, 3), 0)
-        folds_creases = cv2.cvtColor(folds_creases, cv2.COLOR_GRAY2BGR)
         # Apply folds and crease mask
         img = (img * folds_creases)
     
@@ -390,11 +510,6 @@ def get_augment_from_array(img_array, rotate=25, noise=25, crop=0.01, temperatur
     if len(image.shape) == 2:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     
-    # Create an empty list for lead bounding boxes
-    lead_bbs = []
-    leadNames_bbs = []
-    plotted_pixels = []
-    
     # Create a sequential augmentation pipeline
     rot = random.randint(-rotate, rotate)
     crop_sample = random.uniform(0, crop)
@@ -416,7 +531,7 @@ def augment_ecg_image(image_input, output_path=None,
                      crease_angle=None, num_creases_vertically=None, 
                      num_creases_horizontally=None, noise=None, 
                      rotate=None, crop=None, temperature=None, 
-                     fully_random=True, seed=None):
+                     fully_random=True, seed=None, timing=False):
     """
     Apply augmentations to an ECG image with random parameter selection.
     Works directly with numpy arrays without creating temporary files.
@@ -449,28 +564,38 @@ def augment_ecg_image(image_input, output_path=None,
         If True, randomly decide which augmentations to apply regardless of wrinkles/augment params
     seed : int
         Random seed for reproducibility
+    timing : bool
+        Whether to measure and return timing information
         
     Returns:
     --------
-    str or numpy.ndarray
-        Path to the saved image if output_path is provided, or numpy array of the image if output_path is None
+    str or numpy.ndarray or tuple
+        Path to the saved image if output_path is provided, or numpy array of the image if output_path is None.
+        If timing=True, returns a tuple with the result and a dictionary of timing information.
     """
+    timing_info = {}
+    
+    start_time = time.time()
+    
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
     
     # Handle input as either path or numpy array
+    load_start = time.time()
     if isinstance(image_input, str):
         img = np.array(Image.open(image_input))
     elif isinstance(image_input, np.ndarray):
         img = image_input.copy()
     else:
         raise ValueError("image_input must be either a file path or a numpy array")
+    timing_info['load_image'] = time.time() - load_start
     
     # Randomly decide which augmentations to apply if fully_random is True
     if fully_random:
-        wrinkles = random.choice([True, False])
+        # wrinkles = random.choice([True, False])
         augment = random.choice([True, False])
+        wrinkles = True
     else:
         # Default to True if not specified
         wrinkles = True if wrinkles is None else wrinkles
@@ -478,9 +603,10 @@ def augment_ecg_image(image_input, output_path=None,
     
     # Apply wrinkles and creases if requested
     if wrinkles:
+        wrinkles_start = time.time()
         # Randomly choose crease parameters if not specified
         if crease_angle is None:
-            crease_angle = random.randint(0, 90)
+            crease_angle = random.randint(0, 10)
         
         if num_creases_vertically is None:
             num_creases_vertically = random.randint(1, 10)
@@ -498,9 +624,11 @@ def augment_ecg_image(image_input, output_path=None,
             num_creases_horizontally=num_creases_horizontally,
             bbox=False
         )
+        timing_info['wrinkles_and_creases'] = time.time() - wrinkles_start
     
     # Apply image augmentations if requested
     if augment:
+        augment_start = time.time()
         # Randomly choose augmentation parameters if not specified
         if noise is None:
             noise = random.randint(10, 50)
@@ -527,6 +655,7 @@ def augment_ecg_image(image_input, output_path=None,
             temperature=temperature,
             bbox=False
         )
+        timing_info['image_augmentations'] = time.time() - augment_start
     
     # For debugging/information, you can print the parameters used
     if wrinkles or augment:
@@ -550,6 +679,8 @@ def augment_ecg_image(image_input, output_path=None,
         print(f"Augmentation parameters used: {params}")
     
     # Save or return the final image
+    save_start = time.time()
+    result = None
     if output_path:
         # If the output path is a directory, create a filename
         if os.path.isdir(output_path):
@@ -557,10 +688,19 @@ def augment_ecg_image(image_input, output_path=None,
         
         # Save the final image to the output path
         Image.fromarray(img).save(output_path)
-        return output_path
+        result = output_path
     else:
         # Return the image as a numpy array
-        return img
+        result = img
+    timing_info['save_image'] = time.time() - save_start
+    
+    # Calculate total time
+    timing_info['total_time'] = time.time() - start_time
+    
+    if timing:
+        return result, timing_info
+    else:
+        return result
 
 # Original code for loading and processing ECG data
 path_to_npy = glob.glob('./data/mimic/preprocessed_1250_250/*.npy')[0]
@@ -583,29 +723,83 @@ img = Image.fromarray(image)
 original_image_path = './pngs/test_from_array.png'
 img.save(original_image_path)
 
-# Example 1: Save augmented image to disk
-augmented_image_path = augment_ecg_image(
+# Now let's add timing to our examples
+
+# Example 1: Save augmented image to disk with timing
+print("\n--- Example 1: Save augmented image to disk ---")
+augmented_image_path, timing1 = augment_ecg_image(
     original_image_path, 
     output_path='./pngs',
     fully_random=True,
-    seed=42
+    seed=42,
+    timing=True
 )
 print(f"Augmented image saved to: {augmented_image_path}")
+print("Timing information:")
+for step, duration in timing1.items():
+    print(f"  {step}: {duration:.4f} seconds")
 
-# Example 2: Get augmented image as numpy array
-augmented_array = augment_ecg_image(
+# Example 2: Get augmented image as numpy array with timing
+print("\n--- Example 2: Get augmented image as numpy array from file path ---")
+augmented_array, timing2 = augment_ecg_image(
     original_image_path,  # Using file path
     output_path=None,     # No output path means return numpy array
     fully_random=True,
-    seed=43
+    seed=43,
+    timing=True
 )
 print(f"Augmented image array shape: {augmented_array.shape}")
+print("Timing information:")
+for step, duration in timing2.items():
+    print(f"  {step}: {duration:.4f} seconds")
 
-# Example 3: Directly use numpy array as input
-augmented_array2 = augment_ecg_image(
+# Example 3: Directly use numpy array as input with timing
+print("\n--- Example 3: Get augmented image as numpy array from numpy array ---")
+augmented_array2, timing3 = augment_ecg_image(
     image,               # Using numpy array directly
     output_path=None,    # No output path means return numpy array
     fully_random=True,
-    seed=44
+    seed=44,
+    timing=True
 )
 print(f"Augmented image array shape: {augmented_array2.shape}")
+print("Timing information:")
+for step, duration in timing3.items():
+    print(f"  {step}: {duration:.4f} seconds")
+
+# Let's also time the individual augmentation functions
+print("\n--- Timing individual augmentation functions ---")
+
+# Time get_creased_from_array
+test_img = image.copy()
+start = time.time()
+creased_img = get_creased_from_array(
+    test_img,
+    ifWrinkles=True,
+    ifCreases=True,
+    crease_angle=45,
+    num_creases_vertically=5,
+    num_creases_horizontally=5
+)
+creased_time = time.time() - start
+print(f"get_creased_from_array time: {creased_time:.4f} seconds")
+
+# Time get_augment_from_array
+test_img = image.copy()
+start = time.time()
+augmented_img = get_augment_from_array(
+    test_img,
+    rotate=15,
+    noise=30,
+    crop=0.02,
+    temperature=5000
+)
+augment_time = time.time() - start
+print(f"get_augment_from_array time: {augment_time:.4f} seconds")
+
+# Time quilt function (used in wrinkles generation)
+test_img = image.copy()
+start = time.time()
+quilted_img = quilt(test_img, 250, (1,1), 'Cut')
+quilt_time = time.time() - start
+print(f"quilt function time: {quilt_time:.4f} seconds")
