@@ -3,6 +3,8 @@ from torch.utils.data import Dataset
 import torch
 from PIL import Image
 from ecg_bench.utils.conversation_utils import get_conv_template
+from imgaug import augmenters as iaa
+import random
 
 class BaseECGDataset(Dataset):
     def __init__(self, json_data_file, train_utils, encoder_tokenizer=None, llm_tokenizer=None):
@@ -26,11 +28,26 @@ class BaseECGDataset(Dataset):
         return len(self.json_data_file)
 
     def signal_to_image(self, signal):
-        print('signal', signal.shape)
-        normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
-        print('normalized_signal', normalized_signal.shape)
-        rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
-        return Image.fromarray(rgb_norm_signal)
+        if self.args.image:
+            image = self.viz.get_plot_as_image(signal, self.args.target_sf)
+            if random.random() < 0.6:
+                return self.augment_image(image)
+            else:
+                return Image.fromarray(image)
+        else:
+            normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
+            rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
+            return Image.fromarray(rgb_norm_signal)
+    
+    def augment_image(self, image):
+        seq = iaa.Sequential([
+        iaa.Sometimes(0.5, iaa.Multiply((0.8, 1.2))),    # 50% chance to change brightness
+        iaa.Sometimes(0.5, iaa.Affine(rotate=(-5, 5))),    # 50% chance to rotate by -5° to 5°
+        iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0.0, 1.5))),  # 50% chance to apply Gaussian blur
+        iaa.Sometimes(0.5, iaa.AddToHueAndSaturation((-30, 30), per_channel=True))  # 50% chance to adjust hue
+        ])
+        augmented_image = seq.augment_image(image)
+        return Image.fromarray(augmented_image)
 
     def create_attention_mask(self, input_ids):
         return [0 if num == self.pad_id else 1 for num in input_ids]

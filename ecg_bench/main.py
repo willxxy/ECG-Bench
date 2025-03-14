@@ -43,6 +43,7 @@ def get_args():
     data_group.add_argument('--ecg_tokenizer', type=str, help='Tokenizer specification')
     data_group.add_argument('--percentiles', type=str, default=None, help='Percentiles computed during preprocessing')
     data_group.add_argument('--system_prompt', type=str, default=None, help='System prompt')
+    data_group.add_argument('--image', action = 'store_true', default=None, help='Turn Image Generation on')
     
     ### Model
     model_group = parser.add_argument_group('Model')
