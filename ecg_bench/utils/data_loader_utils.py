@@ -215,7 +215,7 @@ class End2EndECGChatDataset(BaseECGDataset):
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text:
+        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
             message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
             conv.append_message(role, message_value)
