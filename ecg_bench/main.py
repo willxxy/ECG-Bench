@@ -321,30 +321,17 @@ def main(rank, world_size):
                 train_utils=train_utils,
                 encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'second' or args.inference == 'second':
-            if args.data in [f'ecg_instruct_45k_mapped_{args.seg_len}', f'ecg_instruct_pulse_mapped_{args.seg_len}']:
-                dataset = SecondStageECGChatDataset(
-                    json_data_file=data,
-                    train_utils=train_utils,
-                    llm_tokenizer=tokenizer,
-                    encoder_tokenizer=model_object.get('encoder_tokenizer'))
-            else:
-                dataset = SecondStageECGDataset(
-                    json_data_file=data,
-                    train_utils=train_utils,
-                    llm_tokenizer=tokenizer,
-                    encoder_tokenizer=model_object.get('encoder_tokenizer'))
+            dataset = SecondStageECGChatDataset(
+                json_data_file=data,
+                train_utils=train_utils,
+                llm_tokenizer=tokenizer,
+                encoder_tokenizer=model_object.get('encoder_tokenizer'))
         elif args.train == 'end2end' or args.inference == 'end2end':
-            if args.data in [f'ecg_instruct_45k_mapped_{args.seg_len}', f'ecg_instruct_pulse_mapped_{args.seg_len}']:
-                dataset = End2EndECGChatDataset(
-                    json_data_file=data,
-                    train_utils=train_utils,
-                    llm_tokenizer=tokenizer)
-            else:
-                dataset = End2EndECGDataset(
-                    json_data_file=data,
-                    train_utils=train_utils,
-                    llm_tokenizer=tokenizer)
-        
+            dataset = End2EndECGChatDataset(
+                json_data_file=data,
+                train_utils=train_utils,
+                llm_tokenizer=tokenizer)
+
         if args.train:
             if args.dis:
                 sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, seed=args.seed, shuffle=True)
