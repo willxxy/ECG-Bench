@@ -16,9 +16,11 @@ class BaseECGDataset(Dataset):
         self.llm_tokenizer = llm_tokenizer
         if llm_tokenizer is not None:
             self.create_special_tokens()
-        if self.args.data in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
+        if self.args.train == 'end2end' or self.args.inference == 'end2end' or self.args.train == 'second' or self.args.inference == 'second':
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
-            if self.args.data == f'ecg_instruct_45k_mapped_{self.args.seg_len}':
+            if self.args.data == f'ecg_instruct_45k_mapped_{self.args.seg_len}'\
+                or self.args.data == f'ecg-qa_mimic-iv-ecg_mapped_{self.args.seg_len}'\
+                    or self.args.data == f'ecg-qa_ptbxl_mapped_{self.args.seg_len}':
                 self.ecg_placeholder = '<ecg>'
             elif self.args.data == f'ecg_instruct_pulse_mapped_{self.args.seg_len}':
                 self.ecg_placeholder = '<image>'
@@ -60,11 +62,12 @@ class BaseECGDataset(Dataset):
         return position_ids
     
     def get_qa(self, altered_text):
-        if self.args.data == 'pretrain_mimic_mapped':
+        if self.args.data == f'pretrain_mimic_mapped_{self.args.seg_len}':
             question, answer = altered_text[0]['value'].replace('\n', '').replace('<ecg>', ''), altered_text[1]['value']
-        elif self.args.data in ['ecg-qa_mimic-iv-ecg_mapped', 'ecg-qa_ptbxl_mapped']:
+        elif self.args.data in [f'ecg-qa_mimic-iv-ecg_mapped_{self.args.seg_len}', f'ecg-qa_ptbxl_mapped_{self.args.seg_len}']:
             question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
             answer = ' '.join(answer) if isinstance(answer, list) else answer
+            question = f"{question}\n<ecg>"
         return question, answer
     
     def pad_to_max_qa(self, tokenized_sequence):

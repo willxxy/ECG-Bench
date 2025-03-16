@@ -22,8 +22,7 @@ from ecg_bench.utils.optim_utils import ScheduledOptim
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
 from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
-from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, SecondStageECGDataset, End2EndECGDataset, \
-                                                End2EndECGChatDataset, SecondStageECGChatDataset
+from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, End2EndECGChatDataset, SecondStageECGChatDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
 from ecg_bench.runners.inference import tester, tester_chat
@@ -36,7 +35,7 @@ def get_args():
     ### Data
     data_group = parser.add_argument_group('Data')
     data_group.add_argument('--data', type=str, default=None, help='Dataset name')
-    data_group.add_argument('--seg_len', type=int, default=500, help='Segment length')
+    data_group.add_argument('--seg_len', type=int, default=None, help='Segment length')
     data_group.add_argument('--num_merges', type=int, default=3500, help='Vocab size')
     data_group.add_argument('--target_sf', type=int, default=250, help='Target sampling frequency')
     data_group.add_argument('--pad_to_max', type=int, default=1020, help='Pad to max size')

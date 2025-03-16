@@ -39,7 +39,7 @@ def main(args: argparse.Namespace):
             preprocess_base_ecg = PreprocessBaseECG(args, fm, df)
             preprocess_base_ecg.preprocess_batch()
         
-        if args.base_data == 'mimic' and args.seg_len == 2500:
+        if args.sample_percentiles or args.sample_files:
             sample_base_ecg = SampleBaseECG(args, fm)
             if args.sample_percentiles:
                 if not fm.ensure_directory_exists(file = f'./data/{args.base_data}_percentiles_{args.seg_len}_{args.target_sf}_{args.num_percentiles}.npy'):

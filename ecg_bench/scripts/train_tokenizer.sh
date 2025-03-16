@@ -28,7 +28,7 @@
 
 python train_tokenizer.py \
 --num_merges=5000 \
---sampled_files=data/sampled_450000_200.txt \
+--sampled_files=data/sampled_300000_random.txt \
 --num_processes=12 \
 --percentiles=data/mimic_percentiles_2500_250_300000.npy \
 --train

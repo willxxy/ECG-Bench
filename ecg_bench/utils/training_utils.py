@@ -246,6 +246,7 @@ class TrainingUtils:
         else:
             patch_size = min(patch_candidates, 
                            key=lambda x: abs(seq_len//x - 32))
+        print(f'Patch size: {patch_size}')
         return patch_size
         
     def count_parameters(self, model: nn.Module) -> int:
