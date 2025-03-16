@@ -246,7 +246,6 @@ class TrainingUtils:
         else:
             patch_size = min(patch_candidates, 
                            key=lambda x: abs(seq_len//x - 32))
-        print(f'Patch size: {patch_size}')
         return patch_size
         
     def count_parameters(self, model: nn.Module) -> int:
@@ -274,14 +273,10 @@ class TrainingUtils:
         }
         if self.args.train == 'second' or self.args.inference == 'second':
             special_tokens['additional_special_tokens'].append('<signal>')
-        if self.args.data in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
-            special_tokens['additional_special_tokens'].append('<|start_header_id|>')
-            special_tokens['additional_special_tokens'].append('<|end_header_id|>')
-            special_tokens['additional_special_tokens'].append('<|eot_id|>')
-        else:
-            ## We may not need this eventually
-            special_tokens['additional_special_tokens'].append('<sig_start>')
-            special_tokens['additional_special_tokens'].append('<sig_end>')
+            
+        special_tokens['additional_special_tokens'].append('<|start_header_id|>')
+        special_tokens['additional_special_tokens'].append('<|end_header_id|>')
+        special_tokens['additional_special_tokens'].append('<|eot_id|>')
         llm_tokenizer.add_special_tokens(special_tokens)
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
