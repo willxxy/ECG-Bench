@@ -461,10 +461,9 @@ class SampleBaseECG:
     '''
     Main class for sampling base datas for percentiles and sapmles for tokenizer training
     '''
-    def __init__(self, args, fm, df):
+    def __init__(self, args, fm):
         self.args = args
         self.fm = fm
-        self.df = df
         self.preprocessed_dir = f"./data/{self.args.base_data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
     
     def get_percentiles(self):
@@ -527,6 +526,25 @@ class SampleBaseECG:
         except Exception as e:
             print(f"Error in get_percentiles: {str(e)}")
             return None
+
+    def random_sampling(self):
+        # Get all .npy file paths directly using glob
+        print("Collecting ECG files for random sampling...")
+        file_paths = glob.glob(os.path.join(self.preprocessed_dir, "*.npy"))
+        
+        # Randomly sample the specified number of files
+        print(f"Randomly sampling {self.args.num_tok_samples} files from {len(file_paths)} total files...")
+        sampled_files = random.sample(
+            file_paths, 
+            min(self.args.num_tok_samples, len(file_paths))
+        )
+        
+        # Save the sampled file paths
+        save_path = f'./data/sampled_{self.args.num_tok_samples}_random.txt'
+        print(f"Sampled {len(sampled_files)} files.")
+        with open(save_path, "w") as f:
+            for file in sampled_files:
+                f.write(f"{file}\n")
 
     def stratified_sampling(self):
         file_paths, clusters, n_clusters = self.analyze_morphologies()
