@@ -249,10 +249,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
-        if args.data in [f'ecg_instruct_45k_mapped_{args.seg_len}', f'ecg_instruct_pulse_mapped_{args.seg_len}']:
-            seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
-        else:
-            seed_results = tester(model, test_loader, tokenizer, args, train_utils)
+        seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
         all_seed_results.append(seed_results)
         
         with open(f"{checkpoint_path}/seed_{seed}.json", 'w') as f:

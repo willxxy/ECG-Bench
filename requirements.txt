@@ -1,3 +1,4 @@
+mlx==0.23.2
 accelerate==0.34.2
 einops==0.8.0
 h5py==3.12.1
@@ -33,12 +34,10 @@ beautifulsoup4==4.12.2
 imageio==2.27.0
 imgaug==0.4.0
 imutils==0.5.4
-keras==2.14.0
 opencv_python==4.6.0.66
 pillow==10.3.0
 scikit-image==0.21.0
 spacy==3.8.4
-tensorflow==2.14.0
 validators==0.18.2
 html5lib==1.1
 qrcode==7.4.2
