@@ -91,7 +91,6 @@ def get_args():
     ckpt_group = parser.add_argument_group('Checkpoints')
     ckpt_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint path')
     ckpt_group.add_argument('--encoder_checkpoint', type=str, default=None, help='Encoder checkpoint path')
-    ckpt_group.add_argument('--encoder_data', type=str, default=None, help='Encoder data path')
 
     return parser.parse_args()
 

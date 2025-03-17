@@ -219,8 +219,7 @@ class TrainingUtils:
             strict = False
             encoder_tokenizer = None
         if self.args.encoder_checkpoint != None:
-            encoder_checkpoint_path = f"./runs/{self.args.encoder_data}_{self.args.seg_len}_{self.args.target_sf}/{self.args.seed}/{self.args.encoder_checkpoint}"
-            encoder_checkpoint = torch.load(f'{encoder_checkpoint_path}/best_model.pth', map_location = self.device)
+            encoder_checkpoint = torch.load(f'{self.args.encoder_checkpoint}/best_model.pth', map_location = self.device)
             encoder.load_state_dict(encoder_checkpoint['model'], strict = strict)
             encoder = encoder.to(device = self.device, dtype = torch.bfloat16) ### dtype of llm
         

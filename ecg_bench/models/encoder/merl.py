@@ -44,7 +44,11 @@ class MERLPretrain(nn.Module):
             self.proj_out = 256
             self.proj_hidden = 256
             self.downconv = nn.Conv1d(in_channels=2048, out_channels=self.proj_out, kernel_size=1)
-            self.att_pool_head = AttentionPool2d(spacial_dim=32,
+            if self.args.seg_len == 1250:
+                spacial_dim = 79
+            else:
+                spacial_dim = 32
+            self.att_pool_head = AttentionPool2d(spacial_dim=spacial_dim,
                                                         embed_dim=self.proj_out, 
                                                         num_heads=4, 
                                                         output_dim=self.proj_out)
