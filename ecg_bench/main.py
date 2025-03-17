@@ -150,7 +150,7 @@ def setup_wandb(args):
 
 def create_save_path(args):
     base_dir = "./runs"
-    dataset_config = f"{args.data}_{args.seg_len}_{args.target_sf}"
+    dataset_config = f"{args.data}"
     seed_dir = str(args.seed)
     model_params = [
         args.model,
@@ -236,7 +236,6 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
     seeds = [0, 1]
     all_seed_results = []
-    checkpoint_path = f"./runs/{args.data}_{args.seg_len}_{args.target_sf}/{args.seed}/{args.checkpoint}"
     
     for seed in seeds:
         print(f'Inferencing on seed {seed}')
@@ -244,14 +243,14 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         random.seed(seed)
         np.random.seed(seed)
         
-        checkpoint = torch.load(f"{checkpoint_path}/best_model.pth", map_location=args.device)
+        checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
         seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
         all_seed_results.append(seed_results)
         
-        with open(f"{checkpoint_path}/seed_{seed}.json", 'w') as f:
+        with open(f"{args.checkpoint}/seed_{seed}.json", 'w') as f:
             json.dump({
                 'averages': seed_results['metrics'],
                 'qa_results': seed_results['qa_results']
@@ -261,7 +260,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     statistical_results = train_utils.run_statistical_analysis(all_seed_results)
     print(f'Statistical results: {statistical_results}')
     
-    with open(f"{checkpoint_path}/statistical_results.json", 'w') as f:
+    with open(f"{args.checkpoint}/statistical_results.json", 'w') as f:
         json.dump(statistical_results, f)
 
 def main(rank, world_size):
