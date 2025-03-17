@@ -18,12 +18,7 @@ class BaseECGDataset(Dataset):
             self.create_special_tokens()
         if self.args.train == 'end2end' or self.args.inference == 'end2end' or self.args.train == 'second' or self.args.inference == 'second':
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
-            if self.args.data == f'ecg_instruct_45k_mapped_{self.args.seg_len}'\
-                or self.args.data == f'ecg-qa_mimic-iv-ecg_mapped_{self.args.seg_len}'\
-                    or self.args.data == f'ecg-qa_ptbxl_mapped_{self.args.seg_len}':
-                self.ecg_placeholder = '<ecg>'
-            elif self.args.data == f'ecg_instruct_pulse_mapped_{self.args.seg_len}':
-                self.ecg_placeholder = '<image>'
+            self.ecg_placeholder = '<signal>'
         self.uniform_question = 'Could you please help me explain my ECG?'
     
     def __len__(self):
@@ -67,7 +62,6 @@ class BaseECGDataset(Dataset):
         elif self.args.data in [f'ecg-qa_mimic-iv-ecg_mapped_{self.args.seg_len}', f'ecg-qa_ptbxl_mapped_{self.args.seg_len}']:
             question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
             answer = ' '.join(answer) if isinstance(answer, list) else answer
-            question = f"{question}\n<ecg>"
         return question, answer
     
     def pad_to_max_qa(self, tokenized_sequence):
@@ -214,13 +208,19 @@ class End2EndECGChatDataset(BaseECGDataset):
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
         
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
+        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
+                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
+                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
         for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            message_value = message['value'].replace('<ecg>\n', '')
+            message_value = message_value.replace('<image>\n', '')
+            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            if message['from'] == 'human':
+                message_value = f"<signal>\n{message_value}"
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
@@ -286,13 +286,19 @@ class End2EndECGChatDataset(BaseECGDataset):
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
         
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
+        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
+                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
+                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text:
+        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            message_value = message['value'].replace('<ecg>', '').replace('\n', '')
+            message_value = message_value.replace('<image>', '').replace('\n', '')
+            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            if message['from'] == 'human':
+                message_value = f"<signal>\n{message_value}"
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
@@ -367,7 +373,6 @@ class SecondStageECGChatDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
         elif 'mlae' in self.args.model:
             encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
-            
         if self.args.train == 'second' and self.args.inference is None:
             return self.prepare_training_second(encoder_out, altered_text)
         if self.args.inference == 'second' and self.args.train is None:
@@ -377,14 +382,19 @@ class SecondStageECGChatDataset(BaseECGDataset):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
-        
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
+        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
+                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
+                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text:
+        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            message_value = message['value'].replace('<ecg>', '').replace('\n', '')
+            message_value = message_value.replace('<image>', '').replace('\n', '')
+            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            if message['from'] == 'human':
+                message_value = f"<signal>\n{message_value}"
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
@@ -434,13 +444,19 @@ class SecondStageECGChatDataset(BaseECGDataset):
             conv = get_conv_template('llama-3')
         conv.set_system_message(self.system_prompt)
         
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', f'ecg_instruct_pulse_mapped_{self.args.seg_len}']:
+        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
+                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
+                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text:
+        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('image', 'signal').replace('Image', 'Signal')
+            message_value = message['value'].replace('<ecg>', '').replace('\n', '')
+            message_value = message_value.replace('<image>', '').replace('\n', '')
+            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            if message['from'] == 'human':
+                message_value = f"<signal>\n{message_value}"
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
