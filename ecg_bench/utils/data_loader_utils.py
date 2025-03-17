@@ -294,8 +294,8 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('<ecg>', '').replace('\n', '')
-            message_value = message_value.replace('<image>', '').replace('\n', '')
+            message_value = message['value'].replace('<ecg>\n', '')
+            message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if message['from'] == 'human':
                 message_value = f"<signal>\n{message_value}"
@@ -390,8 +390,8 @@ class SecondStageECGChatDataset(BaseECGDataset):
         
         for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('<ecg>', '').replace('\n', '')
-            message_value = message_value.replace('<image>', '').replace('\n', '')
+            message_value = message['value'].replace('<ecg>\n', '')
+            message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if message['from'] == 'human':
                 message_value = f"<signal>\n{message_value}"
@@ -452,8 +452,8 @@ class SecondStageECGChatDataset(BaseECGDataset):
         
         for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
-            message_value = message['value'].replace('<ecg>', '').replace('\n', '')
-            message_value = message_value.replace('<image>', '').replace('\n', '')
+            message_value = message['value'].replace('<ecg>\n', '')
+            message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if message['from'] == 'human':
                 message_value = f"<signal>\n{message_value}"
