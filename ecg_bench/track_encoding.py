@@ -12,6 +12,7 @@ def get_args():
     parser.add_argument('--list_of_paths', type = str, default = None, help='Please specify the path to the list of paths')
     parser.add_argument('--num_plots', type = int, default = 2, help='Please specify the number of plots to generate')
     parser.add_argument('--dev', action = 'store_true', default = None, help = 'Use this flag to run the script in development mode')
+    parser.add_argument('--instance_normalize', action = 'store_true', default = None, help = 'Use this flag to run the script in instance normalization mode')
     return parser.parse_args()
 
 def main(args):
@@ -27,7 +28,10 @@ def main(args):
         sample_signal = fm.open_npy(path)['ecg']
         for lead in range(sample_signal.shape[0]):
             single_lead = sample_signal[lead]
-            norm_single_lead, _ = ecg_tokenizer_utils.normalize(single_lead)
+            if args.instance_normalize:
+                norm_single_lead, _, _ = ecg_tokenizer_utils.instance_normalize(single_lead)
+            else:
+                norm_single_lead, _ = ecg_tokenizer_utils.normalize(single_lead)
             single_lead_str = ecg_tokenizer_utils._to_symbol_string(single_lead)
             encoded_ids, segment_map = ecg_tokenizer_utils.track_encoding(single_lead_str)
             
