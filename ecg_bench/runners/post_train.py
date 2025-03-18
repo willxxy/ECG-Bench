@@ -5,8 +5,7 @@ import gc
 import wandb
 
 def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, judger, dpo, ref_model):
-    if args.dis:
-        dataloader.sampler.set_epoch(epoch)
+    ref_model.eval()
     total_loss = 0.0
     len_of_batch = 0
     dev_count = 0
@@ -126,24 +125,24 @@ def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, judge
                 offset2 += out2[:, start2:].size(1) - (end2 - start2)
                 
                 # Compare the two generated responses using the current prompt
-                judge_results = judger.judge([prompt], 
+                judge_results = judger.compare([prompt], 
                                                [decoded_out1],
                                                [decoded_out2])
                 
                 if judge_results[0] == True:
                     # Use the full sequence with generated output for model 1
-                    preferred_output_ids = chat_input_ids1[:, :start1+out1[:, start1:].size(1)].to(model.device)
-                    preferred_output_attention_mask = chat_attention_mask1[:, :start1+out1[:, start1:].size(1)].to(model.device)
+                    preferred_output_ids = chat_input_ids1[:, :start1+out1[:, start1:].size(1)].to(args.device)
+                    preferred_output_attention_mask = chat_attention_mask1[:, :start1+out1[:, start1:].size(1)].to(args.device)
                     # Use the full sequence with generated output for model 2
-                    dispreferred_output_ids = chat_input_ids2[:, :start2+out2[:, start2:].size(1)].to(model.device)
-                    dispreferred_output_attention_mask = chat_attention_mask2[:, :start2+out2[:, start2:].size(1)].to(model.device)
+                    dispreferred_output_ids = chat_input_ids2[:, :start2+out2[:, start2:].size(1)].to(args.device)
+                    dispreferred_output_attention_mask = chat_attention_mask2[:, :start2+out2[:, start2:].size(1)].to(args.device)
                 else:
                     # Use the full sequence with generated output for model 2
-                    preferred_output_ids = chat_input_ids2[:, :start2+out2[:, start2:].size(1)].to(model.device)
-                    preferred_output_attention_mask = chat_attention_mask2[:, :start2+out2[:, start2:].size(1)].to(model.device)
+                    preferred_output_ids = chat_input_ids2[:, :start2+out2[:, start2:].size(1)].to(args.device)
+                    preferred_output_attention_mask = chat_attention_mask2[:, :start2+out2[:, start2:].size(1)].to(args.device)
                     # Use the full sequence with generated output for model 1
-                    dispreferred_output_ids = chat_input_ids1[:, :start1+out1[:, start1:].size(1)].to(model.device)
-                    dispreferred_output_attention_mask = chat_attention_mask1[:, :start1+out1[:, start1:].size(1)].to(model.device)
+                    dispreferred_output_ids = chat_input_ids1[:, :start1+out1[:, start1:].size(1)].to(args.device)
+                    dispreferred_output_attention_mask = chat_attention_mask1[:, :start1+out1[:, start1:].size(1)].to(args.device)
                 
                 preferred_log_prob = dpo.get_log_prob(model.llm(input_ids = preferred_output_ids, attention_mask = preferred_output_attention_mask).logits, preferred_output_ids)
                 dispreferred_log_prob = dpo.get_log_prob(model.llm(input_ids = dispreferred_output_ids, attention_mask = dispreferred_output_attention_mask).logits, dispreferred_output_ids)
@@ -152,8 +151,8 @@ def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, judge
                     ref_preferred_log_prob = dpo.get_log_prob(ref_model.llm(input_ids = preferred_output_ids, attention_mask = preferred_output_attention_mask).logits, preferred_output_ids)
                     ref_dispreferred_log_prob = dpo.get_log_prob(ref_model.llm(input_ids = dispreferred_output_ids, attention_mask = dispreferred_output_attention_mask).logits, dispreferred_output_ids)
                     
-                loss, prefered_relative_logprob, disprefered_relative_logprob, reward_accuracies, reward_margins = dpo.calculate_DPO_loss(preferred_log_prob.to(model.device), dispreferred_log_prob.to(model.device),
-                            ref_preferred_log_prob.to(model.device), ref_dispreferred_log_prob.to(model.device))
+                loss, _, _, _, _ = dpo.calculate_DPO_loss(preferred_log_prob.to(args.device), dispreferred_log_prob.to(args.device),
+                            ref_preferred_log_prob.to(args.device), ref_dispreferred_log_prob.to(args.device))
                 
                 optimizer.zero_grad()
                 loss.backward()

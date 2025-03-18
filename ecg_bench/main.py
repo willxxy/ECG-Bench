@@ -216,6 +216,14 @@ def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, 
     all_epochs = []
     train_losses = []
     
+    checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
+    model.load_state_dict(checkpoint['model'])
+    print('Model loaded')
+    
+    ref_checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
+    ref_model.load_state_dict(ref_checkpoint['model'])
+    print('Reference model loaded')
+    
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
         train_dic = post_trainer_dpo(model, test_loader, tokenizer, args, optimizer, epoch, judger, dpo, ref_model)
@@ -355,7 +363,6 @@ def main(rank, world_size):
                 judger.loadranker("llm-blender/PairRM", device = model.device, cache_dir = './../.huggingface')
                 dpo = DPO(beta = args.dpo_beta)
                 ref_model = copy.deepcopy(model)
-                ref_model.eval()
                 run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)
             else:
                 run_inference(model, data_loader, tokenizer, args, train_utils)

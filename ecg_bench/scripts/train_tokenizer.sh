@@ -31,7 +31,8 @@ python train_tokenizer.py \
 --sampled_files=data/sampled_300000_random.txt \
 --num_processes=12 \
 --percentiles=data/mimic_percentiles_2500_250_300000.npy \
---train
+--train \
+--instance_normalize
 
 
 python train_tokenizer.py \
@@ -39,4 +40,5 @@ python train_tokenizer.py \
 --sampled_files=data/sampled_450000_200.txt \
 --num_processes=12 \
 --percentiles=data/mimic_percentiles_2500_250_300000.npy \
---ecg_tokenizer=data/tokenizer_5000_450000.pkl
+--ecg_tokenizer=data/tokenizer_5000_450000_instance.pkl \
+--instance_normalize

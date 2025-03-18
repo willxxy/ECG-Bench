@@ -50,7 +50,10 @@ class ECGByteTokenizer:
         print(f"Compression ratio: {len(all_string_signals) / len(ids):.2f}X")
         print(f"Vocabulary size: {len(vocab)}")
         num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
-        self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}_instance.pkl')
+        if self.args.instance_normalize:
+            self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}_instance.pkl')
+        else:
+            self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}.pkl')
         print(f"Vocabulary and merges saved")
         
     def verify_tokenizer(self):

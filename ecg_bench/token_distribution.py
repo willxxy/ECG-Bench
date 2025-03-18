@@ -12,6 +12,7 @@ def get_args():
     parser.add_argument('--percentiles', type = str, default = None, help='Please specify the path to the percentiles')
     parser.add_argument('--num_processes', type = int, default = 6, help='Please specify the number of processes')
     parser.add_argument('--dev', action = 'store_true', default = None, help = 'Use this flag to run the script in development mode')
+    parser.add_argument('--instance_normalize', action = 'store_true', default = None, help = 'Use this flag to run the script in instance normalization mode')
     return parser.parse_args()
 
 def main(args):
