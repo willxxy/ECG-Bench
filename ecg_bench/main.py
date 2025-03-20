@@ -360,7 +360,7 @@ def main(rank, world_size):
             if args.post_train:
                 ### FROM LLM-BLENDER
                 judger = llm_blender.Blender()
-                judger.loadranker("llm-blender/PairRM", device = model.device, cache_dir = './../.huggingface')
+                judger.loadranker("llm-blender/PairRM", device = device, cache_dir = './../.huggingface')
                 dpo = DPO(beta = args.dpo_beta)
                 ref_model = copy.deepcopy(model)
                 run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)

@@ -214,13 +214,15 @@ class End2EndECGChatDataset(BaseECGDataset):
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
+        count = 0
+        for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human':
+            if message['from'] == 'human' and count == 0:
                 message_value = f"<signal>\n{message_value}"
+                count += 1
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
@@ -292,13 +294,15 @@ class End2EndECGChatDataset(BaseECGDataset):
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
+        count = 0
+        for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human':
+            if message['from'] == 'human' and count == 0:
                 message_value = f"<signal>\n{message_value}"
+                count += 1
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
@@ -388,13 +392,15 @@ class SecondStageECGChatDataset(BaseECGDataset):
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
+        count = 0
+        for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human':
+            if message['from'] == 'human' and count == 0:
                 message_value = f"<signal>\n{message_value}"
+                count += 1
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
@@ -450,13 +456,16 @@ class SecondStageECGChatDataset(BaseECGDataset):
             question, answer = self.get_qa(altered_text)
             altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
-        for message in altered_text: #### FOR ECG INSTRUCT AND OTHER DATA MAKE SURE THAT THE <ECG>\n DO WE NED TO GET RID OF \N?
+        
+        count = 0
+        for message in altered_text:
             role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human':
+            if message['from'] == 'human' and count == 0:
                 message_value = f"<signal>\n{message_value}"
+                count += 1
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
