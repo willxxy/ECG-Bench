@@ -43,6 +43,7 @@ def get_args():
     data_group.add_argument('--percentiles', type=str, default=None, help='Percentiles computed during preprocessing')
     data_group.add_argument('--system_prompt', type=str, default=None, help='System prompt')
     data_group.add_argument('--image', action = 'store_true', default=None, help='Turn Image Generation on')
+    data_group.add_argument('--instance_normalize', action = 'store_true', default=None, help='Instance normalize ECGs')
     
     ### Model
     model_group = parser.add_argument_group('Model')
@@ -161,7 +162,8 @@ def create_save_path(args):
         args.beta2,
         args.eps,
         args.warmup,
-        args.weight_decay
+        args.weight_decay,
+        args.instance_normalize
     ]
     model_config = '_'.join(str(param) for param in model_params)    
     save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
