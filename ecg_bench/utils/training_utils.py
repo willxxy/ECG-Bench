@@ -281,6 +281,9 @@ class TrainingUtils:
         llm.resize_token_embeddings(len(llm_tokenizer))
         return llm, llm_tokenizer
     
+    def calculate_acc(self, references, hypotheses):
+        return np.mean([ref == hyp for ref, hyp in zip(references, hypotheses)])
+    
     def calculate_bleu(self, references, hypotheses):
         smoother = SmoothingFunction()
         # Convert to list of lists for corpus_bleu
@@ -329,7 +332,8 @@ class TrainingUtils:
                 'BLEU': 0,
                 'METEOR': 0.0,
                 'ROUGE': {'rouge-1': 0.0, 'rouge-2': 0.0, 'rouge-l': 0.0},
-                'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]}
+                'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]},
+                'ACC': 0.0
             }
             
         valid_refs, valid_hyps = zip(*valid_pairs)
@@ -338,7 +342,8 @@ class TrainingUtils:
             'BLEU': self.calculate_bleu(valid_refs, valid_hyps),
             'METEOR': self.calculate_meteor(valid_refs, valid_hyps),
             'ROUGE': self.calculate_rouge(valid_refs, valid_hyps),
-            'BERTSCORE': self.calculate_bertscore(valid_refs, valid_hyps, device)
+            'BERTSCORE': self.calculate_bertscore(valid_refs, valid_hyps, device),
+            'ACC': self.calculate_acc(valid_refs, valid_hyps)
         }
         
 

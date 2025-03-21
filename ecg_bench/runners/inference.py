@@ -142,6 +142,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
         print(f"METEOR: {all_metrics['METEOR']}")
         print(f"ROUGE-L: {all_metrics['ROUGE']['rouge-l']}")
         print(f"BERTScore F1: {np.mean(all_metrics['BERTSCORE']['hf-f1'])}")
+        print(f"Accuracy: {all_metrics['ACC']}")
     except Exception as e:
         print('\nError during metric calculation:')
         print(f"Error type: {type(e).__name__}")
@@ -150,7 +151,8 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
             'BLEU': 0, 
             'METEOR': 0.0, 
             'ROUGE': {'rouge-1': 0.0, 'rouge-2': 0.0, 'rouge-l': 0.0}, 
-            'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]}
+            'BERTSCORE': {'hf-prec': [0.0], 'hf-rec': [0.0], 'hf-f1': [0.0]},
+            'ACC': 0.0
         }
     
     print("\nEvaluation complete!")
