@@ -25,7 +25,7 @@ from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
 from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, End2EndECGChatDataset, SecondStageECGChatDataset
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
-from ecg_bench.runners.inference import tester, tester_chat
+from ecg_bench.runners.inference import tester_chat
 from ecg_bench.runners.post_train import post_trainer_dpo
 from ecg_bench.utils.post_train_utils import DPO
 
@@ -38,12 +38,12 @@ def get_args():
     data_group.add_argument('--seg_len', type=int, default=None, help='Segment length')
     data_group.add_argument('--num_merges', type=int, default=3500, help='Vocab size')
     data_group.add_argument('--target_sf', type=int, default=250, help='Target sampling frequency')
-    data_group.add_argument('--pad_to_max', type=int, default=1020, help='Pad to max size')
+    data_group.add_argument('--pad_to_max', type=int, default=1024, help='Pad to max size')
     data_group.add_argument('--ecg_tokenizer', type=str, help='Tokenizer specification')
     data_group.add_argument('--percentiles', type=str, default=None, help='Percentiles computed during preprocessing')
     data_group.add_argument('--system_prompt', type=str, default=None, help='System prompt')
     data_group.add_argument('--image', action = 'store_true', default=None, help='Turn Image Generation on')
-    data_group.add_argument('--instance_normalize', action = 'store_true', default=None, help='Instance normalize ECGs')
+    data_group.add_argument('--instance_normalize', action = 'store_true', default=None, help='Turn Instance Normalization on')
     
     ### Model
     model_group = parser.add_argument_group('Model')
@@ -75,8 +75,8 @@ def get_args():
     
     ### Mode and Environment
     mode_group = parser.add_argument_group('Mode and Environment')
-    mode_group.add_argument('--train', type=str, choices=['first', 'second', 'end2end'], help='Training mode')
-    mode_group.add_argument('--inference', type=str, choices=['second', 'end2end'], help='Inference mode')
+    mode_group.add_argument('--train', type=str, default=None, choices=['first', 'second', 'end2end'], help='Training mode')
+    mode_group.add_argument('--inference', type=str, default=None, choices=['second', 'end2end'], help='Inference mode')
     mode_group.add_argument('--post_train', action='store_true', default=None, help='Post-training mode')
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')
@@ -141,33 +141,35 @@ def initialize_system(args):
 
 def setup_wandb(args):
     """Initialize Weights & Biases logging if enabled"""
-    if args.log:
-        print('Initializing Wandb')
-        wandb.init(
-            project='ecg-bench',
-            name=f"{'_'.join(args.save_path.split('/')[2:])}",
-            config=args
-        )
+    print('Initializing Wandb')
+    wandb.init(
+        project='ecg-bench',
+        name=f"{'_'.join(args.save_path.split('/')[2:])}",
+        config=args
+    )
 
 def create_save_path(args):
-    base_dir = "./runs"
-    dataset_config = f"{args.data}"
-    seed_dir = str(args.seed)
-    model_params = [
-        args.model,
-        args.batch_size,
-        args.epochs,
-        args.lr,
-        args.beta1,
-        args.beta2,
-        args.eps,
-        args.warmup,
-        args.weight_decay,
-        args.instance_normalize
-    ]
-    model_config = '_'.join(str(param) for param in model_params)    
-    save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
-    return save_path
+    if args.train != None or args.post_train != None:
+        base_dir = "./runs"
+        dataset_config = f"{args.data}"
+        seed_dir = str(args.seed)
+        model_params = [
+            args.model,
+            args.batch_size,
+            args.epochs,
+            args.lr,
+            args.beta1,
+            args.beta2,
+            args.eps,
+            args.warmup,
+            args.weight_decay,
+            args.instance_normalize
+        ]
+        model_config = '_'.join(str(param) for param in model_params)    
+        save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
+        return save_path
+    else:
+        return args.checkpoint
 
 def save_config(args):    
     args_dict = {k: v for k, v in vars(args).items() if not k.startswith('_')}
@@ -253,7 +255,8 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         random.seed(seed)
         np.random.seed(seed)
         
-        checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
+        # checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
+        checkpoint = torch.load(f"{args.checkpoint}/model_0_49999.pth", map_location=args.device)
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
@@ -283,7 +286,8 @@ def main(rank, world_size):
     
     args.save_path = create_save_path(args)
     fm.ensure_directory_exists(folder=args.save_path)
-    setup_wandb(args)
+    if args.log:
+        setup_wandb(args)
     save_config(args)
     
     try:
@@ -313,7 +317,8 @@ def main(rank, world_size):
         json_data_file = fm.open_json(f'./data/{args.data}.json')
         if args.inference:
             _, test_data = train_utils.split_dataset(json_data_file)
-            data = test_data
+            # data = test_data
+            data = test_data[:20000]
             print('Length of Test Dataset:', len(test_data))
         else:
             data = json_data_file
@@ -336,7 +341,7 @@ def main(rank, world_size):
                 train_utils=train_utils,
                 llm_tokenizer=tokenizer)
 
-        if args.train:
+        if args.train != None:
             if args.dis:
                 sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, seed=args.seed, shuffle=True)
             else:
@@ -352,14 +357,14 @@ def main(rank, world_size):
             
             run_train(model, data_loader, optimizer, args, viz)
         
-        elif args.inference:
+        elif args.inference != None:
             data_loader = DataLoader(
                 dataset,
                 batch_size=1,
                 shuffle=False,
                 pin_memory=True)
             
-            if args.post_train:
+            if args.post_train != None:
                 ### FROM LLM-BLENDER
                 judger = llm_blender.Blender()
                 judger.loadranker("llm-blender/PairRM", device = device, cache_dir = './../.huggingface')
