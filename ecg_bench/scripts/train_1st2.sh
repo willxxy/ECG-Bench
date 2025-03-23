@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define array of models
-models=("stmem" "merl" "mlae" "mtae")
+models=("vit" "clip" "siglip")
 # did stmem
 
 # Loop through each model
@@ -23,7 +23,7 @@ for model in "${models[@]}"; do
     python main.py \
     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
     --model=$model \
-    --device=cuda:3 \
+    --device=cuda:2 \
     --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
     --train=first \
     --batch_size=64 \

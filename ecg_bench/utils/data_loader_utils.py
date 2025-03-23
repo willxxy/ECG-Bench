@@ -32,7 +32,10 @@ class BaseECGDataset(Dataset):
             else:
                 return Image.fromarray(image)
         else:
-            normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
+            if self.args.instance_normalize:
+                normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(signal)
+            else:
+                normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
             rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
             return Image.fromarray(rgb_norm_signal)
     
