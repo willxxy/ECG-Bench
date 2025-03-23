@@ -216,11 +216,12 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         count = 0
         for message in altered_text:
-            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            is_human = message['from'].lower() in ['human', 'user']
+            role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human' and count == 0:
+            if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
@@ -257,7 +258,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         labels = [-100] * len(input_ids)
         for message in altered_text:
-            if message['from'] == 'gpt':
+            if message['from'].lower() == 'assistant':
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):
@@ -268,6 +269,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
                 labels[i] = eot_id
+        
         
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         
@@ -296,11 +298,12 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         count = 0
         for message in altered_text:
-            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            is_human = message['from'].lower() in ['human', 'user']
+            role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human' and count == 0:
+            if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
@@ -394,11 +397,12 @@ class SecondStageECGChatDataset(BaseECGDataset):
         
         count = 0
         for message in altered_text:
-            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            is_human = message['from'].lower() in ['human', 'user']
+            role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human' and count == 0:
+            if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
@@ -413,7 +417,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         labels = [-100] * len(input_ids)
         
         for i, message in enumerate(altered_text):
-            if message['from'] == 'gpt':
+            if message['from'].lower() == 'assistant':
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):
@@ -459,11 +463,12 @@ class SecondStageECGChatDataset(BaseECGDataset):
         
         count = 0
         for message in altered_text:
-            role = conv.roles[0] if message['from'] == 'human' else conv.roles[1]
+            is_human = message['from'].lower() in ['human', 'user']
+            role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if message['from'] == 'human' and count == 0:
+            if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
