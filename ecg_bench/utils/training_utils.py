@@ -268,11 +268,12 @@ class TrainingUtils:
         # Special tokens added in more idiomatic way
         special_tokens = {
             'additional_special_tokens': [],
-            'pad_token': '<pad>'
+            'pad_token': '<pad>' # IS PAD TOKEN DIFFERENT FOR EACH LLM?
         }
         if self.args.train == 'second' or self.args.inference == 'second':
             special_tokens['additional_special_tokens'].append('<signal>')
-            
+        
+        ### THIS IS FOR LLAMA
         special_tokens['additional_special_tokens'].append('<|start_header_id|>')
         special_tokens['additional_special_tokens'].append('<|end_header_id|>')
         special_tokens['additional_special_tokens'].append('<|eot_id|>')
