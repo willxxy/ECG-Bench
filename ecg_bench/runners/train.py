@@ -29,7 +29,7 @@ def trainer(model, dataloader, optimizer, args, epoch):
         loss = outputs.loss
         loss.backward()
 
-        if args.model in ['clip', 'vit', 'merl', 'st_mem', 'siglip']:
+        if args.model in ['clip', 'vit', 'merl', 'st_mem', 'siglip', 'mtae', 'mlae']:
             pass
         else:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
