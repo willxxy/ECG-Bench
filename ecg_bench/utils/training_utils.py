@@ -86,9 +86,9 @@ class TrainingUtils:
     def get_llm(self):
         # Model configuration mapping
         model_configs = {
-            'Llama': {
+            'llama': {
                 'import_path': 'ecg_bench.models.llm.llama',
-                'class_name': 'Llama',
+                'class_name': 'llama',
                 'hf_path': 'meta-llama'
             },
             'opt': {
@@ -105,6 +105,11 @@ class TrainingUtils:
                 'import_path': 'ecg_bench.models.llm.gemma',
                 'class_name': 'gemma',
                 'hf_path': 'google'
+            },
+            'qwen': {
+                'import_path': 'ecg_bench.models.llm.qwen',
+                'class_name': 'qwen',
+                'hf_path': 'qwen'
             }
         }
 

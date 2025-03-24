@@ -1,9 +1,9 @@
 import torch.nn as nn
 
 ### LLM FOR ECG-Byte
-class Qwen(nn.Module):
+class qwen(nn.Module):
     def __init__(self, llm, args):
-        super(Qwen, self).__init__()
+        super(qwen, self).__init__()
         self.args = args
         self.llm = llm
         if self.args.interpret:

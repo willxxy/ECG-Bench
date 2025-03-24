@@ -2074,10 +2074,24 @@ if __name__ == "__main__":
     from transformers import AutoModelForCausalLM, AutoTokenizer
     # llama_model = "meta-llama/llama-3.2-1b-instruct"
     # llama_model = "meta-llama/llama-3.2-1b"
-    models = ["google/gemma-2-2b", "qwen/qwen2.5-1.5b"]
+    models = ["meta-llama/llama-3.2-1b-instruct","meta-llama/llama-3.2-1b", "google/gemma-2-2b", "qwen/qwen2.5-1.5b"]
     for checkpoint in models:
         llama_tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir='../.huggingface')
         llama_model = AutoModelForCausalLM.from_pretrained(checkpoint, cache_dir='../.huggingface')
+        
+        ### ADD SPECIAL TOKENS
+        special_tokens = {
+            'additional_special_tokens': [],
+            'pad_token': '<pad>' # IS PAD TOKEN DIFFERENT FOR EACH LLM?
+        }
+        
+        ### THIS IS FOR LLAMA
+        special_tokens['additional_special_tokens'].append('<|start_header_id|>')
+        special_tokens['additional_special_tokens'].append('<|end_header_id|>')
+        special_tokens['additional_special_tokens'].append('<|eot_id|>')
+        llama_tokenizer.add_special_tokens(special_tokens)
+        llama_model.config.pad_token_id = llama_tokenizer.pad_token_id
+        ###
         
         print("\n")
         print(f"-- {checkpoint} template --")
@@ -2086,6 +2100,8 @@ if __name__ == "__main__":
             conv = get_conv_template("gemma")
         elif 'qwen' in checkpoint:
             conv = get_conv_template("qwen-7b-chat")
+        elif 'llama' in checkpoint:
+            conv = get_conv_template("llama-3")
         conv.set_system_message("You are a helpful assistant that can see and understand images. Please provide detailed and accurate responses.")
         conv.append_message(conv.roles[0], "Hello!")
         conv.append_message(conv.roles[1], "Hi!")
@@ -2093,7 +2109,7 @@ if __name__ == "__main__":
         conv.append_message(conv.roles[1], "great")
         print(conv.get_prompt())
         print(conv.dict())
-        token_ids = llama_tokenizer.encode(conv.get_prompt())
+        token_ids = llama_tokenizer.encode(conv.get_prompt(), add_special_tokens=False)
         tokens = llama_tokenizer.convert_ids_to_tokens(token_ids)
 
         print(llama_tokenizer.decode(token_ids))
@@ -2103,3 +2119,7 @@ if __name__ == "__main__":
             print(f"{idx}: {token} -> {token_id}")
             
         print('--' * 100)
+
+        
+        ### ALL THE SPECIAL TOKENS IN TERMS OF HEADER AND START END TURN TOKENS ARE ALREADY DEFINED IN TOKENIZER
+        ### SO DO WE NEED TO ADD THEM AGAIN?
