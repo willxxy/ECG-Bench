@@ -209,7 +209,14 @@ class End2EndECGChatDataset(BaseECGDataset):
     def prepare_training_end2end(self, ecg_signal, altered_text):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
-        conv.set_system_message(self.system_prompt)
+        elif 'qwen' in self.args.model:
+            conv = get_conv_template('qwen-7b-chat')
+        elif 'gemma' in self.args.model:
+            conv = get_conv_template('gemma')
+        if 'gemma' in self.args.model:
+            pass
+        elif 'qwen' in self.args.model or 'llama' in self.args.model:
+            conv.set_system_message(self.system_prompt)
         
         if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
@@ -294,7 +301,14 @@ class End2EndECGChatDataset(BaseECGDataset):
     def prepare_inference_end2end(self, ecg_signal, altered_text):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
-        conv.set_system_message(self.system_prompt)
+        elif 'qwen' in self.args.model:
+            conv = get_conv_template('qwen-7b-chat')
+        elif 'gemma' in self.args.model:
+            conv = get_conv_template('gemma')
+        if 'gemma' in self.args.model:
+            pass
+        elif 'qwen' in self.args.model or 'llama' in self.args.model:
+            conv.set_system_message(self.system_prompt)
         
         if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
@@ -400,7 +414,15 @@ class SecondStageECGChatDataset(BaseECGDataset):
     def prepare_training_second(self, encoder_out, altered_text):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
-        conv.set_system_message(self.system_prompt)
+        elif 'qwen' in self.args.model:
+            conv = get_conv_template('qwen-7b-chat')
+        elif 'gemma' in self.args.model:
+            conv = get_conv_template('gemma')
+        if 'gemma' in self.args.model:
+            pass
+        elif 'qwen' in self.args.model or 'llama' in self.args.model:
+            conv.set_system_message(self.system_prompt)
+            
         if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
                                   f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
@@ -467,7 +489,14 @@ class SecondStageECGChatDataset(BaseECGDataset):
     def prepare_inference_second(self, encoder_out, altered_text):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
-        conv.set_system_message(self.system_prompt)
+        elif 'qwen' in self.args.model:
+            conv = get_conv_template('qwen-7b-chat')
+        elif 'gemma' in self.args.model:
+            conv = get_conv_template('gemma')
+        if 'gemma' in self.args.model:
+            pass
+        elif 'qwen' in self.args.model or 'llama' in self.args.model:
+            conv.set_system_message(self.system_prompt)
         
         if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',

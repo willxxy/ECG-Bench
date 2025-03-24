@@ -2102,7 +2102,7 @@ if __name__ == "__main__":
             conv = get_conv_template("qwen-7b-chat")
         elif 'llama' in checkpoint:
             conv = get_conv_template("llama-3")
-        conv.set_system_message("You are a helpful assistant that can see and understand images. Please provide detailed and accurate responses.")
+        # conv.set_system_message("You are a helpful assistant that can see and understand images. Please provide detailed and accurate responses.")
         conv.append_message(conv.roles[0], "Hello!")
         conv.append_message(conv.roles[1], "Hi!")
         conv.append_message(conv.roles[0], "How are you?")
