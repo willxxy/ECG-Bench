@@ -215,7 +215,10 @@ class End2EndECGChatDataset(BaseECGDataset):
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
                                   f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
-            altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+            if 'gemma' in self.args.model:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
+            else:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
         count = 0
         for message in altered_text:
@@ -261,7 +264,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         labels = [-100] * len(input_ids)
         for message in altered_text:
-            if message['from'].lower() == 'assistant':
+            if message['from'].lower() in ['assistant', 'model']:
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):
@@ -297,7 +300,10 @@ class End2EndECGChatDataset(BaseECGDataset):
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
                                   f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
-            altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+            if 'gemma' in self.args.model:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
+            else:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
         count = 0
         for message in altered_text:
@@ -327,7 +333,10 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         assistant_ranges = []
         start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
-        assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
+        if 'gemma' in self.args.model:
+            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
+        else:
+            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
         eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
         
         for i in range(len(input_ids)-1):  # -1 to safely check next token
@@ -396,7 +405,10 @@ class SecondStageECGChatDataset(BaseECGDataset):
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
                                   f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
-            altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+            if 'gemma' in self.args.model:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
+            else:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
         count = 0
         for message in altered_text:
@@ -420,7 +432,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         labels = [-100] * len(input_ids)
         
         for i, message in enumerate(altered_text):
-            if message['from'].lower() == 'assistant':
+            if message['from'].lower() in ['assistant', 'model']:
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):
@@ -461,7 +473,10 @@ class SecondStageECGChatDataset(BaseECGDataset):
                                   f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
                                   f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
             question, answer = self.get_qa(altered_text)
-            altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+            if 'gemma' in self.args.model:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
+            else:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         
         
         count = 0
@@ -487,7 +502,10 @@ class SecondStageECGChatDataset(BaseECGDataset):
         
         assistant_ranges = []
         start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
-        assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
+        if 'gemma' in self.args.model:
+            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
+        else:
+            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
         eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
         
         for i in range(len(input_ids)-1):
