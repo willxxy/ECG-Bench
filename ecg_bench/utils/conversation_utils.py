@@ -2074,7 +2074,7 @@ if __name__ == "__main__":
     from transformers import AutoModelForCausalLM, AutoTokenizer
     # llama_model = "meta-llama/llama-3.2-1b-instruct"
     # llama_model = "meta-llama/llama-3.2-1b"
-    models = ["meta-llama/llama-3.2-1b-instruct","meta-llama/llama-3.2-1b", "google/gemma-2-2b", "qwen/qwen2.5-1.5b"]
+    models = ["meta-llama/llama-3.2-1b-instruct","meta-llama/llama-3.2-1b", "google/gemma-2-2b-it", "qwen/qwen2.5-1.5b"]
     for checkpoint in models:
         llama_tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir='../.huggingface')
         llama_model = AutoModelForCausalLM.from_pretrained(checkpoint, cache_dir='../.huggingface')

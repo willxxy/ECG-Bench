@@ -1,9 +1,9 @@
 <h2 align="center">
-  ELM-Bench: A Unified Benchmark for Generative Electrocardiogram Language Models
+  Time Series, Image, or Text: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework
 </h2>
 
 <div align="center">
-  <img src="./assets/ELM-Bench2.png" alt="Our pipeline.">
+  <img src="./assets/fig1_2.png" alt="Our pipeline.">
 </div>
 
 ## Table of Contents
@@ -23,9 +23,15 @@
 
 
 ## Overview <a name="overview"></a>
-This repository is the official implementation of [ELM-Bench: A Unified Benchmark for Generative Electrocardiogram Language Models]()
+This repository is the official implementation of [Time Series, Image, or Text: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework]()
 by [William Jongwon Han](https://willxxy.github.io/), [Choajing Duan](https://www.linkedin.com/in/chaojing-duan-0b3266127), [Michael A. Rosenberg](https://scholar.google.com/citations?user=o0Y0GLcAAAAJ&hl=en), [Emerson Liu](https://www.linkedin.com/in/emerson-liu-950479/), and [Ding Zhao](https://www.meche.engineering.cmu.edu/directory/bios/zhao-ding.html).
 
+Although this repository is based on the mentioned paper, the overall goal of the repository is to provide a unified framework for training and evaluating electrocardiogram-language models (ELMs).
+To this end, we provide the following features not mentioned in the paper:
+1. We impemented an LLM judge with llm-blender and utilized [DPO](https://arxiv.org/abs/2305.18290) for post-training.
+2. Flash Attention 2 for faster training and inference.
+
+We hope to continouously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
 Please carefully read the below documentations to run the pipeline. If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
 
 All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVIDIA A6000 GPUs.
@@ -58,7 +64,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 13. Now `cd ../` and `pip install -e .`
 
-14. We use [Flash Attention 2](https://arxiv.org/abs/2307.08691) to speed up training and inference, however, it is not required. To install flash-attn please use the following command:
+14. We do not use [Flash Attention 2](https://arxiv.org/abs/2307.08691) for the results in the paper but we provide the option to install flash-attn to speed up training and inference, however, it is not required. To install flash-attn please use the following command:
 
     `pip cache remove flash_attn`
 
@@ -199,7 +205,7 @@ Once you are finished with these steps, it's time to preprocess the data!
 
 ### Preprocessing
 
-1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others! For the ECG Instruct Pulse dataset, it uses the code15, mimic, and ptb datasets as the base datasets. However, the base data should only be flagged as code15. We hardcoded the other datasets to be mapped to the base data. This will be generalized in the future.
+1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others!
 
 
 ## Main Methods <a name="methods"></a>
