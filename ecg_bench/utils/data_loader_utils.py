@@ -33,7 +33,7 @@ class BaseECGDataset(Dataset):
                 return Image.fromarray(image)
         else:
             if self.args.instance_normalize:
-                normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(signal)
+                normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(signal)
             else:
                 normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(signal)
             rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
@@ -95,7 +95,10 @@ class EncoderInputPreparation(BaseECGDataset):
         super().__init__(json_data_file=None, train_utils=train_utils, encoder_tokenizer=encoder_tokenizer)
 
     def prepare_st_mem_input(self, ecg_signal):
-        normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
+        if self.args.instance_normalize:
+            normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(ecg_signal)
+        else:
+            normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
         return {'signal': normalized_signal.astype(np.float32)}
     def prepare_vit_input(self, ecg_signal, num_patches):
         image_signal = self.signal_to_image(ecg_signal)
@@ -140,7 +143,10 @@ class EncoderInputPreparation(BaseECGDataset):
         }
     
     def prepare_merl_input(self, ecg_signal, original_report):
-        normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
+        if self.args.instance_normalize:
+            normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(ecg_signal)
+        else:
+            normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
         merl_inputs = self.encoder_tokenizer(text=[original_report],
                                            return_tensors='pt',
                                            padding='max_length',
