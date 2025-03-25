@@ -162,9 +162,9 @@ wget https://physionet.org/static/published-projects/challenge-2020/classificati
 
 3. Unzip the file and inside of `data/cpsc/classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2/training` move the `cpsc_2018` and `cpsc_2018_extra` folders into the `data/cpsc` directory. Then delete the `classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2` folder.
 
-### External Datasets
+### Mapping Datasets
 
-External datasets are datasets that are mapped to the base datasets and subsequently used for all experiments.
+Mapping datasets are datasets that are mapped to the base datasets and subsequently used for all experiments.
 
 #### ECG-QA dataset curated by [ECG-QA, Oh et al.](https://github.com/Jwoo5/ecg-qa)
 
@@ -209,6 +209,22 @@ Once you are finished with these steps, it's time to preprocess the data!
 
 
 ## Main Methods <a name="methods"></a>
+
+### 2 Stage Training <a name="twostage-train"></a>
+
+#### 2-Stage Scratch
+
+We provide the script for training the first stage in 2-stage scratch in `scripts/train_1st.sh`.
+After training the first stage, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint. 
+
+
+#### 2-Stage LLaVA
+
+For 2-stage LLaVA, we provide the script for training in `scripts/train_2nd.sh`. As LLaVA directly utilizes the pretrained, general encoder and only updates the projection head, utilize either CLIP, ViT, or SIGLIP for the encoder and do not pass in the encoder checkpoint.
+
+#### 2-Stage Finetune
+
+For 2-stage finetune, we provide the script for finetuning the general, pretrained encoder in `scripts/train_1st.sh`. After finetuning, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint.
 
 ### Training ECG-Byte <a name="ecg-byte"></a>
 
