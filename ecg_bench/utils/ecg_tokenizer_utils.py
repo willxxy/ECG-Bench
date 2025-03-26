@@ -39,10 +39,7 @@ class ECGByteTokenizer:
         print(list(all_string_signals)[:100])
         
         start_time = time.time()
-        if self.args.super_bpe:
-            ids, vocab, merges = bpe.super_byte_pair_encoding(all_string_signals, self.args.num_merges, self.args.transition_point, self.args.num_processes)
-        else:
-            ids, vocab, merges = bpe.byte_pair_encoding(all_string_signals, self.args.num_merges, self.args.num_processes)
+        ids, vocab, merges = bpe.byte_pair_encoding(all_string_signals, self.args.num_merges, self.args.num_processes)
         end_time = time.time()
         execution_time = end_time - start_time
         
@@ -54,7 +51,7 @@ class ECGByteTokenizer:
         print(f"Vocabulary size: {len(vocab)}")
         num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
         if self.args.instance_normalize:
-            self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}_instance_super.pkl')
+            self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}_instance.pkl')
         else:
             self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}.pkl')
         print(f"Vocabulary and merges saved")
