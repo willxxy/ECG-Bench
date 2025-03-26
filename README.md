@@ -226,11 +226,12 @@ For 2-stage LLaVA, we provide the script for training in `scripts/train_2nd.sh`.
 
 For 2-stage finetune, we provide the script for finetuning the general, pretrained encoder in `scripts/train_1st.sh`. After finetuning, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint.
 
-### Training ECG-Byte <a name="ecg-byte"></a>
 
-1. Once you sampled the ECGs, you can simply run `bash scripts/train_tokenizer.sh` to train the tokenizer. We also provide a script to load in your trained tokenizer and see the encoding compression rate and original vs. decoded signal. Lastly, we provide basic configurations, however, please feel free to modify these.
+### End-to-End Training <a name="endtoend-train"></a>
 
-NOTE: We also provide a trained tokenizer at this [link](https://drive.google.com/drive/folders/1IFrg-XRRDhJ_xIUSxjcXwxvyPLdsbMR0?usp=sharing). Please feel free to use this or train your own!
+#### Training ECG-Byte
+
+1. During preprocessing, 
 
 
 #

@@ -239,6 +239,8 @@ class End2EndECGChatDataset(BaseECGDataset):
             role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
+            message_value = message_value.replace('<image>', '')
+            message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
@@ -246,6 +248,8 @@ class End2EndECGChatDataset(BaseECGDataset):
             conv.append_message(role, message_value)
             
         prompt = conv.get_prompt()
+        # print('PROMPTSSSSSSSS')
+        # print(prompt)
         ecg_position = prompt.find(self.ecg_placeholder)
         prompt_before_ecg = prompt[:ecg_position]
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
@@ -277,7 +281,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         
         labels = [-100] * len(input_ids)
         for message in altered_text:
-            if message['from'].lower() in ['assistant', 'model']:
+            if message['from'].lower() in ['assistant', 'model', 'gpt']:
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):
@@ -289,6 +293,23 @@ class End2EndECGChatDataset(BaseECGDataset):
             if token_id == eot_id:
                 labels[i] = eot_id
         
+        
+        ### MODIFIED
+        # print('LABELSSSSSSSS')
+        # # Convert labels to numpy array first for safer indexing
+        # labels_np = np.array(labels)
+        # # Find indices where labels are not -100
+        # non_neg_indices = np.where(labels_np != -100)[0]
+        # # Get the tokens and ids only for non-negative values
+        # if len(non_neg_indices) > 0:
+        #     non_neg_values = labels_np[non_neg_indices].tolist()
+        #     tokens = self.llm_tokenizer.convert_ids_to_tokens(non_neg_values)
+        #     for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)):
+        #         print(f"{idx}: {token} -> {token_id}")
+        # else:
+        #     print("No valid labels found (all are -100)")
+        # print('='*100)
+        ###
         
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         
@@ -460,7 +481,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         labels = [-100] * len(input_ids)
         
         for i, message in enumerate(altered_text):
-            if message['from'].lower() in ['assistant', 'model']:
+            if message['from'].lower() in ['assistant', 'model', 'gpt']:
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
                 for j in range(len(input_ids) - len(response_tokens) + 1):

@@ -15,6 +15,8 @@ def get_args():
     parser.add_argument('--ecg_tokenizer', type = str, default = None, help = 'If you want to just load the tokenizer, please specify the path to the .pkl file.')
     parser.add_argument('--dev', action = 'store_true', default = False, help = 'Use this flag to run the script in development mode')
     parser.add_argument('--instance_normalize', action='store_true', default=False, help='Use instance-based normalization instead of percentile-based')
+    parser.add_argument('--super_bpe', action='store_true', default=False, help='Use super BPE instead of byte-pair encoding')
+    parser.add_argument('--transition_point', type=int, default=3000, help='Transition point for super BPE')
     return parser.parse_args()
 
 def main(args: argparse.Namespace):

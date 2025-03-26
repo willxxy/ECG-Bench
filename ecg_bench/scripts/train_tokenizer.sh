@@ -29,16 +29,20 @@
 python train_tokenizer.py \
 --num_merges=5000 \
 --sampled_files=data/sampled_300000_random.txt \
---num_processes=12 \
+--num_processes=6 \
 --percentiles=data/mimic_percentiles_2500_250_300000.npy \
 --train \
---instance_normalize
+--instance_normalize \
+--super_bpe \
+--transition_point=3000
 
 
 python train_tokenizer.py \
 --num_merges=5000 \
---sampled_files=data/sampled_450000_200.txt \
---num_processes=12 \
+--sampled_files=data/sampled_300000_random.txt \
+--num_processes=6 \
 --percentiles=data/mimic_percentiles_2500_250_300000.npy \
---ecg_tokenizer=data/tokenizer_5000_450000_instance.pkl \
---instance_normalize
+--ecg_tokenizer=data/tokenizer_5000_300000_instance_super.pkl \
+--instance_normalize \
+--super_bpe \
+--transition_point=3000
