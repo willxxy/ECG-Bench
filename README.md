@@ -226,12 +226,31 @@ For 2-stage LLaVA, we provide the script for training in `scripts/train_2nd.sh`.
 
 For 2-stage finetune, we provide the script for finetuning the general, pretrained encoder in `scripts/train_1st.sh`. After finetuning, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint.
 
+### 2-Stage Inferencing <a name="twostage-inf"></a>
 
-### End-to-End Training <a name="endtoend-train"></a>
+We provide the scripts for inferencing each type of 2-stage training method in `scripts/inference_2stage.sh`. For 2-stage finetune and 2-stage scratch, make sure to define the encoder checkpoint.
 
-#### Training ECG-Byte
+#### End-to-End Training <a name="endtoend-train"></a>
 
-1. During preprocessing, 
+### Training ECG-Byte
+
+1. During preprocessing, there is a sampling stage where we sample N number utilizing one of two techniques. The techniques are random sampling or morphological clustering based sampling. We found that random sampling is enough for our use case.
+
+2. After sampling, a sampled file .txt file should pop up under the data folder.These sampled files will be the ECGs considered during training of ECG-Byte.
+
+3. To train ECG-Byte, simply execute `sh scripts/train_tokenizer.sh`. We provide the default configurations utilized in the paper but feel free to change it!
+
+
+#### Training End-to-End
+
+For training End-to-End, we provide the script in `scripts/train_end2end.sh`. We provide the basic configurations in the file but feel free to modify it.
+
+
+#### Inferencing End-to-End
+
+For inferencing End-to-End, we provide the script in `scripts/inference_end2end.sh`. 
+
+ 
 
 
 #

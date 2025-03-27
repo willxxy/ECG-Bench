@@ -27,7 +27,7 @@ class BaseECGDataset(Dataset):
     def signal_to_image(self, signal):
         if self.args.image:
             image = self.viz.get_plot_as_image(signal, self.args.target_sf)
-            if random.random() < 0.6:
+            if self.args.augment_image and random.random() < 0.6:
                 return self.augment_image(image)
             else:
                 return Image.fromarray(image)
@@ -288,7 +288,12 @@ class End2EndECGChatDataset(BaseECGDataset):
                     if input_ids[j:j+len(response_tokens)] == response_tokens:
                         labels[j:j+len(response_tokens)] = response_tokens
         
-        eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        if 'llama' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        elif 'qwen' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
+        elif 'gemma' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
                 labels[i] = eot_id
@@ -352,6 +357,7 @@ class End2EndECGChatDataset(BaseECGDataset):
             role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
+            message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
@@ -378,7 +384,13 @@ class End2EndECGChatDataset(BaseECGDataset):
             assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
         else:
             assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
-        eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
+        
+        if 'llama' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        elif 'qwen' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
+        elif 'gemma' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
         
         for i in range(len(input_ids)-1):  # -1 to safely check next token
             if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
@@ -465,6 +477,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
             role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
+            message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
@@ -487,7 +500,12 @@ class SecondStageECGChatDataset(BaseECGDataset):
                 for j in range(len(input_ids) - len(response_tokens) + 1):
                     if input_ids[j:j+len(response_tokens)] == response_tokens:
                         labels[j:j+len(response_tokens)] = response_tokens
-        eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        if 'llama' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        elif 'qwen' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
+        elif 'gemma' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
                 labels[i] = eot_id
@@ -541,6 +559,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
             role = conv.roles[0] if is_human else conv.roles[1]
             message_value = message['value'].replace('<ecg>\n', '')
             message_value = message_value.replace('<image>\n', '')
+            message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
                 message_value = f"<signal>\n{message_value}"
@@ -562,7 +581,13 @@ class SecondStageECGChatDataset(BaseECGDataset):
             assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
         else:
             assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
-        eot_id = self.llm_tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0]
+        
+        if 'llama' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        elif 'qwen' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
+        elif 'gemma' in self.args.model:
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
         
         for i in range(len(input_ids)-1):
             if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:

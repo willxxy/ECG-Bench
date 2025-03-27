@@ -43,6 +43,7 @@ def get_args():
     data_group.add_argument('--percentiles', type=str, default=None, help='Percentiles computed during preprocessing')
     data_group.add_argument('--system_prompt', type=str, default=None, help='System prompt')
     data_group.add_argument('--image', action = 'store_true', default=None, help='Turn Image Generation on')
+    data_group.add_argument('--augment_image', action = 'store_true', default=None, help='Turn Image Augmentation on')
     data_group.add_argument('--instance_normalize', action = 'store_true', default=None, help='Turn Instance Normalization on')
     
     ### Model
@@ -163,7 +164,9 @@ def create_save_path(args):
             args.eps,
             args.warmup,
             args.weight_decay,
-            args.instance_normalize
+            args.instance_normalize,
+            args.image,
+            args.augment_image
         ]
         model_config = '_'.join(str(param) for param in model_params)    
         save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
@@ -246,7 +249,7 @@ def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, 
 
 def run_inference(model, test_loader, tokenizer, args, train_utils):
     print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
-    seeds = [0, 1]
+    seeds = [0, 1, 2, 3, 4]
     all_seed_results = []
     
     for seed in seeds:
@@ -255,8 +258,8 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         random.seed(seed)
         np.random.seed(seed)
         
-        # checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
-        checkpoint = torch.load(f"{args.checkpoint}/model_0_49999.pth", map_location=args.device)
+        checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
+        # checkpoint = torch.load(f"{args.checkpoint}/model_0_49999.pth", map_location=args.device)
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
@@ -315,6 +318,7 @@ def main(rank, world_size):
             model_object['model_hidden_size'], args.warmup)
         
         json_data_file = fm.open_json(f'./data/{args.data}.json')
+        
         train_data, test_data = train_utils.split_dataset(json_data_file)
         if args.train == 'first':
             data = train_data[:800000]
