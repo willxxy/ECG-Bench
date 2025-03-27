@@ -20,7 +20,6 @@ class BaseECGDataset(Dataset):
         if self.args.train == 'end2end' or self.args.inference == 'end2end' or self.args.train == 'second' or self.args.inference == 'second':
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
             self.ecg_placeholder = '<signal>'
-        self.uniform_question = 'Could you please help me explain my ECG?'
     
     def __len__(self):
         return len(self.json_data_file)
