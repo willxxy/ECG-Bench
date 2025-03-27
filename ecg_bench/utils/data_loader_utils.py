@@ -66,16 +66,6 @@ class BaseECGDataset(Dataset):
             question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
             answer = ' '.join(answer) if isinstance(answer, list) else answer
         return question, answer
-    
-    def pad_to_max_qa(self, tokenized_sequence):
-        if len(tokenized_sequence) > self.args.pad_to_max:
-            truncated_token = tokenized_sequence[:self.args.pad_to_max]
-            full_token = [self.bos_id] + list(truncated_token) + [self.eos_id]
-            return full_token
-        elif len(tokenized_sequence) < self.args.pad_to_max:
-            return [self.pad_id] * (self.args.pad_to_max - len(tokenized_sequence)) + [self.bos_id] + list(tokenized_sequence) + [self.eos_id]
-        else:
-            return [self.bos_id] + list(tokenized_sequence[:self.args.pad_to_max]) + [self.eos_id]
         
     def pad_to_max_chat(self, tokenized_sequence):
         if len(tokenized_sequence) > self.args.pad_to_max:
