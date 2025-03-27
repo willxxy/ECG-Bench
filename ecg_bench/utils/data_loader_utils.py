@@ -16,6 +16,7 @@ class BaseECGDataset(Dataset):
         self.llm_tokenizer = llm_tokenizer
         if llm_tokenizer is not None:
             self.create_special_tokens()
+            self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(['<signal>'])
         if self.args.train == 'end2end' or self.args.inference == 'end2end' or self.args.train == 'second' or self.args.inference == 'second':
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
             self.ecg_placeholder = '<signal>'
@@ -88,6 +89,105 @@ class BaseECGDataset(Dataset):
         
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
+        
+    def setup_conversation_template(self):
+        if 'llama' in self.args.model:
+            conv = get_conv_template('llama-3')
+        elif 'qwen' in self.args.model:
+            conv = get_conv_template('qwen-7b-chat')
+        elif 'gemma' in self.args.model:
+            conv = get_conv_template('gemma')
+            
+        if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
+            conv.set_system_message(self.system_prompt)
+            
+        return conv
+        
+    def process_altered_text(self, altered_text):
+        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
+                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
+                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
+            question, answer = self.get_qa(altered_text)
+            if 'gemma' in self.args.model:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
+            else:
+                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+        return altered_text
+        
+    def append_messages_to_conv(self, conv, altered_text):
+        count = 0
+        for message in altered_text:
+            is_human = message['from'].lower() in ['human', 'user']
+            role = conv.roles[0] if is_human else conv.roles[1]
+            message_value = message['value'].replace('<ecg>\n', '')
+            message_value = message_value.replace('<image>\n', '')
+            message_value = message_value.replace('<image>', '')
+            message_value = message_value.replace('<ecg>', '')
+            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            if is_human and count == 0:
+                message_value = f"<signal>\n{message_value}"
+                count += 1
+            conv.append_message(role, message_value)
+        return conv
+    
+    def get_input_tokens(self, conv):
+        prompt = conv.get_prompt()
+        ecg_position = prompt.find(self.ecg_placeholder)
+        prompt_before_ecg = prompt[:ecg_position]
+        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
+        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
+        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+        return tokens_before, tokens_after
+    
+    def get_special_token_ids(self):
+        if 'llama' in self.args.model:
+            start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
+        elif 'gemma' in self.args.model:
+            start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<start_of_turn>'])[0]
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
+        elif 'qwen' in self.args.model:
+            start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|im_start|>'])[0]
+            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
+            
+        if 'gemma' in self.args.model:
+            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
+        else:
+            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
+            
+        return start_header_id, assistant_token, eot_id
+        
+    def find_assistant_ranges(self, input_ids):
+        start_header_id, assistant_token, eot_id = self.get_special_token_ids()
+        assistant_ranges = []
+        
+        for i in range(len(input_ids)-1):  # -1 to safely check next token
+            if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
+                # Find next eot_id
+                for j in range(i, len(input_ids)):
+                    if input_ids[j] == eot_id:
+                        assistant_ranges.append({'start': i, 'end': j})
+                        break
+        
+        return assistant_ranges
+    
+    def create_labels_from_responses(self, input_ids, altered_text):
+        labels = [-100] * len(input_ids)
+        _, _, eot_id = self.get_special_token_ids()
+        
+        for message in altered_text:
+            if message['from'].lower() in ['assistant', 'model', 'gpt']:
+                response = message['value']
+                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+                for j in range(len(input_ids) - len(response_tokens) + 1):
+                    if input_ids[j:j+len(response_tokens)] == response_tokens:
+                        labels[j:j+len(response_tokens)] = response_tokens
+        
+        for i, token_id in enumerate(input_ids):
+            if token_id == eot_id:
+                labels[i] = eot_id
+                
+        return labels
 
 
 class EncoderInputPreparation(BaseECGDataset):
@@ -100,6 +200,7 @@ class EncoderInputPreparation(BaseECGDataset):
         else:
             normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
         return {'signal': normalized_signal.astype(np.float32)}
+        
     def prepare_vit_input(self, ecg_signal, num_patches):
         image_signal = self.signal_to_image(ecg_signal)
         vit_inputs = self.encoder_tokenizer(images=image_signal,
@@ -213,48 +314,11 @@ class End2EndECGChatDataset(BaseECGDataset):
             return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
-        if 'llama' in self.args.model:
-            conv = get_conv_template('llama-3')
-        elif 'qwen' in self.args.model:
-            conv = get_conv_template('qwen-7b-chat')
-        elif 'gemma' in self.args.model:
-            conv = get_conv_template('gemma')
-        if 'gemma' in self.args.model:
-            pass
-        elif 'qwen' in self.args.model or 'llama' in self.args.model:
-            conv.set_system_message(self.system_prompt)
+        conv = self.setup_conversation_template()
+        altered_text = self.process_altered_text(altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text)
         
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
-                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
-                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
-            question, answer = self.get_qa(altered_text)
-            if 'gemma' in self.args.model:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
-            else:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
-        
-        count = 0
-        for message in altered_text:
-            is_human = message['from'].lower() in ['human', 'user']
-            role = conv.roles[0] if is_human else conv.roles[1]
-            message_value = message['value'].replace('<ecg>\n', '')
-            message_value = message_value.replace('<image>\n', '')
-            message_value = message_value.replace('<image>', '')
-            message_value = message_value.replace('<ecg>', '')
-            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if is_human and count == 0:
-                message_value = f"<signal>\n{message_value}"
-                count += 1
-            conv.append_message(role, message_value)
-            
-        prompt = conv.get_prompt()
-        # print('PROMPTSSSSSSSS')
-        # print(prompt)
-        ecg_position = prompt.find(self.ecg_placeholder)
-        prompt_before_ecg = prompt[:ecg_position]
-        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
-        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
-        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+        tokens_before, tokens_after = self.get_input_tokens(conv)
         
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
@@ -279,42 +343,19 @@ class End2EndECGChatDataset(BaseECGDataset):
             padding_length = self.args.pad_to_max - len(input_ids)
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
         
-        labels = [-100] * len(input_ids)
-        for message in altered_text:
-            if message['from'].lower() in ['assistant', 'model', 'gpt']:
-                response = message['value']
-                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
-                for j in range(len(input_ids) - len(response_tokens) + 1):
-                    if input_ids[j:j+len(response_tokens)] == response_tokens:
-                        labels[j:j+len(response_tokens)] = response_tokens
+        labels = self.create_labels_from_responses(input_ids, altered_text)
         
-        if 'llama' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
-        elif 'qwen' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
-        elif 'gemma' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
-        for i, token_id in enumerate(input_ids):
-            if token_id == eot_id:
-                labels[i] = eot_id
-        
-        
-        ### MODIFIED
-        # print('LABELSSSSSSSS')
-        # # Convert labels to numpy array first for safer indexing
-        # labels_np = np.array(labels)
-        # # Find indices where labels are not -100
-        # non_neg_indices = np.where(labels_np != -100)[0]
-        # # Get the tokens and ids only for non-negative values
-        # if len(non_neg_indices) > 0:
-        #     non_neg_values = labels_np[non_neg_indices].tolist()
-        #     tokens = self.llm_tokenizer.convert_ids_to_tokens(non_neg_values)
-        #     for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)):
-        #         print(f"{idx}: {token} -> {token_id}")
-        # else:
-        #     print("No valid labels found (all are -100)")
-        # print('='*100)
-        ###
+        if self.args.dev:
+            labels_np = np.array(labels)
+            non_neg_indices = np.where(labels_np != -100)[0]
+            if len(non_neg_indices) > 0:
+                non_neg_values = labels_np[non_neg_indices].tolist()
+                tokens = self.llm_tokenizer.convert_ids_to_tokens(non_neg_values)
+                for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)):
+                    print(f"{idx}: {token} -> {token_id}")
+            else:
+                print("No valid labels found (all are -100)")
+            print('='*100)
         
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         
@@ -331,74 +372,22 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_end2end(self, ecg_signal, altered_text):
-        if 'llama' in self.args.model:
-            conv = get_conv_template('llama-3')
-        elif 'qwen' in self.args.model:
-            conv = get_conv_template('qwen-7b-chat')
-        elif 'gemma' in self.args.model:
-            conv = get_conv_template('gemma')
-        if 'gemma' in self.args.model:
-            pass
-        elif 'qwen' in self.args.model or 'llama' in self.args.model:
-            conv.set_system_message(self.system_prompt)
+        conv = self.setup_conversation_template()
+        altered_text = self.process_altered_text(altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text)
         
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
-                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
-                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
-            question, answer = self.get_qa(altered_text)
-            if 'gemma' in self.args.model:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
-            else:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+        tokens_before, tokens_after = self.get_input_tokens(conv)
         
-        count = 0
-        for message in altered_text:
-            is_human = message['from'].lower() in ['human', 'user']
-            role = conv.roles[0] if is_human else conv.roles[1]
-            message_value = message['value'].replace('<ecg>\n', '')
-            message_value = message_value.replace('<image>\n', '')
-            message_value = message_value.replace('<ecg>', '')
-            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if is_human and count == 0:
-                message_value = f"<signal>\n{message_value}"
-                count += 1
-            conv.append_message(role, message_value)
-            
-        prompt = conv.get_prompt()
-        ecg_position = prompt.find(self.ecg_placeholder)
-        prompt_before_ecg = prompt[:ecg_position]
-        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
-        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
-        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
-                
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                           self.train_utils.ecg_tokenizer_utils.merges)
         tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
+        
         input_ids = tokens_before + tokenized_signal + tokens_after
         attention_mask = self.create_attention_mask(input_ids)
         
-        assistant_ranges = []
-        start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
-        if 'gemma' in self.args.model:
-            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
-        else:
-            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
-        
-        if 'llama' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
-        elif 'qwen' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
-        elif 'gemma' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
-        
-        for i in range(len(input_ids)-1):  # -1 to safely check next token
-            if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
-                # Find next eot_id
-                for j in range(i, len(input_ids)):
-                    if input_ids[j] == eot_id:
-                        assistant_ranges.append({'start': i, 'end': j})
-                        break
+        # Find assistant response ranges
+        assistant_ranges = self.find_assistant_ranges(input_ids)
         
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),
@@ -407,12 +396,9 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
 
 
-
 class SecondStageECGChatDataset(BaseECGDataset):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.llm_tokenizer is not None:
-            self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(['<signal>'])
         self.encoder_prep = EncoderInputPreparation(self.encoder_tokenizer, self.train_utils)
         
     def __getitem__(self, idx):
@@ -439,76 +425,23 @@ class SecondStageECGChatDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-        elif 'stmem' in self.args.model:
+        elif 'stmem' in self.args.model or 'mtae' in self.args.model or 'mlae' in self.args.model:
             encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
-        elif 'mtae' in self.args.model:
-            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
-        elif 'mlae' in self.args.model:
-            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
+            
         if self.args.train == 'second' and self.args.inference is None:
             return self.prepare_training_second(encoder_out, altered_text)
         if self.args.inference == 'second' and self.args.train is None:
             return self.prepare_inference_second(encoder_out, altered_text)
     
     def prepare_training_second(self, encoder_out, altered_text):
-        if 'llama' in self.args.model:
-            conv = get_conv_template('llama-3')
-        elif 'qwen' in self.args.model:
-            conv = get_conv_template('qwen-7b-chat')
-        elif 'gemma' in self.args.model:
-            conv = get_conv_template('gemma')
-        if 'gemma' in self.args.model:
-            pass
-        elif 'qwen' in self.args.model or 'llama' in self.args.model:
-            conv.set_system_message(self.system_prompt)
-            
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
-                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
-                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
-            question, answer = self.get_qa(altered_text)
-            if 'gemma' in self.args.model:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
-            else:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+        conv = self.setup_conversation_template()
+        altered_text = self.process_altered_text(altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text)
         
-        count = 0
-        for message in altered_text:
-            is_human = message['from'].lower() in ['human', 'user']
-            role = conv.roles[0] if is_human else conv.roles[1]
-            message_value = message['value'].replace('<ecg>\n', '')
-            message_value = message_value.replace('<image>\n', '')
-            message_value = message_value.replace('<ecg>', '')
-            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if is_human and count == 0:
-                message_value = f"<signal>\n{message_value}"
-                count += 1
-            conv.append_message(role, message_value)
-            
-        prompt = conv.get_prompt()
-        ecg_position = prompt.find(self.ecg_placeholder)
-        prompt_before_ecg = prompt[:ecg_position]
-        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
-        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
-        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
+        tokens_before, tokens_after = self.get_input_tokens(conv)
+        
         input_ids = tokens_before + self.signal_id + tokens_after
-        labels = [-100] * len(input_ids)
-        
-        for i, message in enumerate(altered_text):
-            if message['from'].lower() in ['assistant', 'model', 'gpt']:
-                response = message['value']
-                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
-                for j in range(len(input_ids) - len(response_tokens) + 1):
-                    if input_ids[j:j+len(response_tokens)] == response_tokens:
-                        labels[j:j+len(response_tokens)] = response_tokens
-        if 'llama' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
-        elif 'qwen' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
-        elif 'gemma' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
-        for i, token_id in enumerate(input_ids):
-            if token_id == eot_id:
-                labels[i] = eot_id
+        labels = self.create_labels_from_responses(input_ids, altered_text)
         
         input_ids = self.pad_to_max_chat(input_ids)
         signal_id_index = input_ids.index(self.signal_id[0])
@@ -532,70 +465,18 @@ class SecondStageECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_second(self, encoder_out, altered_text):
-        if 'llama' in self.args.model:
-            conv = get_conv_template('llama-3')
-        elif 'qwen' in self.args.model:
-            conv = get_conv_template('qwen-7b-chat')
-        elif 'gemma' in self.args.model:
-            conv = get_conv_template('gemma')
-        if 'gemma' in self.args.model:
-            pass
-        elif 'qwen' in self.args.model or 'llama' in self.args.model:
-            conv.set_system_message(self.system_prompt)
+        conv = self.setup_conversation_template()
+        altered_text = self.process_altered_text(altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text)
         
-        if self.args.data not in [f'ecg_instruct_45k_mapped_{self.args.seg_len}', 
-                                  f'ecg_instruct_pulse_mapped_{self.args.seg_len}',
-                                  f'ecg_bench_pulse_mapped_{self.args.seg_len}']:
-            question, answer = self.get_qa(altered_text)
-            if 'gemma' in self.args.model:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'model', 'value': answer}]
-            else:
-                altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
+        tokens_before, tokens_after = self.get_input_tokens(conv)
         
-        
-        count = 0
-        for message in altered_text:
-            is_human = message['from'].lower() in ['human', 'user']
-            role = conv.roles[0] if is_human else conv.roles[1]
-            message_value = message['value'].replace('<ecg>\n', '')
-            message_value = message_value.replace('<image>\n', '')
-            message_value = message_value.replace('<ecg>', '')
-            message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if is_human and count == 0:
-                message_value = f"<signal>\n{message_value}"
-                count += 1
-            conv.append_message(role, message_value)
-            
-        prompt = conv.get_prompt()
-        ecg_position = prompt.find(self.ecg_placeholder)
-        prompt_before_ecg = prompt[:ecg_position]
-        prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
-        tokens_before = self.llm_tokenizer.encode(prompt_before_ecg, add_special_tokens=False)
-        tokens_after = self.llm_tokenizer.encode(prompt_after_ecg, add_special_tokens=False)
         input_ids = tokens_before + self.signal_id + tokens_after
         attention_mask = self.create_attention_mask(input_ids)
         
-        assistant_ranges = []
-        start_header_id = self.llm_tokenizer.convert_tokens_to_ids(['<|start_header_id|>'])[0]
-        if 'gemma' in self.args.model:
-            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['model'])[0]
-        else:
-            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(['assistant'])[0]
-        
-        if 'llama' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|eot_id|>')
-        elif 'qwen' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<end_of_turn>')
-        elif 'gemma' in self.args.model:
-            eot_id = self.llm_tokenizer.convert_tokens_to_ids('<|im_end|>')
-        
-        for i in range(len(input_ids)-1):
-            if input_ids[i] == start_header_id and input_ids[i+1] == assistant_token:
-                for j in range(i, len(input_ids)):
-                    if input_ids[j] == eot_id:
-                        assistant_ranges.append({'start': i, 'end': j})
-                        break
+        assistant_ranges = self.find_assistant_ranges(input_ids)
         signal_id_index = input_ids.index(self.signal_id[0])
+        
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.int64),
             'attn_mask': torch.tensor(attention_mask, dtype=torch.float32),
