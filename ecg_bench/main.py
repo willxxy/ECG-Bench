@@ -79,6 +79,7 @@ def get_args():
     mode_group.add_argument('--train', type=str, default=None, choices=['first', 'second', 'end2end'], help='Training mode')
     mode_group.add_argument('--inference', type=str, default=None, choices=['second', 'end2end'], help='Inference mode')
     mode_group.add_argument('--post_train', action='store_true', default=None, help='Post-training mode')
+    model_group.add_argument('--train_encoder', action='store_true', default=None, help='Train encoder too')
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')
     mode_group.add_argument('--log', action='store_true', default=None, help='Enable logging')
@@ -166,7 +167,8 @@ def create_save_path(args):
             args.weight_decay,
             args.instance_normalize,
             args.image,
-            args.augment_image
+            args.augment_image,
+            args.train_encoder
         ]
         model_config = '_'.join(str(param) for param in model_params)    
         save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)

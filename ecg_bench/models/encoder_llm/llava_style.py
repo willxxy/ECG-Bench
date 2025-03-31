@@ -6,8 +6,11 @@ class LLaVA(nn.Module):
         self.llm = llm
         self.encoder = encoder
         self.llm_tokenizer = llm_tokenizer
-        for param in self.encoder.parameters():
-            param.requires_grad = False
+        if self.llm.args.train_encoder:
+            pass
+        else:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
         
         self.projection_dim = projection_dim
         self.encoder_projection = nn.Linear(self.projection_dim, self.llm.llm.config.hidden_size).to(dtype=self.llm.llm.dtype)

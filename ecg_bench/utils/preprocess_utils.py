@@ -701,7 +701,7 @@ class SampleBaseECG:
     
     def extract_features(self, ecg):
         features = []
-        
+        print('ECG SHAPE', ecg.shape)
         for lead in range(ecg.shape[0]):
             lead_signal = ecg[lead, :]
             
