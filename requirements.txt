@@ -41,3 +41,4 @@ validators==0.18.2
 html5lib==1.1
 qrcode==7.4.2
 gradio==5.20.1
+faiss-cpu==1.10.0

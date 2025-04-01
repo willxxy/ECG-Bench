@@ -18,6 +18,7 @@ from sklearn.metrics import silhouette_score
 import random
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+import faiss
 
 SUPPORTED_BASE_DATASETS = ['ptb', 'mimic', 'code15', 'cpsc', 'csn']
 SUPPORTED_MAPPED_DATASETS = ['ecg_bench_pulse', 'ecg_instruct_pulse', 'pretrain_mimic', 'ecg_instruct_45k', 'ecg-qa_ptbxl', 'ecg-qa_mimic-iv-ecg']
@@ -465,6 +466,7 @@ class SampleBaseECG:
         self.args = args
         self.fm = fm
         self.preprocessed_dir = f"./data/{self.args.base_data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+        self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
     
     def get_percentiles(self):
         all_files = [os.path.join(self.preprocessed_dir, f) for f in os.listdir(self.preprocessed_dir) 
@@ -584,7 +586,7 @@ class SampleBaseECG:
                 file_path = os.path.join(self.preprocessed_dir, filename)
                 file_paths.append(file_path)
                 ecg = self.fm.open_npy(file_path)['ecg']
-                features = self.extract_features(ecg)
+                features = self.feature_extractor.extract_features(ecg)
                 all_features.append(features)
                 if count == self.args.num_tok_samples:
                     break
@@ -698,96 +700,6 @@ class SampleBaseECG:
         diffs = np.diff(inertias)
         elbow_point = np.argmin(diffs) + 2  # +2 because we started from 2 clusters
         return elbow_point
-    
-    def extract_features(self, ecg):
-        features = []
-        print('ECG SHAPE', ecg.shape)
-        for lead in range(ecg.shape[0]):
-            lead_signal = ecg[lead, :]
-            
-            # Basic statistical features
-            features.extend([
-                np.mean(lead_signal),
-                np.std(lead_signal),
-                np.max(lead_signal),
-                np.min(lead_signal),
-                np.median(lead_signal),
-                np.percentile(lead_signal, 25),
-                np.percentile(lead_signal, 75)
-            ])
-            
-            # Frequency domain features
-            freqs, psd = signal.welch(lead_signal, fs=self.args.target_sf, nperseg=1024)
-            total_power = np.sum(psd)
-            features.extend([
-                total_power,  # Total power
-                np.max(psd),  # Peak frequency power
-                freqs[np.argmax(psd)],  # Dominant frequency
-            ])
-            
-            # Spectral centroid with NaN handling
-            if total_power > 0:
-                spectral_centroid = np.sum(freqs * psd) / total_power
-            else:
-                spectral_centroid = 0  # or another appropriate default value
-            features.append(spectral_centroid)
-            
-            peaks, _ = signal.find_peaks(lead_signal, height=0.5*np.max(lead_signal), distance=0.2*self.args.target_sf)
-            if len(peaks) > 1:
-                # Heart rate
-                rr_intervals = np.diff(peaks) / self.args.target_sf
-                heart_rate = 60 / np.mean(rr_intervals)
-                features.append(heart_rate)
-                
-                # Heart rate variability
-                hrv = np.std(rr_intervals)
-                features.append(hrv)
-                
-                # QRS duration (simplified)
-                qrs_duration = np.mean([self.find_qrs_duration(lead_signal, peak) for peak in peaks])
-                features.append(qrs_duration)
-            else:
-                features.extend([0, 0, 0])  # Placeholder values if no peaks found
-            
-            # T-wave features (simplified)
-            t_wave_amp = self.find_t_wave_amplitude(lead_signal, peaks)
-            features.append(t_wave_amp)
-            
-            # ST segment features (simplified)
-            st_deviation = self.find_st_deviation(lead_signal, peaks)
-            features.append(st_deviation)
-            
-            coeffs = pywt.wavedec(lead_signal, 'db4', level=5)
-            features.extend([np.mean(np.abs(c)) for c in coeffs])
-            
-            # Non-linear features
-            features.append(np.mean(np.abs(np.diff(lead_signal))))  # Average absolute difference
-            features.append(np.sqrt(np.mean(np.square(np.diff(lead_signal)))))  # Root mean square of successive differences
-        
-        return np.array(features)
-
-    def find_qrs_duration(self, ecg, peak):
-        # Simplified QRS duration estimation
-        window = int(0.1 * self.args.target_sf)  # 100 ms window
-        start = max(0, peak - window)
-        end = min(len(ecg), peak + window)
-        qrs_segment = ecg[start:end]
-        return np.sum(np.abs(qrs_segment) > 0.1 * np.max(qrs_segment)) / self.args.target_sf
-
-    def find_t_wave_amplitude(self, ecg, peaks):
-        if len(peaks) < 2:
-            return 0
-        t_wave_region = ecg[peaks[-2]:peaks[-1]]
-        return np.max(t_wave_region) - np.min(t_wave_region)
-
-    def find_st_deviation(self, ecg, peaks):
-        if len(peaks) < 2:
-            return 0
-        st_point = peaks[-1] + int(0.08 * self.args.target_sf)  # 80 ms after R peak
-        if st_point < len(ecg):
-            return ecg[st_point] - ecg[peaks[-1]]
-        return 0
-        
 
 class PreprocessMapECG:
     '''
@@ -999,4 +911,262 @@ class PreprocessMapECG:
             filtered_list = [item for item in loaded_file if item['question_type'] in question_types]
             data.extend(filtered_list)
         return data
+    
+class RAGECGDatabse:
+    def __init__(self, args, fm):
+        self.args = args
+        self.fm = fm
+        self.preprocessed_dir = f"./data/{self.args.base_data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+        self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
+        if self.args.load_rag_db == None:
+            self.all_data = self.get_features()
+        else:
+            self.all_data = self.fm.open_json(self.args.load_rag_db)
+        
+        self.features = np.stack([item['features'] for item in self.all_data])
+        self.signals = np.stack([item['signal'] for item in self.all_data])
+        self.reports = [item['report'] for item in self.all_data]
+        self.file_path = [item['file_path'] for item in self.all_data]
+        self.feature_dim = self.features.shape[1]
+        self.signal_dim = self.signals.shape[1]
+        print('features', self.features.shape)
+        print('signals', self.signals.shape)
+        print('reports', len(self.reports))
+        print('file_path', len(self.file_path))
+        print('feature_dim', self.feature_dim)
+        print('signal_dim', self.signal_dim)
+        if self.args.load_rag_db_idx == None:
+            self.create_and_save_db()
+        else:
+            self.index = faiss.read_index(self.args.load_rag_db_idx)
+        
+    def create_and_save_db(self):
+        combined_data = np.hstack([self.features, self.signals])
+        self.index = faiss.IndexFlatL2(combined_data.shape[1])
+        self.index.add(combined_data)
+        faiss.write_index(self.index, f"./data/{self.args.base_data}/combined.index")
+        print(f"Saved combined index to ./data/{self.args.base_data}/combined.index")
+        
+    def get_features(self):
+        all_data = []
+        npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
+        if self.args.dev:
+            npy_files = npy_files[:1000]
+        print(f"Found {len(npy_files)} .npy files in {self.preprocessed_dir}")
+        if len(npy_files) == 0:
+            raise ValueError(f"No .npy files found in directory: {self.preprocessed_dir}")
+        
+        for file_path in tqdm(npy_files, desc="Extracting features"):
+            try:
+                data = self.fm.open_npy(file_path)
+                ecg = data['ecg']
+                report = data['report']
+                features = self.feature_extractor.extract_features(ecg)
+                all_data.append({
+                                'features': features.flatten().tolist(),
+                                'signal': ecg.flatten().tolist(),
+                                'report': report,
+                                'file_path': str(file_path)
+                                })
+            except Exception as e:
+                print(f"Error processing {file_path}: {str(e)}")
+                continue
+        self.fm.save_json(all_data, f'./data/{self.args.base_data}/all_data_rag_db.json')
+        return all_data
+    
+    def search_similar(self, query_features=None, query_signal=None, k=5, mode='query_signal'):
+        """
+        Search for similar ECGs using different modes
+        
+        Args:
+            query_features: feature vector for similarity search
+            query_signal: signal vector for similarity search
+            k: number of results to return
+            mode: 'feature', 'signal', or 'combined'
+        """
+        if mode not in ['feature', 'signal', 'combined']:
+            raise ValueError("Mode must be 'feature', 'signal', or 'combined'")
+            
+        if mode == 'feature' and query_features is None:
+            raise ValueError("Feature mode requires query_features")
+        if mode == 'signal' and query_signal is None:
+            raise ValueError("Signal mode requires query_signal")
+        if mode == 'combined' and (query_features is None or query_signal is None):
+            raise ValueError("Combined mode requires both query_features and query_signal")
+
+        if mode == 'feature':
+            if not hasattr(self, 'feature_index'):
+                # Extract only feature part from all vectors
+                feature_vectors = np.zeros((self.index.ntotal, self.feature_dim), dtype=np.float32)
+                for i in range(self.index.ntotal):
+                    full_vector = self.index.reconstruct(i)
+                    feature_vectors[i] = full_vector[:self.feature_dim]
+                
+                # Create and store feature-only index
+                self.feature_index = faiss.IndexFlatL2(self.feature_dim)
+                self.feature_index.add(feature_vectors)
+                
+                # Store mapping from feature index to full index
+                self.index_mapping = np.arange(self.index.ntotal)
+            
+            # Search using feature index
+            query_features = query_features.reshape(1, self.feature_dim)
+            distances, indices = self.feature_index.search(query_features, k)
+            
+            # Map back to original indices
+            original_indices = [self.index_mapping[idx] for idx in indices[0]]
+            
+        elif mode == 'signal':
+            if not hasattr(self, 'signal_index'):
+                # Extract only signal part from all vectors
+                signal_vectors = np.zeros((self.index.ntotal, self.signal_dim), dtype=np.float32)
+                for i in range(self.index.ntotal):
+                    full_vector = self.index.reconstruct(i)
+                    signal_vectors[i] = full_vector[self.feature_dim:]
+                
+                # Create and store signal-only index
+                self.signal_index = faiss.IndexFlatL2(self.signal_dim)
+                self.signal_index.add(signal_vectors)
+                
+                # Store mapping from signal index to full index
+                self.signal_mapping = np.arange(self.index.ntotal)
+            
+            # Search using signal index
+            query_signal = query_signal.reshape(1, self.signal_dim)
+            distances, indices = self.signal_index.search(query_signal, k)
+            
+            # Map back to original indices
+            original_indices = [self.signal_mapping[idx] for idx in indices[0]]
+            
+        else:  # combined mode
+            query_combined = np.hstack([query_features, query_signal])
+            query_combined = query_combined.reshape(1, -1)
+            distances, indices = self.index.search(query_combined, k)
+            original_indices = indices[0]
+
+        # Prepare results
+        results = {}
+        for i, (dist, idx) in enumerate(zip(distances[0], original_indices)):
+            result_dict = {
+                f'signal': self.signals[idx],
+                f'feature': self.features[idx],
+                f'report': self.reports[idx],
+                f'distance': float(dist),
+                f'file_path': self.file_path[idx]
+            }
+            results[i] = result_dict
+        
+        return results
+    
+    def test_search(self):
+        query_signal = self.signals[0]
+        print('query_signal', query_signal.shape)
+        results = self.search_similar(query_signal=query_signal, k=5, mode='signal')
+        print(results)
+        print('-----' * 100)
+        
+        npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
+        query_signal2 = self.fm.open_npy(npy_files[0])['ecg']
+        results2 = self.search_similar(query_signal=query_signal2, k=5, mode='signal')
+        print(results2)
+        print('-----' * 100)
+        for key in results.keys():
+            print(results[key]['file_path'] == results2[key]['file_path'])
+    
+class ECGFeatureExtractor:
+    '''
+    Class for extracting various features from ECG signals
+    '''
+    def __init__(self, target_sf):
+        self.target_sf = target_sf
+        
+    def extract_features(self, ecg):
+        features = []
+        
+        for lead in range(ecg.shape[0]):
+            lead_signal = ecg[lead, :]
+            
+            # Basic statistical features
+            features.extend([
+                np.mean(lead_signal),
+                np.std(lead_signal),
+                np.max(lead_signal),
+                np.min(lead_signal),
+                np.median(lead_signal),
+                np.percentile(lead_signal, 25),
+                np.percentile(lead_signal, 75)
+            ])
+            
+            # Frequency domain features
+            freqs, psd = signal.welch(lead_signal, fs=self.target_sf, nperseg=1024)
+            total_power = np.sum(psd)
+            features.extend([
+                total_power,  # Total power
+                np.max(psd),  # Peak frequency power
+                freqs[np.argmax(psd)],  # Dominant frequency
+            ])
+            
+            # Spectral centroid with NaN handling
+            if total_power > 0:
+                spectral_centroid = np.sum(freqs * psd) / total_power
+            else:
+                spectral_centroid = 0  # or another appropriate default value
+            features.append(spectral_centroid)
+            
+            peaks, _ = signal.find_peaks(lead_signal, height=0.5*np.max(lead_signal), distance=0.2*self.target_sf)
+            if len(peaks) > 1:
+                # Heart rate
+                rr_intervals = np.diff(peaks) / self.target_sf
+                heart_rate = 60 / np.mean(rr_intervals)
+                features.append(heart_rate)
+                
+                # Heart rate variability
+                hrv = np.std(rr_intervals)
+                features.append(hrv)
+                
+                # QRS duration (simplified)
+                qrs_duration = np.mean([self.find_qrs_duration(lead_signal, peak) for peak in peaks])
+                features.append(qrs_duration)
+            else:
+                features.extend([0, 0, 0])  # Placeholder values if no peaks found
+            
+            # T-wave features (simplified)
+            t_wave_amp = self.find_t_wave_amplitude(lead_signal, peaks)
+            features.append(t_wave_amp)
+            
+            # ST segment features (simplified)
+            st_deviation = self.find_st_deviation(lead_signal, peaks)
+            features.append(st_deviation)
+            
+            coeffs = pywt.wavedec(lead_signal, 'db4', level=5)
+            features.extend([np.mean(np.abs(c)) for c in coeffs])
+            
+            # Non-linear features
+            features.append(np.mean(np.abs(np.diff(lead_signal))))  # Average absolute difference
+            features.append(np.sqrt(np.mean(np.square(np.diff(lead_signal)))))  # Root mean square of successive differences
+        
+        return np.array(features)
+
+    def find_qrs_duration(self, ecg, peak):
+        # Simplified QRS duration estimation
+        window = int(0.1 * self.target_sf)  # 100 ms window
+        start = max(0, peak - window)
+        end = min(len(ecg), peak + window)
+        qrs_segment = ecg[start:end]
+        return np.sum(np.abs(qrs_segment) > 0.1 * np.max(qrs_segment)) / self.target_sf
+
+    def find_t_wave_amplitude(self, ecg, peaks):
+        if len(peaks) < 2:
+            return 0
+        t_wave_region = ecg[peaks[-2]:peaks[-1]]
+        return np.max(t_wave_region) - np.min(t_wave_region)
+
+    def find_st_deviation(self, ecg, peaks):
+        if len(peaks) < 2:
+            return 0
+        st_point = peaks[-1] + int(0.08 * self.target_sf)  # 80 ms after R peak
+        if st_point < len(ecg):
+            return ecg[st_point] - ecg[peaks[-1]]
+        return 0
+        
     

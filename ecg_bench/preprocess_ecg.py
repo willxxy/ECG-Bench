@@ -7,7 +7,8 @@ os.environ['VECLIB_MAXIMUM_THREADS'] = '4'
 os.environ['NUMEXPR_NUM_THREADS'] = '4'
 
 from ecg_bench.utils.dir_file_utils import FileManager
-from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, PreprocessMapECG, SampleBaseECG
+from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, PreprocessMapECG, \
+                                                SampleBaseECG, RAGECGDatabse
 
 def get_args():
     parser = argparse.ArgumentParser(description = "ECG preprocessing pipeline")
@@ -26,6 +27,9 @@ def get_args():
     parser.add_argument('--max_clusters', type = int, default = 200, help = 'Maximum number of clusters for tokenizer training')
     parser.add_argument('--dev', action = 'store_true', default = False, help = 'Run in development mode')
     parser.add_argument('--toy', action = 'store_true', default = False, help = 'Create a toy dataset')
+    parser.add_argument('--create_rag_db', action = 'store_true', default = False, help = 'Create a RAG database')
+    parser.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
+    parser.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
     return parser.parse_args()
     
 def main(args: argparse.Namespace):
@@ -51,6 +55,10 @@ def main(args: argparse.Namespace):
                 elif args.stratified_sampling:
                     if not fm.ensure_directory_exists(file = f'./data/sampled_{args.num_tok_samples}_{args.max_clusters}.txt'):
                         sample_base_ecg.stratified_sampling()
+        elif args.create_rag_db:
+            rag_db = RAGECGDatabse(args, fm)
+            rag_db.create_and_save_db()
+            rag_db.test_search()
     else:
         preprocess_map_ecg = PreprocessMapECG(args, fm)
         preprocess_map_ecg.map_data()

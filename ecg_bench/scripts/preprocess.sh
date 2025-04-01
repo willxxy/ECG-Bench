@@ -8,13 +8,14 @@ BASE_DATA_VALUES=("mimic")
 # # Loop through each base_data value
 for base_data in "${BASE_DATA_VALUES[@]}"; do
 #     # echo "Processing base_data: $base_data"
-#     python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --preprocess_files
+    # python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --preprocess_files
+    python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --create_rag_db --dev --load_rag_db=./data/mimic/all_data_rag_db.json
     
 #     # Special case for mimic: also process with seg_len=2500
-    if [ "$base_data" = "mimic" ]; then
-        echo "Processing mimic with seg_len=2500"
-        python preprocess_ecg.py --base_data=$base_data --seg_len=2500 --toy --sample_files --stratified_sampling --dev # or --stratified_sampling
-    fi
+    # if [ "$base_data" = "mimic" ]; then
+    #     echo "Processing mimic with seg_len=2500"
+    #     python preprocess_ecg.py --base_data=$base_data --seg_len=2500 --toy --sample_files --stratified_sampling --dev # or --stratified_sampling
+    # fi
 done
 
 # ### MAPPING DATA
