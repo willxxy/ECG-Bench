@@ -952,6 +952,8 @@ class RAGECGDatabse:
         npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
         if self.args.dev:
             npy_files = npy_files[:1000]
+        if self.args.toy:
+            npy_files = npy_files[:400000]
         print(f"Found {len(npy_files)} .npy files in {self.preprocessed_dir}")
         if len(npy_files) == 0:
             raise ValueError(f"No .npy files found in directory: {self.preprocessed_dir}")

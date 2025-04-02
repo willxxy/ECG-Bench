@@ -9,7 +9,7 @@ BASE_DATA_VALUES=("mimic")
 for base_data in "${BASE_DATA_VALUES[@]}"; do
 #     # echo "Processing base_data: $base_data"
     # python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --preprocess_files
-    python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --create_rag_db --dev --load_rag_db=./data/mimic/all_data_rag_db.json
+    python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --create_rag_db --toy
     
 #     # Special case for mimic: also process with seg_len=2500
     # if [ "$base_data" = "mimic" ]; then
