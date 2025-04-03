@@ -7,8 +7,8 @@ os.environ['VECLIB_MAXIMUM_THREADS'] = '4'
 os.environ['NUMEXPR_NUM_THREADS'] = '4'
 
 from ecg_bench.utils.dir_file_utils import FileManager
-from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, PreprocessMapECG, \
-                                                SampleBaseECG, RAGECGDatabse
+from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, PreprocessMapECG, SampleBaseECG
+from ecg_bench.utils.rag_utils import RAGECGDatabse
 
 def get_args():
     parser = argparse.ArgumentParser(description = "ECG preprocessing pipeline")
