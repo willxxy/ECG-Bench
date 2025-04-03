@@ -8,7 +8,7 @@ os.environ['NUMEXPR_NUM_THREADS'] = '4'
 
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, PreprocessMapECG, SampleBaseECG
-from ecg_bench.utils.rag_utils import RAGECGDatabse
+from ecg_bench.utils.rag_utils import RAGECGDatabase
 
 def get_args():
     parser = argparse.ArgumentParser(description = "ECG preprocessing pipeline")
@@ -56,8 +56,7 @@ def main(args: argparse.Namespace):
                     if not fm.ensure_directory_exists(file = f'./data/sampled_{args.num_tok_samples}_{args.max_clusters}.txt'):
                         sample_base_ecg.stratified_sampling()
         elif args.create_rag_db:
-            rag_db = RAGECGDatabse(args, fm)
-            rag_db.create_and_save_db()
+            rag_db = RAGECGDatabase(args, fm)
             rag_db.test_search()
     else:
         preprocess_map_ecg = PreprocessMapECG(args, fm)
