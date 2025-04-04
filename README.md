@@ -13,7 +13,7 @@
 4. [Main Methods](#methods)
 5. [Known Issues + Tips](#issues)
 6. [Acknowledgements](#ack)
-
+7. [TODO](#todo)
 
 ## Overview <a name="overview"></a>
 This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase.
@@ -47,13 +47,21 @@ Utilizing HuggingFace, we also provide general, pretrained models to serve as EC
 2. [CLIP](https://arxiv.org/abs/2103.00020)
 3. [SigLIP](https://arxiv.org/abs/2303.15343)
 
+We utilize the HuggingFace API to create wrappers around the following pretrained LLMs:
+
+1. [Llama 3](https://arxiv.org/abs/2407.21783)
+2. [Gemma 2](https://arxiv.org/abs/2408.00118)
+3. [Qwen 2.5](https://arxiv.org/abs/2412.15115)
+
+We also have [GPT 2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) and [OPT](https://arxiv.org/abs/2205.01068) LLMs, however, we do not have chat tempaltes for them yet.
+
 
 We provide the following features for training and evaluating ELMs:
 1. Single and distributed training.
 2. We impemented an LLM judge with llm-blender and utilized [DPO](https://arxiv.org/abs/2305.18290) for post-training.
 3. [Flash Attention 2](https://arxiv.org/abs/2307.08691) for faster training and inference.
 4. [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
-5. A demo based on gradio for chatting with your own trained ELM!
+5. A demo based on gradio for chatting with your own trained ELM and collect preference data.
 
 We hope to continouously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
 Please carefully read the below documentations to run the pipeline. If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
@@ -274,6 +282,11 @@ For training End-to-End, we provide the script in `scripts/train_end2end.sh`. We
 
 For inferencing End-to-End, we provide the script in `scripts/inference_end2end.sh`. 
 
+### Demo
+
+We provide a demo for chatting with your own trained ELM! To run the demo, please execute the script in `scripts/run_demo.sh`.
+
+
  
  ## Known Issues + Tips <a name="issues"></a>
 
@@ -299,6 +312,15 @@ os.environ['NUMEXPR_NUM_THREADS'] = '4'
 We noticed that on some machines under computational constraints this number is too high when largely launching the PCA analysis, thus resulting in a crash. 
 In this case, simply reduce the maximum number of threads for each os.environ to either 1 or 2.
 Reducing this number should solve the problem, however, if you continue to run into crashes please feel free to report an issue!
+
+## TODO <a name="todo"></a>
+
+1. Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
+2. Add [GEM model](https://www.arxiv.org/abs/2503.06073)
+3. Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
+4. More documentation and examples!
+5. Provide HuggingFace dataset and model card push ability.
+6. Create a offline demo for ELMs with unified preference collection.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital. 
