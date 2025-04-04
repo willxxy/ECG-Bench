@@ -180,3 +180,5 @@ ecg_bench/pngs
 .huggingface/
 ecg_bench/atharva_demo/data
 ecg_bench/atharva_demo/dump/testchat
+
+.gradio/
