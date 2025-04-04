@@ -11,13 +11,6 @@
 2. [Installation](#installation)
 3. [ECG Datasets](#data)
 4. [Main Methods](#methods)
-  - [Training ECG-Byte](#ecg-byte)
-  - [Training LLM](#endtoend-train)
-  - [Inference LLM](#endtoend-inference)
-  - [Analysis of methods](#endtoend-analysis)
-  - [Training 1st Stage](#twostage-train1)
-  - [Training 2nd Stage](#twostage-train2)
-  - [Inferencing 2 Stage](#twostage-inference)
 5. [Known Issues + Tips](#issues)
 6. [Acknowledgements](#ack)
 
