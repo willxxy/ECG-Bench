@@ -1,5 +1,5 @@
 <h2 align="center">
-  Time Series, Image, or Text: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework
+  A Unified Framework for Benchmarking Generative Electrocardiogram-Language Models (ELMs)
 </h2>
 
 <div align="center">
@@ -23,6 +23,11 @@
 
 
 ## Overview <a name="overview"></a>
+This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs).
+The audience for this repository is mainly for researchers who are interested in developing ELMs.
+The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs.
+Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended.
+
 This repository is the official implementation of [Time Series, Image, or Text: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework]()
 by [William Jongwon Han](https://willxxy.github.io/), [Choajing Duan](https://www.linkedin.com/in/chaojing-duan-0b3266127), [Michael A. Rosenberg](https://scholar.google.com/citations?user=o0Y0GLcAAAAJ&hl=en), [Emerson Liu](https://www.linkedin.com/in/emerson-liu-950479/), and [Ding Zhao](https://www.meche.engineering.cmu.edu/directory/bios/zhao-ding.html).
 
