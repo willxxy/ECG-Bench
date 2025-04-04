@@ -23,23 +23,49 @@
 
 
 ## Overview <a name="overview"></a>
-This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs).
-The audience for this repository is mainly for researchers who are interested in developing ELMs.
-The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs.
-Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended.
+This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase.
 
-This repository is the official implementation of [Time Series, Image, or Text: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework]()
-by [William Jongwon Han](https://willxxy.github.io/), [Choajing Duan](https://www.linkedin.com/in/chaojing-duan-0b3266127), [Michael A. Rosenberg](https://scholar.google.com/citations?user=o0Y0GLcAAAAJ&hl=en), [Emerson Liu](https://www.linkedin.com/in/emerson-liu-950479/), and [Ding Zhao](https://www.meche.engineering.cmu.edu/directory/bios/zhao-ding.html).
+We provide preprocessing pipelines for various datasets in this repository.
 
-Although this repository is based on the mentioned paper, the overall goal of the repository is to provide a unified framework for training and evaluating electrocardiogram-language models (ELMs).
-To this end, we provide the following features not mentioned in the paper:
-1. We impemented an LLM judge with llm-blender and utilized [DPO](https://arxiv.org/abs/2305.18290) for post-training.
-2. Flash Attention 2 for faster training and inference.
+**Datasets:**
+
+1. [PTB-XL, a large publicly available electrocardiography dataset](https://physionet.org/content/ptb-xl/1.0.0/)
+2. [MIMIC-IV-ECG: Diagnostic Electrocardiogram Matched Subset](https://physionet.org/content/mimic-iv-ecg/1.0/)
+3. [CODE-15%: a large scale annotated dataset of 12-lead ECGs](https://zenodo.org/records/4916206)
+4. [CPSC from Classification of 12-lead ECGs: The PhysioNet/Computing in Cardiology Challenge 2020](https://physionet.org/content/challenge-2020/1.0.2/training/cpsc_2018/#files-panel)
+5. [CSN from A large scale 12-lead electrocardiogram database for arrhythmia study](https://physionet.org/content/ecg-arrhythmia/1.0.0/)
+6. [MIMIC-IV and PTB-XL variants of ECG-QA: A Comprehensive Question Answering Dataset Combined With Electrocardiogram](https://arxiv.org/abs/2306.15681)
+7. [Pretrain MIMIC-IV and ECG Instruct 45K from ECG-Chat: A Large ECG-Language Model for Cardiac Disease Diagnosis](https://arxiv.org/abs/2408.08849)
+8. [ECG Instruct Pulse and ECG Bench Pulse from Teach Multimodal LLMs to Comprehend Electrocardiographic Images](https://arxiv.org/abs/2410.19008)
+
+We implement the following ELMs:
+
+1. [ECG-Byte: A Tokenizer for End-to-End Electrocardiogram Language Modeling](https://arxiv.org/abs/2412.14373)
+
+We also provide implementations of the following ECG-specific encoders:
+
+1. [Guiding Masked Representation Learning to Capture Spatio-Temporal Relationship of Electrocardiogram](https://arxiv.org/abs/2402.09450)
+2. [Zero-Shot ECG Classification with Multimodal Learning and Test-time Clinical Knowledge Enhancement](https://arxiv.org/abs/2403.06659)
+3. [MaeFE: Masked Autoencoders Family of Electrocardiogram for Self-Supervised Pretraining and Transfer Learning](https://ieeexplore.ieee.org/document/9980411)
+
+Utilizing HuggingFace, we also provide general, pretrained models to serve as ECG encoders:
+
+1. [ViT](https://arxiv.org/abs/2010.11929)
+2. [CLIP](https://arxiv.org/abs/2103.00020)
+3. [SigLIP](https://arxiv.org/abs/2303.15343)
+
+
+We provide the following features for training and evaluating ELMs:
+1. Single and distributed training.
+2. We impemented an LLM judge with llm-blender and utilized [DPO](https://arxiv.org/abs/2305.18290) for post-training.
+3. [Flash Attention 2](https://arxiv.org/abs/2307.08691) for faster training and inference.
+4. [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
+5. A demo based on gradio for chatting with your own trained ELM!
 
 We hope to continouously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
 Please carefully read the below documentations to run the pipeline. If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
 
-All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVIDIA A6000 GPUs.
+All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVIDIA A5000 and A6000 GPUs.
 
 ## Installation <a name="installation"></a>
 
@@ -49,48 +75,48 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 3. After opening a new terminal, check the Rust installation by running `rustc --version`.
 
-4. Create the conda virtual environment via `conda create -n elm python=3.10.15`.
+4. Create the conda virtual environment via `conda create -n ecg python=3.10.15`.
 
-5. Activate the environment `conda activate elm`
+5. Activate the environment `conda activate ecg`
 
 6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121`
 
-7. `git clone https://github.com/willxxy/ELM-Bench.git`
+7. `git clone https://github.com/willxxy/ECG-Bench.git`
 
-8. `cd ELM-Bench`
+8. `cd ECG-Bench`
 
 9. `git submodule init`
 
 10. `git submodule update`
 
-11. Please `cd` into the `ELM-Bench/transformers` directory and `pip install -e .`.
+11. Please `cd` into the `ECG-Bench/transformers` directory and `pip install -e .`.
 
-12. Now `cd ../` and `cd` into the `ELM-Bench/ecg-plot` directory and `pip install -e .`.
+12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `pip install -e .`.
 
 13. Now `cd ../` and `pip install -e .`
 
-14. We do not use [Flash Attention 2](https://arxiv.org/abs/2307.08691) for the results in the paper but we provide the option to install flash-attn to speed up training and inference, however, it is not required. To install flash-attn please use the following command:
+14. To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
 
     `pip cache remove flash_attn`
 
     `pip install flash-attn==2.7.4.post1 --no-cache-dir`
 
-15. Install the `llm-blender` and `trl[judges]` packagesby running the following commands:
+15. To install the `llm-blender` and `trl[judges]` packages please run the following commands:
 
     `pip install git+https://github.com/yuchenlin/LLM-Blender.git`
 
     `pip install trl[judges]`
 
-16. Run the `ELM-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
+16. Run the `ECG-Bench/test/test_gpu.py` to ensure you are able to use your GPU.
 
-17. Run the `ELM-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
+17. Run the `ECG-Bench/test/test_transformers.py` to ensure you properly installed the `transformers` package.
 
-18. `cd` into `ELM-Bench/elm_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
+18. `cd` into `ECG-Bench/ecg_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
 
 19. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
 
 
-**NOTE: From now, all instructions will assume you are working from the `ELM-Bench/elm_bench` directory.**
+**NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.**
 
 ## ECG Datasets <a name="data"></a>
 
@@ -197,7 +223,7 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 
 1. Next create a `data/pretrain_mimic` directory and download the `pretrain_mimic.json` file from this [dropbox link](https://www.dropbox.com/scl/fo/ccq5dxmdgg4shf02yjn8c/ANOQ1Hzj4KwHqa1b9r80uzc?rlkey=teysp3v6hg6o9uko2i4zbbjpn&e=1&st=exu3i9oo&dl=0).
 
-### Instruct 45k MIMIC dataset curated by [ECG-Chat, Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
+#### Instruct 45k MIMIC dataset curated by [ECG-Chat, Zhao et al.](https://github.com/YubaoZhao/ECG-Chat)
 
 1. Next create a `data/ecg_instruct_45k` directory and download the `ecg_instruct_45k.json` file from this [link](https://github.com/YubaoZhao/ECG-Chat/blob/master/llava/playground/data/ecg_instruct_45k.json).
 
@@ -235,9 +261,9 @@ For 2-stage finetune, we provide the script for finetuning the general, pretrain
 
 We provide the scripts for inferencing each type of 2-stage training method in `scripts/inference_2stage.sh`. For 2-stage finetune and 2-stage scratch, make sure to define the encoder checkpoint.
 
-#### End-to-End Training <a name="endtoend-train"></a>
+### End-to-End Training <a name="endtoend-train"></a>
 
-### Training ECG-Byte
+#### Training ECG-Byte
 
 1. During preprocessing, there is a sampling stage where we sample N number utilizing one of two techniques. The techniques are random sampling or morphological clustering based sampling. We found that random sampling is enough for our use case.
 
@@ -256,32 +282,49 @@ For training End-to-End, we provide the script in `scripts/train_end2end.sh`. We
 For inferencing End-to-End, we provide the script in `scripts/inference_end2end.sh`. 
 
  
+ ## Known Issues + Tips <a name="issues"></a>
 
+We encountered some issues during development of ECG-Byte and hope to contribute to the open source community by reporting them here and adding any tips if possible. If you happen to know a good solution to any of them, please do not hesitate to open an issue or pull request!
 
-#
-Run tests in ECG-Bench
-example: python tests/test_file.py
+1. **`tqdm` bar freezing script with multiprocessing** - We noticed that the tqdm bar freezes sometimes when we put it inside a multiprocessing job (especially during preprocessing). We recommend adding print statements before and after the main operations inside the tqdm loop to ensure the operations are being executed. This is a [thread of the issue](https://github.com/tqdm/tqdm/issues/1160) from the tqdm repository. Please feel free to look at it!
 
+2. **Utilizing inputs_embeds for generation** - We noticed that utilizing inputs_embeds as the primary input to the model for generation is quite instable (e.g., [example1 from HF](https://github.com/huggingface/transformers/issues/23042), [example2 from stackoverflow](https://stackoverflow.com/questions/78857426/error-when-using-inputs-embeds-with-generate-method), [example3 from vllm but related](https://github.com/vllm-project/vllm/issues/416), [example4 from HF](https://github.com/huggingface/transformers/pull/32493)). When we tried generating via only `inputs_embeds` the model failed to generate anything coherent (i.e., mostly empty strings). Our current workaround is passing in both `input_ids` and `inputs_embeds` as inputs for generation. The reasoning behind this is from the [GenerationMixin code](https://github.com/huggingface/transformers/blob/main/src/transformers/generation/utils.py#L332C1-L332C2) and this [thread](https://github.com/huggingface/transformers/issues/23042). From the code, it seems like the model creates an empty input_ids tensor of shape (batch_size, 0) and uses the embeddings only for the first forward pass. However, this can be unstable because there's no explicit token mapping for the embeddings, making it harder for the model to maintain coherence between the embedded representation and subsequent token generation. The solution for this would be to create better `inputs_embeds` from the getgo. However, we wanted to add some guidance to the generation therefore we provided embeddings for the initial forward pass while having input_ids that explicitly map to those embeddings, providing a more stable foundation for generation. This is not "true" generation only using `inputs_embeds`, therefore we believe that this reinforces our method of representing ECGs even more.
 
-## Checklist
-[x] Preprocessing (preprocessing, percentiles, sampling)
+3. **HuggingFace api key not being recognized** - We also noticed that the main training script sometimes crashes due to the huggingface api key not being recognized. The current workaround is just to relogin utilizing your own personal api key. 
 
-[ ] Preprocessing tests
+4. **Nan values during preprocessing** - We noticed that the MIMIC-IV ECG dataset has many nan values during preprocessing so we workaround this by skipping them.
 
-[X] Visualizer (plot 1d, 2d, other things) 
+5. **Crash during ECG sampling** - When sampling ECGs (`ecg_byte/preprocess/sample_ecg.py`, we currently have the following configurations for the number of threads:
 
-[ ] Visualizer tests
+```
+os.environ['OPENBLAS_NUM_THREADS'] = '4'
+os.environ['MKL_NUM_THREADS'] = '4'
+os.environ['VECLIB_MAXIMUM_THREADS'] = '4'
+os.environ['NUMEXPR_NUM_THREADS'] = '4'
+```
 
-[ X] Tokenizer (bpe for now)
+We noticed that on some machines under computational constraints this number is too high when largely launching the PCA analysis, thus resulting in a crash. 
+In this case, simply reduce the maximum number of threads for each os.environ to either 1 or 2.
+Reducing this number should solve the problem, however, if you continue to run into crashes please feel free to report an issue!
 
-[X ] Tokenizer tests
+## Acknowledgements <a name="ack"></a>
+This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital. 
 
-[ X] main pipeline
-    - [ X] .py files for pretraining and finetuning
+We thank the authors of [MERL](https://github.com/cheliu-computation/MERL-ICML2024), [ST-MEM](https://github.com/bakqui/ST-MEM), [ECG-QA](https://github.com/Jwoo5/ecg-qa), [ECG-Chat](https://github.com/YubaoZhao/ECG-Chat), and [PULSE](https://github.com/AIMedLab/PULSE) for their code and publicly released datasets.
 
-[X ] models (llm, encoders, etc.)
+Lastly, we thank [HuggingFace](https://huggingface.co/) for providing the APIs for the models.
 
-[ X] runners
-    - [ X] .py files for training and evaluating
+## Citations
+If this codebase or work has helped you please cite the following:
 
-[ ]  Add ECG instruct and datasets from PULSE paper.
+```
+@misc{han2024ecgbytetokenizerendtoendgenerative,
+      title={ECG-Byte: A Tokenizer for End-to-End Generative Electrocardiogram Language Modeling}, 
+      author={William Han and Chaojing Duan and Michael A. Rosenberg and Emerson Liu and Ding Zhao},
+      year={2024},
+      eprint={2412.14373},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2412.14373}, 
+}
+```
