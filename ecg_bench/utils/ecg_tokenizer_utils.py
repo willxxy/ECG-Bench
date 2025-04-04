@@ -19,11 +19,12 @@ class ECGByteTokenizer:
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
-        self.percentiles = self.fm.open_npy(self.args.percentiles)
-        self.p1 = self.percentiles['p1']
-        self.p99 = self.percentiles['p99']
         self.n = 3000 if self.args.dev else None
         self.lead_order = ['I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+        if self.args.percentiles != None:
+            self.percentiles = self.fm.open_npy(self.args.percentiles)
+            self.p1 = self.percentiles['p1']
+            self.p99 = self.percentiles['p99']
         if self.args.ecg_tokenizer != None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.ecg_tokenizer)
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')

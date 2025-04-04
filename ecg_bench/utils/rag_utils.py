@@ -14,7 +14,7 @@ class RAGECGDatabase:
         print('Loading RAG database...')
         if self.args.load_rag_db_idx is None and self.args.load_rag_db is None:
             print('No RAG database found. Creating new one...')
-            self.create_and_save_db()
+            self.metadata = self.create_and_save_db()
         else:
             print('Loading RAG database from file...')
             self.metadata = self.fm.open_json(self.args.load_rag_db)

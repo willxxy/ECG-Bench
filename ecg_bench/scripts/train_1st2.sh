@@ -1,13 +1,13 @@
 #!/bin/bash
 
-models=("stmem" "merl" "mlae" "mtae")
+models=("vit" "clip" "siglip")
 
 ### MULTI GPU
 for model in "${models[@]}"; do
     python main.py \
     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
     --model=$model \
-    --device=cuda:2 \
+    --device=cuda:4 \
     --train=first \
     --batch_size=64 \
     --seg_len=1250 \
