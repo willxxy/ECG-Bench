@@ -553,7 +553,7 @@ Reducing this number should solve the problem, however, if you continue to run i
 
 ## Contributions <a name="contributions"></a>
 
-We welcome contributions to the repository! Please feel free to open an issue or pull request.
+We welcome contributions to the repository! Please feel free to open an issue or pull request for any bugs or features you would like to add. We are always looking for new ECG datasets to benchmark our methods on. If you have any recommendations, please let us know! Also, a good place to start is by looking at the [TODO](#todo) section.
 
 ## TODO <a name="todo"></a>
 
@@ -564,6 +564,7 @@ We welcome contributions to the repository! Please feel free to open an issue or
 5. Provide HuggingFace dataset and model card push ability.
 6. Create a offline demo for ELMs with unified preference collection.
 7. [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
+8. Create more tests and integrate with workflows for codebase.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital. 
