@@ -65,12 +65,14 @@ jobs:
           else
             echo "WARNING: setup.py not found, cannot install in development mode!"
             # Create a basic setup.py if missing
-            echo 'from setuptools import setup, find_packages
+            cat > setup.py << 'EOF'
+from setuptools import setup, find_packages
 setup(
     name="ecg_bench",
     version="0.1.0",
     packages=find_packages(),
-)' > setup.py
+)
+EOF
             pip install -e .
             echo "Created and installed from minimal setup.py"
           fi
