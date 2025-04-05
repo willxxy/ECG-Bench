@@ -6,17 +6,26 @@
   <img src="./assets/fig1_2.png" alt="Our pipeline.">
 </div>
 
+## News
+
+- **[April 5, 2025] We open source ECG-Bench for training and evaluating ELMs!**
+
 ## Table of Contents
 1. [Overview](#overview)
 2. [Installation](#installation)
 3. [ECG Datasets](#data)
 4. [Main Methods](#methods)
 5. [Known Issues + Tips](#issues)
-6. [Acknowledgements](#ack)
+6. [Contributions](#contributions)
 7. [TODO](#todo)
+8. [Acknowledgements](#ack)
+9. [License](#license)
+10. [Citations](#citations)
 
 ## Overview <a name="overview"></a>
 This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase.
+
+Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
 
 We provide preprocessing pipelines for various datasets in this repository.
 
@@ -542,6 +551,10 @@ We noticed that on some machines under computational constraints this number is 
 In this case, simply reduce the maximum number of threads for each os.environ to either 1 or 2.
 Reducing this number should solve the problem, however, if you continue to run into crashes please feel free to report an issue!
 
+## Contributions <a name="contributions"></a>
+
+We welcome contributions to the repository! Please feel free to open an issue or pull request.
+
 ## TODO <a name="todo"></a>
 
 1. Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
@@ -559,7 +572,11 @@ We thank the authors of [MERL](https://github.com/cheliu-computation/MERL-ICML20
 
 Lastly, we thank [HuggingFace](https://huggingface.co/) for providing the APIs for the models.
 
-## Citations
+## License <a name="license"></a>
+
+This repository contains code licensed under the MIT License, except for the following `.py` files in the `ecg_bench/models/encoder` directory: `st_mem.py`, `mlae.py`, `mtae.py`. These files are licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. Please view the original license in their [respective repository](https://github.com/bakqui/ST-MEM?tab=License-1-ov-file#readme) for more details.
+
+## Citations <a name="citations"></a>
 If this codebase or work has helped you please cite the following:
 
 ```

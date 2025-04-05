@@ -1,3 +1,16 @@
+
+# Original work Copyright (c) Meta Platforms, Inc. and affiliates. <https://github.com/facebookresearch/mae>
+# Modified work Copyright 2024 ST-MEM paper authors. <https://github.com/bakqui/ST-MEM>
+# Modified work Copyright 2025 ECG-Bench authors. <https://github.com/willxxy/ECG-Bench>
+
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this repository https://github.com/bakqui/ST-MEM.
+# --------------------------------------------------------
+# References:
+# timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
+# DeiT: https://github.com/facebookresearch/deit
+# MAE: https://github.com/facebookresearch/mae
+# --------------------------------------------------------
 from functools import partial
 
 import torch
