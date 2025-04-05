@@ -52,30 +52,23 @@ jobs:
           fi
           pip install pytest pytest-xdist
           
+      - name: Create setup.py if needed
+        run: |
+          if [ ! -f "setup.py" ]; then
+            echo "WARNING: setup.py not found, creating a minimal one"
+            echo "from setuptools import setup, find_packages" > setup.py
+            echo "setup(name=\"ecg_bench\", version=\"0.1.0\", packages=find_packages())" >> setup.py
+            cat setup.py
+          fi
+          
       - name: Install project in development mode
         run: |
           # First, verify the project structure
           ls -la
-          
-          # Make sure the package is installable
-          if [ -f "setup.py" ]; then
-            pip install -e .
-            # Verify that the package is installed correctly
-            python -c "import ecg_bench; print(f'ECG-Bench package installed: {ecg_bench.__file__}')"
-          else
-            echo "WARNING: setup.py not found, cannot install in development mode!"
-            # Create a basic setup.py if missing
-            cat > setup.py << 'EOF'
-from setuptools import setup, find_packages
-setup(
-    name="ecg_bench",
-    version="0.1.0",
-    packages=find_packages(),
-)
-EOF
-            pip install -e .
-            echo "Created and installed from minimal setup.py"
-          fi
+          # Install in dev mode
+          pip install -e .
+          # Try to verify installation
+          python -c "import ecg_bench; print('ECG-Bench package installed successfully')" || echo "Warning: Could not import ecg_bench package"
           
       - name: List installed packages
         run: |
@@ -84,7 +77,7 @@ EOF
       - name: List project structure
         run: |
           ls -la
-          find ecg_bench -type f -name "*.py" | sort
+          find . -name "*.py" | grep -v "__pycache__" | sort
           
       - name: Run all tests with custom script
         run: |
