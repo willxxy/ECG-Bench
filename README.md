@@ -60,8 +60,7 @@ We provide the following features for training and evaluating ELMs:
 1. Single and distributed training.
 2. We impemented an LLM judge with llm-blender and utilized [DPO](https://arxiv.org/abs/2305.18290) for post-training.
 3. [Flash Attention 2](https://arxiv.org/abs/2307.08691) for faster training and inference.
-4. [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
-5. A demo based on gradio for chatting with your own trained ELM and collect preference data.
+4. A demo based on gradio for chatting with your own trained ELM and collect preference data.
 
 We hope to continouously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
 Please carefully read the below documentations to run the pipeline. If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
@@ -551,6 +550,7 @@ Reducing this number should solve the problem, however, if you continue to run i
 4. More documentation and examples!
 5. Provide HuggingFace dataset and model card push ability.
 6. Create a offline demo for ELMs with unified preference collection.
+7. [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital. 
