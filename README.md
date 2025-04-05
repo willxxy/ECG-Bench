@@ -292,7 +292,7 @@ python main.py \
 --seg_len=1250 \
 --epochs=50 \
 --instance_normalize \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --attn_implementation=flash_attention_2 \
 --encoder_checkpoint=$encoder_checkpoint \
 --log
@@ -314,7 +314,7 @@ python main.py \
 --seg_len=1250 \
 --epochs=50 \
 --attn_implementation=flash_attention_2 \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --log
 ```
 
@@ -331,7 +331,7 @@ python main.py \
 --seg_len=1250 \
 --epochs=50 \
 --instance_normalize \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --attn_implementation=flash_attention_2 \
 --log
 ```
@@ -349,7 +349,7 @@ python main.py \
 --epochs=50 \
 --attn_implementation=flash_attention_2 \
 --image \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --log
 ```
 
@@ -367,7 +367,7 @@ python main.py \
 --attn_implementation=flash_attention_2 \
 --image \
 --augment_image \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --log
 ```
 
@@ -389,7 +389,7 @@ python main.py \
 --seg_len=1250 \
 --epochs=50 \
 --attn_implementation=flash_attention_2 \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --train_encoder \
 --log
 ```
@@ -409,7 +409,7 @@ python main.py \
 --peft \
 --inference=second \
 --checkpoint=$checkpoint \
---system_prompt=./data/system_prompt_e2e.txt \
+--system_prompt=$system_prompt.txt \
 --encoder_checkpoint=$encoder_checkpoint
 ```
 
@@ -423,7 +423,7 @@ python main.py \
 --peft \
 --inference=second \
 --checkpoint=$checkpoint \
---system_prompt=./data/system_prompt_e2e.txt
+--system_prompt=$system_prompt.txt
 ```
 
 Make sure to add the necessary arguments for your particular use case.
@@ -457,18 +457,66 @@ python train_tokenizer.py \
 
 #### Training End-to-End
 
-For training End-to-End, we provide the script in `scripts/train_end2end.sh`. We provide the basic configurations in the file but feel free to modify it.
+For training End-to-End, we provide the script in `scripts/train_end2end.sh`. We provide the basic configurations in the file but feel free to modify it. Here is an example of training End-to-End:
+
+```
+python main.py \
+--data=$data \
+--model=$llm \
+--device=cuda:5 \
+--ecg_tokenizer=$ecg_tokenizer \
+--seg_len=1250 \
+--peft \
+--train=end2end \
+--system_prompt=$system_prompt.txt \
+--batch_size=8 \
+--pad_to_max=1024 \
+--epochs=1 \
+--attn_implementation=flash_attention_2 \
+--log
+```
 
 
 #### Inferencing End-to-End
 
-For inferencing End-to-End, we provide the script in `scripts/inference_end2end.sh`. 
+For inferencing End-to-End, we provide the script in `scripts/inference_end2end.sh`. We provide the basic configurations in the file but feel free to modify it. Here is an example of inferencing End-to-End:
+
+```
+python main.py \
+--data=$data \
+--model=$llm \
+--device=cuda:7 \
+--ecg_tokenizer=$ecg_tokenizer \
+--peft \
+--inference=end2end \
+--checkpoint=$checkpoint \
+--system_prompt=$system_prompt.txt \
+--attn_implementation=flash_attention_2 \
+--batch_size=1
+```
 
 ### Demo
 
-We provide a demo for chatting with your own trained ELM! To run the demo, please execute the script in `scripts/run_demo.sh`.
+We provide a demo for chatting with your own trained ELM! To run the demo, please execute the script in `scripts/run_demo.sh`. For the demo, it is the same command as the inference script but utilizing the `demo.py` file. Currently, the demo is only supporting End-to-End methods.
+
+```
+python demo.py \
+--data=$data \
+--model=$llm \
+--device=cuda:7 \
+--ecg_tokenizer=$ecg_tokenizer \
+--peft \
+--inference=end2end \
+--checkpoint=$checkpoint \
+--system_prompt=$system_prompt.txt \
+--attn_implementation=flash_attention_2 \
+--batch_size=1
+```
 
 
+### Analysis
+
+We provide attention visualizations and tokenization analysis scripts taken from [ECG-Byte](https://github.com/willxxy/ECG-Byte). Please view the README in the official ECG-Byte repository and the scripts `scripts/token_dist.sh` and `scripts/track_encode.sh` for more details.
  
  ## Known Issues + Tips <a name="issues"></a>
 
