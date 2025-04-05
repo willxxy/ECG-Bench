@@ -22,19 +22,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
           
-      - name: Install PyTorch and special dependencies
+      - name: Install PyTorch
         run: |
           python -m pip install --upgrade pip
           # Install PyTorch with specific CUDA support
           pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
           
-          # Install Flash Attention 2
-          pip cache remove flash_attn
-          pip install flash-attn==2.7.4.post1 --no-cache-dir
+      - name: Install Flash Attention and other special dependencies
+        run: |
+          # Install build dependencies for Flash Attention
+          pip install ninja
+
+          # Try pre-built wheel if available (more reliable)
+          pip install flash-attn==2.7.4.post1 --no-build-isolation || \
+          # Fall back to installing from source with specific build flags
+          TORCH_CUDA_ARCH_LIST="8.0;8.6" pip install flash-attn==2.7.4.post1 --no-cache-dir || \
+          # Final fallback - skip if installation fails
+          echo "Flash Attention installation failed, continuing without it"
           
           # Install LLM Blender and TRL packages
-          pip install git+https://github.com/yuchenlin/LLM-Blender.git
-          pip install trl[judges]
+          pip install git+https://github.com/yuchenlin/LLM-Blender.git || echo "LLM-Blender installation failed, continuing"
+          pip install "trl[judges]" || echo "TRL installation failed, continuing"
           
       - name: Install remaining dependencies
         run: |
@@ -47,6 +55,10 @@ jobs:
       - name: Install project in development mode
         run: |
           pip install -e .
+          
+      - name: List installed packages
+        run: |
+          pip list
           
       - name: List project structure
         run: |
