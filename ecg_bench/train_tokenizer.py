@@ -14,7 +14,7 @@ def get_args():
     parser.add_argument('--train', action = 'store_true', default = None, help = 'Please specify whether to train the tokenizer')
     parser.add_argument('--ecg_tokenizer', type = str, default = None, help = 'If you want to just load the tokenizer, please specify the path to the .pkl file.')
     parser.add_argument('--dev', action = 'store_true', default = False, help = 'Use this flag to run the script in development mode')
-    parser.add_argument('--instance_normalize', action='store_true', default=False, help='Use instance-based normalization instead of percentile-based')
+    parser.add_argument('--instance_normalize', action='store_true', default=True, help='Use instance-based normalization instead of percentile-based')
     return parser.parse_args()
 
 def main(args: argparse.Namespace):

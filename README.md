@@ -244,23 +244,189 @@ Once you are finished with these steps, it's time to preprocess the data!
 
 ### 2 Stage Training <a name="twostage-train"></a>
 
-#### 2-Stage Scratch
+#### 2-Stage Scratch and 2-Stage Finetune
 
-We provide the script for training the first stage in 2-stage scratch in `scripts/train_1st.sh`.
-After training the first stage, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint. 
+We provide the script for training the first stage in 2-stage scratch and 2-stage finetune in `scripts/train_1st.sh`. Single GPU training looks like so:
 
+```
+python main.py \
+--data=$data \
+--model=$encoder \
+--device=cuda:2 \
+--train=first \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--instance_normalize \
+--attn_implementation=flash_attention_2 \
+--log
+```
+
+For multi-GPU training, it looks like so:
+
+```
+python main.py \
+--data=mimic-iv-ecg_mapped_1250 \
+--model=$encoder \
+--dis \
+--gpus=1,2,3,4 \
+--train=first \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--instance_normalize \
+--attn_implementation=flash_attention_2 \
+--log
+```
+
+After training the first stage, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint like so:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_$llm \
+--dis \
+--gpus=1,2,3,4 \
+--train=second \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--instance_normalize \
+--system_prompt=./data/system_prompt_e2e.txt \
+--attn_implementation=flash_attention_2 \
+--encoder_checkpoint=$encoder_checkpoint \
+--log
+```
 
 #### 2-Stage LLaVA
 
 For 2-stage LLaVA, we provide the script for training in `scripts/train_2nd.sh`. As LLaVA directly utilizes the pretrained, general encoder and only updates the projection head, utilize either CLIP, ViT, or SIGLIP for the encoder and do not pass in the encoder checkpoint.
 
-#### 2-Stage Finetune
+For single GPU training, it looks like so:
 
-For 2-stage finetune, we provide the script for finetuning the general, pretrained encoder in `scripts/train_1st.sh`. After finetuning, you can train the second stage by running `scripts/train_2nd.sh` by defining the encoder checkpoint.
+```
+python main.py \
+--data=$data \
+--model=$encoder_ \
+--device=cuda:2 \
+--train=second \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--attn_implementation=flash_attention_2 \
+--system_prompt=./data/system_prompt_e2e.txt \
+--log
+```
+
+For multi-GPU training, it looks like so:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_$llm \
+--dis \
+--gpus=1,2,3,4 \
+--train=second \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--instance_normalize \
+--system_prompt=./data/system_prompt_e2e.txt \
+--attn_implementation=flash_attention_2 \
+--log
+```
+
+If you want to utilize the image modality (plot of ECG), you can add the following argument:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_llm \
+--device=cuda:2 \
+--train=second \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--attn_implementation=flash_attention_2 \
+--image \
+--system_prompt=./data/system_prompt_e2e.txt \
+--log
+```
+
+For image augmentation, you can add the following argument:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_llm \
+--device=cuda:2 \
+--train=second \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--attn_implementation=flash_attention_2 \
+--image \
+--augment_image \
+--system_prompt=./data/system_prompt_e2e.txt \
+--log
+```
+
+#### Additional Notes for 2-Stage Methods During Training
+
+1. For non-image and text representations of ECGs (e.g., signal and stacked signal), the representation between signal and stacked signal is automatically allocated when using a particular ECG encoder. For general, pretrained encoders, the stacked signal representation is used due to the input size requirement. For ECG-specific encoders, the original signal representation is used.
+
+2. For image representations of ECGs (e.g., plot of ECG), the image representation is automatically plotted using the `ecg-plot` package.
+
+3. For any 2-stage method, if you want to fully finetune the encoder during the second stage with only the autoregressive objective, you can add the following argument:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_llm \
+--device=cuda:2 \
+--train=second \
+--batch_size=64 \
+--seg_len=1250 \
+--epochs=50 \
+--attn_implementation=flash_attention_2 \
+--system_prompt=./data/system_prompt_e2e.txt \
+--train_encoder \
+--log
+```
+
 
 ### 2-Stage Inferencing <a name="twostage-inf"></a>
 
 We provide the scripts for inferencing each type of 2-stage training method in `scripts/inference_2stage.sh`. For 2-stage finetune and 2-stage scratch, make sure to define the encoder checkpoint.
+
+Example of 2-stage finetune or scratch:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_llm \
+--device=cuda:7 \
+--peft \
+--inference=second \
+--checkpoint=$checkpoint \
+--system_prompt=./data/system_prompt_e2e.txt \
+--encoder_checkpoint=$encoder_checkpoint
+```
+
+Example of 2-stage LLaVA:
+
+```
+python main.py \
+--data=$data \
+--model=$encoder_llm \
+--device=cuda:7 \
+--peft \
+--inference=second \
+--checkpoint=$checkpoint \
+--system_prompt=./data/system_prompt_e2e.txt
+```
+
+Make sure to add the necessary arguments for your particular use case.
 
 ### End-to-End Training <a name="endtoend-train"></a>
 
@@ -270,8 +436,24 @@ We provide the scripts for inferencing each type of 2-stage training method in `
 
 2. After sampling, a sampled file .txt file should pop up under the data folder.These sampled files will be the ECGs considered during training of ECG-Byte.
 
-3. To train ECG-Byte, simply execute `sh scripts/train_tokenizer.sh`. We provide the default configurations utilized in the paper but feel free to change it!
+3. To train ECG-Byte, simply execute `sh scripts/train_tokenizer.sh`. We provide the default configurations utilized in the paper but feel free to change it! Here is an example of training ECG-Byte:
 
+```
+python train_tokenizer.py \
+--num_merges=$num_merges \
+--sampled_files=$sampled_files.txt \
+--num_processes=$num_processes \
+--train
+```
+
+To load in a pre-trained ECG-Byte tokenizer and verify it, you can add the following argument:
+```
+python train_tokenizer.py \
+--num_merges=$num_merges \
+--sampled_files=$sampled_files.txt \
+--num_processes=$num_processes \
+--ecg_tokenizer=$ecg_tokenizer
+```
 
 #### Training End-to-End
 

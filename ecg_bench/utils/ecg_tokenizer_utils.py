@@ -188,7 +188,6 @@ class ECGByteTokenizer:
         return token_counts, token_lengths
     
     def track_encoding(self, single_lead_str):
-        ### Python version of Rust code
         ids = list(single_lead_str.encode('utf-8'))
         segment_map = [(i, i+1) for i in range(len(ids))]
         for batch in tqdm(self.merges, desc = 'Tracking Encoding'):

@@ -7,12 +7,12 @@ for d in "${data[@]}"; do
     python main.py \
     --data=$d \
     --model=vit_llama-3.2-1b-instruct \
-    --device=cuda:4 \
+    --device=cuda:7 \
     --seg_len=1250 \
     --peft \
     --train=second \
     --system_prompt=./data/system_prompt_e2e.txt \
-    --batch_size=2 \
+    --batch_size=8 \
     --pad_to_max=1024 \
     --epochs=1 \
     --instance_normalize \
