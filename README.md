@@ -13,14 +13,15 @@
 ## Table of Contents
 1. [Overview](#overview)
 2. [Installation](#installation)
-3. [ECG Datasets](#data)
-4. [Main Methods](#methods)
-5. [Known Issues + Tips](#issues)
-6. [Contributions](#contributions)
-7. [TODO](#todo)
-8. [Acknowledgements](#ack)
-9. [License](#license)
-10. [Citations](#citations)
+3. [Testing](#testing)
+4. [ECG Datasets](#data)
+5. [Main Methods](#methods)
+6. [Known Issues + Tips](#issues)
+7. [Contributions](#contributions)
+8. [TODO](#todo)
+9. [Acknowledgements](#ack)
+10. [License](#license)
+11. [Citations](#citations)
 
 ## Overview <a name="overview"></a>
 This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase.
@@ -126,6 +127,39 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 
 **NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.**
+
+## Testing <a name="testing"></a>
+
+We provide automated tests to verify the functionality of ECG-Bench components. These tests help ensure that the core functionality works correctly and help identify issues early.
+
+### Running Tests Locally
+
+1. To run all tests, use our test runner script:
+   ```
+   python tests/run_all_tests.py
+   ```
+
+2. Run specific test modules with:
+   ```
+   python tests/run_all_tests.py --modules core data models
+   ```
+
+3. Available test modules:
+   - `core`: Tests for core components and utilities
+   - `data`: Tests for data loaders and dataset processing
+   - `models`: Tests for model creation, saving, and loading
+   - `gpu`: Tests for GPU compatibility (skipped if no GPU available)
+   - `transformers`: Tests for transformers integration (skipped if not installed)
+
+4. For more verbose output:
+   ```
+   python tests/run_all_tests.py --verbose
+   ```
+
+5. Use pytest directly for even more control:
+   ```
+   pytest -xvs tests/test_core_components.py
+   ```
 
 ## ECG Datasets <a name="data"></a>
 

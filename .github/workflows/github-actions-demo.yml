@@ -1,18 +1,56 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: ECG-Bench CI/CD
+run-name: ${{ github.actor }} is running tests 🚀
+on: [push, pull_request]
 jobs:
-  Explore-GitHub-Actions:
+  Build-and-Test:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v4
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-xdist
+          
+      - name: Install project in development mode
+        run: |
+          pip install -e .
+          
+      - name: List project structure
+        run: |
+          ls -la
+          
+      - name: Run core component tests
+        run: |
+          pytest -xvs tests/test_core_components.py
+          
+      - name: Run data loader tests
+        run: |
+          pytest -xvs tests/test_data_loaders.py
+          
+      - name: Run model tests
+        run: |
+          pytest -xvs tests/test_models.py
+          
+      - name: Run GPU compatibility tests (if available)
+        run: |
+          if [ $(python -c "import torch; print(torch.cuda.is_available())") == "True" ]; then
+            pytest -xvs tests/test_gpu.py
+          else
+            echo "CUDA not available, skipping GPU tests"
+          fi
+          
+      - name: Run transformers tests (if available)
+        run: |
+          if [ -d "transformers" ]; then
+            pytest -xvs tests/test_transformers.py
+          else
+            echo "Transformers directory not found, skipping transformers tests"
+          fi
