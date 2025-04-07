@@ -251,7 +251,64 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 
 ### Preprocessing
 
-1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others!
+1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others! We provide some example configurations for Base, Mapping, and RAG dataset curation.
+
+Example configurations for Base dataset curation:
+
+```
+python preprocess_ecg.py \
+--base_data=$base_data \
+--seg_len=$seg_len \
+--preprocess_files
+```
+
+where `$base_data` is one of `ptb`, `mimic`, `code15`, `csn`, or `cpsc`. `$seg_len` is the segment length you want to use for training.
+
+Example configurations for Mapping dataset curation:
+
+```
+python preprocess_ecg.py \
+--map_data=$map_data \
+--seg_len=$seg_len
+```
+
+where `$map_data` is one of `ecg_instruct_45k`, `pretrain_mimic`, `ecg_instruct_pulse`, `ecg_bench_pulse`, `ecg-qa_mimic-iv-ecg`, `ecg-qa_ptbxl`, `ecg_grounding_pulse`, `ecg_grounding`, or `ecg_grounding_test`.
+
+For RAG dataset curation, an example configuration looks like so:
+
+```
+python preprocess_ecg.py \
+--base_data=$base_data \
+--seg_len=$seg_len \
+--create_rag_db
+```
+
+We encourage you to use the `mimic` base dataset for RAG curation since it has the most amount of ECGs.
+
+After running the RAG dataset curation, you should have a `data/$base_data/combined.index` file and a `data/$base_data/rag_metadata.json` file.
+
+You can then load in the RAG database and test it out by running the following command:
+
+```
+python preprocess_ecg.py \
+--base_data=$base_data \
+--seg_len=$seg_len \
+--load_rag_db=./data/$base_data/rag_metadata.json \
+--load_rag_db_idx=./data/$base_data/combined.index
+```
+
+Lastly, for sampling ECGs for training ECG-Byte and getting percentiles, an example configuration looks like so:
+
+```
+python preprocess_ecg.py \
+--base_data=$base_data \
+--seg_len=$seg_len \
+--sample_files \
+--$sampling_method \
+--sample_percentiles
+```
+
+where `$sampling_method` is either `random_sampling` or `stratified_sampling`. ECG-Byte utilizes stratified sampling, however, you can use random sampling as well.
 
 
 ## Main Methods <a name="methods"></a>
@@ -567,6 +624,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 
 - [ ] Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
 - [ ] Add [GEM model](https://www.arxiv.org/abs/2503.06073)
+- [ ] Add [ECG-Expert-QA dataset](https://arxiv.org/abs/2502.17475)
 - [x] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
 - [ ] Provide HuggingFace dataset and model card push ability.
 - [ ] Create an offline demo for ELMs with unified preference collection.
