@@ -555,14 +555,15 @@ We welcome contributions to the repository! Please feel free to open an issue or
 
 ## TODO <a name="todo"></a>
 
+This is a list of TODOs for the repository. If you are interested in contributing, please feel free to look at the list and open a PR! We are always looking for ways to add more documentation, examples, tests, and workflows for the codebase. Lastly, general improvements to the codebase are always welcome!
+
 - [ ] Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
 - [ ] Add [GEM model](https://www.arxiv.org/abs/2503.06073)
 - [ ] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
-- [ ] More documentation and examples!
 - [ ] Provide HuggingFace dataset and model card push ability.
 - [ ] Create an offline demo for ELMs with unified preference collection.
 - [x] [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
-- [ ] Create more tests and integrate with workflows for codebase.
+- [ ] Make RAG searching faster.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital. 
