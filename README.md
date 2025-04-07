@@ -28,6 +28,7 @@ This repository is a unified framework for training and evaluating electrocardio
 Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
 
 This current repository considers 4 input representations of ECGS as defined below:
+
 **ECG Signal:** The raw ECG signal is represented as a matrix $X_{\text{sig}} \in \mathbb{R}^{C \times L}$, where $C$ denotes the number of leads (channels) and $L$ is the number of time samples per lead. All other modalities derived from $X_{\text{sig}}$.
 
 **ECG Image:** An ECG image is derived from $X_{\text{sig}}$ via plotting and represented as a tensor $X_{\text{img}} \in \mathbb{R}^{H \times W \times C'}$, where $H$ and $W$ denote the image height and width, respectively, and $C'$ is the number of color channels. 
