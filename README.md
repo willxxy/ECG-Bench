@@ -27,9 +27,17 @@ This repository is a unified framework for training and evaluating electrocardio
 
 Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
 
-We provide preprocessing pipelines for various datasets in this repository.
+This current repository considers 4 input representations of ECGS as defined below:
+**ECG Signal:** The raw ECG signal is represented as a matrix $X_{\text{sig}} \in \mathbb{R}^{C \times L}$, where \( C \) denotes the number of leads (channels) and \( L \) is the number of time samples per lead. All other modalities derived from $X_{\text{sig}}$.
+**ECG Image:** An ECG image is derived from $X_{\text{sig}}$ via plotting and represented as a tensor $X_{\text{img}} \in \mathbb{R}^{H \times W \times C'}$, where \( H \) and \( W \) denote the image height and width, respectively, and \( C' \) is the number of color channels. 
+**Stacked ECG Signal:** We also create a synthetic three-channel version of $X_{\text{sig}}$, denoted \( X^*_{\text{sig}} \), by stacking \( X_{\text{sig}} \) three times along the channel dimension \( C' \) as seen in ECG Image.
+**ECG Text:** We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal \(X_{\text{sig}}\) is mapped to a symbolic sequence using a set of symbols \(\mathcal{A} = \{\text{a}, \text{b}, \dots, \text{z}\}\). This sequence is then flattened into a one-dimensional array \(X_{\text{symb}} \in \mathcal{A}^{C\cdot L}\). Finally, a byte-pair encoding (BPE) process compresses \(X_{\text{symb}}\) into a sequence of tokens from an extended vocabulary \(\mathcal{V}\), resulting in the final textual representation \(X_{\text{ID}} \in \mathcal{V}^{m}\), where \(m\) is the length of the token sequence.
 
-**Datasets:**
+We describe the different training paradigms in the Main Methods section.
+
+We also provide preprocessing pipelines for various datasets in this repository.
+
+Datasets:
 
 1. [PTB-XL, a large publicly available electrocardiography dataset](https://physionet.org/content/ptb-xl/1.0.0/)
 2. [MIMIC-IV-ECG: Diagnostic Electrocardiogram Matched Subset](https://physionet.org/content/mimic-iv-ecg/1.0/)
