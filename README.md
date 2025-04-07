@@ -89,7 +89,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 5. Activate the environment `conda activate ecg`
 
-6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121`
+6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121` (make sure when executing `nvcc --version` you get version 12.1)
 
 7. `git clone https://github.com/willxxy/ECG-Bench.git`
 
