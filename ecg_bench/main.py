@@ -209,6 +209,11 @@ def run_train(model, train_loader, optimizer, args, viz):
     all_epochs = []
     train_losses = []
     
+    if args.checkpoint != None:
+        checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
+        model.load_state_dict(checkpoint['model'])
+        print('Model loaded and training resumed')
+    
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
         train_dic = trainer(model, train_loader, optimizer, args, epoch)
@@ -266,7 +271,6 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         np.random.seed(seed)
         
         checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
-        # checkpoint = torch.load(f"{args.checkpoint}/model_0_49999.pth", map_location=args.device)
         model.load_state_dict(checkpoint['model'])
         print('Model loaded')
         
