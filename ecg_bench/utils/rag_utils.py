@@ -59,12 +59,35 @@ class RAGECGDatabase:
         first_vector = self.index.reconstruct(0)
         self.feature_dim = 288
         self.signal_dim = len(first_vector) - self.feature_dim
+        self._build_sub_indices()
         
         print('features dim:', self.feature_dim)
         print('signals dim:', self.signal_dim)
         print('total samples:', len(self.reports))
         print('Index loaded.')
+    
+    def _build_sub_indices(self):
+            """Build and cache feature and signal sub-indices."""
+            # Extract feature and signal vectors once
+            ntotal = self.index.ntotal
+            feature_vectors = np.zeros((ntotal, self.feature_dim), dtype=np.float32)
+            signal_vectors = np.zeros((ntotal, self.signal_dim), dtype=np.float32)
 
+            for i in range(ntotal):
+                full_vector = self.index.reconstruct(i)
+                feature_vectors[i] = full_vector[:self.feature_dim]
+                signal_vectors[i] = full_vector[self.feature_dim:]
+
+            # Build feature index
+            self.feature_index = faiss.IndexFlatL2(self.feature_dim)
+            self.feature_index.add(feature_vectors)
+            self.index_mapping = np.arange(ntotal)
+
+            # Build signal index
+            self.signal_index = faiss.IndexFlatL2(self.signal_dim)
+            self.signal_index.add(signal_vectors)
+            self.signal_mapping = np.arange(ntotal)
+            
     def create_and_save_db(self):
         metadata = []
         vectors_for_index = []
@@ -107,15 +130,6 @@ class RAGECGDatabase:
         return metadata
 
     def search_similar(self, query_features=None, query_signal=None, k=5, mode='query_signal'):
-        """
-        Search for similar ECGs using different modes
-        
-        Args:
-            query_features: feature vector for similarity search
-            query_signal: signal vector for similarity search
-            k: number of results to return
-            mode: 'feature', 'signal', or 'combined'
-        """
         if mode not in ['feature', 'signal', 'combined']:
             raise ValueError("Mode must be 'feature', 'signal', or 'combined'")
             
@@ -127,41 +141,13 @@ class RAGECGDatabase:
             raise ValueError("Combined mode requires both query_features and query_signal")
 
         if mode == 'feature':
-            if not hasattr(self, 'feature_index'):
-                # Extract only feature part from all vectors
-                feature_vectors = np.zeros((self.index.ntotal, self.feature_dim), dtype=np.float32)
-                for i in range(self.index.ntotal):
-                    full_vector = self.index.reconstruct(i)
-                    feature_vectors[i] = full_vector[:self.feature_dim]
-                
-                self.feature_index = faiss.IndexFlatL2(self.feature_dim)
-                self.feature_index.add(feature_vectors)
-                self.index_mapping = np.arange(self.index.ntotal)
-            
             query_features = query_features.reshape(1, self.feature_dim)
             distances, indices = self.feature_index.search(query_features, k)
             original_indices = [int(self.index_mapping[idx]) for idx in indices[0]]
             
         elif mode == 'signal':
-            if not hasattr(self, 'signal_index'):
-                # Extract only signal part from all vectors
-                signal_vectors = np.zeros((self.index.ntotal, self.signal_dim), dtype=np.float32)
-                for i in range(self.index.ntotal):
-                    full_vector = self.index.reconstruct(i)
-                    signal_vectors[i] = full_vector[self.feature_dim:]
-                
-                # Create and store signal-only index
-                self.signal_index = faiss.IndexFlatL2(self.signal_dim)
-                self.signal_index.add(signal_vectors)
-                
-                # Store mapping from signal index to full index
-                self.signal_mapping = np.arange(self.index.ntotal)
-            
-            # Search using signal index
-            query_signal = query_signal.reshape(1, -1)  # Reshape to 2D array
+            query_signal = query_signal.reshape(1, -1)
             distances, indices = self.signal_index.search(query_signal, k)
-            
-            # Map back to original indices
             original_indices = [int(self.signal_mapping[idx]) for idx in indices[0]]
             
         else:  # combined mode
@@ -225,6 +211,7 @@ class RAGECGDatabase:
         return filtered_results
 
     def test_search(self):
+        self.preprocessed_dir = f"./data/{self.args.base_data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
         npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
         query_signal = self.fm.open_npy(npy_files[0])['ecg']
         print('query_signal', query_signal.shape)
@@ -232,7 +219,6 @@ class RAGECGDatabase:
         # query_signal = query_signal.flatten()
         start_time = time.time()
         results = self.search_similar(query_signal=query_signal, k=5, mode='signal')
-        print(results)
         formatted_results = self.format_search(results)
         print(formatted_results)
         end_time = time.time()

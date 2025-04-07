@@ -563,7 +563,8 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Provide HuggingFace dataset and model card push ability.
 - [ ] Create an offline demo for ELMs with unified preference collection.
 - [x] [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
-- [ ] Make RAG searching faster.
+- [x] Make RAG searching faster.
+- [ ] Make training with RAG faster.
 - [ ] Add encoder-free VLMs such as [Fuyu-8B](https://www.adept.ai/blog/fuyu-8b), [Vision as LoRA](https://arxiv.org/abs/2503.20680), and/or [Unveiling Encoder-Free Vision-Language Models](https://arxiv.org/abs/2406.11832) for ECGs. This could be extended for all training methods.
 
 ## Acknowledgements <a name="ack"></a>
