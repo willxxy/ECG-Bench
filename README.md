@@ -452,9 +452,9 @@ python main.py \
 
 #### Additional Notes for 2-Stage Methods During Training
 
-1. For non-image and text representations of ECGs (e.g., signal and stacked signal), the representation between signal and stacked signal is automatically allocated when using a particular ECG encoder. For general, pretrained encoders, the stacked signal representation is used due to the input size requirement. For ECG-specific encoders, the original signal representation is used.
+1. For non-image and text representations of ECGs (e.g., ECG signal and stacked ECG signal), the representation between ECG signal and stacked ECG signal is automatically allocated when using a particular ECG encoder. For general, pretrained encoders, the stacked ECG signal representation is used due to the input size requirement. For ECG-specific encoders, the original ECG signal representation is used.
 
-2. For image representations of ECGs (e.g., plot of ECG), the image representation is automatically plotted using the `ecg-plot` package.
+2. For image representations of ECGs (e.g., ECG image), the image representation is automatically plotted using the `ecg-plot` package.
 
 3. For any 2-stage method, if you want to fully finetune the encoder during the second stage with only the autoregressive objective, you can add the following argument:
 
