@@ -20,7 +20,9 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
 SUPPORTED_BASE_DATASETS = ['ptb', 'mimic', 'code15', 'cpsc', 'csn']
-SUPPORTED_MAPPED_DATASETS = ['ecg_bench_pulse', 'ecg_instruct_pulse', 'pretrain_mimic', 'ecg_instruct_45k', 'ecg-qa_ptbxl', 'ecg-qa_mimic-iv-ecg']
+SUPPORTED_MAPPED_DATASETS = ['ecg_bench_pulse', 'ecg_instruct_pulse', 'pretrain_mimic',
+                             'ecg_instruct_45k', 'ecg-qa_ptbxl', 'ecg-qa_mimic-iv-ecg',
+                             'ecg_grounding_pulse', 'ecg_grounding', 'ecg_grounding_test']
 
 class PrepareDF:
     '''
@@ -724,6 +726,8 @@ class PreprocessMapECG:
             data = self._prepare_ecg_qa_ptb()
         elif self.args.map_data == 'ecg-qa_mimic-iv-ecg':
             data = self._prepare_ecg_qa_mimic()
+        elif self.args.map_data in ['ecg_grounding_pulse', 'ecg_grounding', 'ecg_grounding_test']:
+            data = self._prepare_ecg_grounding()
             
         if self.args.dev:
             data = data[:100]
@@ -769,9 +773,28 @@ class PreprocessMapECG:
             file_name = instance['file_name']
             name = instance['name']
             ecg_path, preprocessed_dir = self._get_ecg_bench_pulse_path(name, file_name)
+            
+        elif self.args.map_data in ['ecg_grounding_pulse', 'ecg_grounding', 'ecg_grounding_test']:
+            text = instance['conversations']
+            file_name = instance['ecg']
+            ecg_path, preprocessed_dir = self._get_ecg_grounding_path(file_name)
         
         return ecg_path, text, name, preprocessed_dir
     
+    def _prepare_ecg_grounding(self):
+        base_datasets = ['mimic']
+        if self.args.map_data == 'ecg_grounding_pulse':
+            base_datasets.append('ptb')
+            base_datasets.append('code15')
+            data = self.fm.open_json(f'./data/ecg_grounding/ECG_Grounding_30k.json')
+        elif self.args.map_data == 'ecg_grounding':
+            data = self.fm.open_json(f'./data/ecg_grounding/grounding_train_30k.json')
+        elif self.args.map_data == 'ecg_grounding_test':
+            data = self.fm.open_json(f'./data/ecg_grounding/ecg-grounding-test.json')
+        for dataset in base_datasets:
+            preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))
+        return data
     
     def _prepare_ecg_bench_pulse(self):
         json_path = f'./data/{self.args.map_data}/ecg_bench_pulse_datasets.json'
@@ -855,6 +878,19 @@ class PreprocessMapECG:
         self.fm.save_json(data, json_path)
         return data
     
+    def _get_ecg_grounding_path(self, file_name):
+        base_dataset_name = file_name.split('/')[0]
+        if base_dataset_name == 'mimic-iv':
+            preprocessed_dir = f"./data/mimic/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            file_name = '_'.join(file_name.split('/')[1:])
+        elif base_dataset_name == 'ecg_ptbxl_benchmarking':
+            preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            file_name = '_'.join(file_name.split('/')[3:])
+        elif base_dataset_name == 'code15':
+            preprocessed_dir = f"./data/code15/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            file_name = file_name.split('/')[-1]
+        return file_name, preprocessed_dir
+            
     def _get_ecg_bench_pulse_path(self, name, file_name):
         if name in ['ecgqa-test', 'ptb-test-report', 'ptb-test']:
             preprocessed_dir = f"./data/ptb/preprocessed_{self.args.seg_len}_{self.args.target_sf}"

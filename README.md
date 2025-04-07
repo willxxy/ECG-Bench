@@ -39,6 +39,7 @@ We provide preprocessing pipelines for various datasets in this repository.
 6. [MIMIC-IV and PTB-XL variants of ECG-QA: A Comprehensive Question Answering Dataset Combined With Electrocardiogram](https://arxiv.org/abs/2306.15681)
 7. [Pretrain MIMIC-IV and ECG Instruct 45K from ECG-Chat: A Large ECG-Language Model for Cardiac Disease Diagnosis](https://arxiv.org/abs/2408.08849)
 8. [ECG Instruct Pulse and ECG Bench Pulse from Teach Multimodal LLMs to Comprehend Electrocardiographic Images](https://arxiv.org/abs/2410.19008)
+9. [ECG Grounding Datasets from GEM: Empowering MLLM for Grounded ECG Understanding with Time Series and Images](https://www.arxiv.org/abs/2503.06073)
 
 We implement the following ELMs:
 
@@ -239,7 +240,14 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 
 1. Create a 'data/ecg_instruct_pulse' directory and downlod the `ECGInstruct.json`from this [link](https://huggingface.co/datasets/PULSE-ECG/ECGInstruct/tree/main). Then rename it to `ecg_instruct_pulse.json`.
 
-Once you are finished with these steps, it's time to preprocess the data!
+#### ECG Bench Pulse dataset curated by [PULSE, Liu et al.](https://github.com/AIMedLab/PULSE)
+
+1. The ECG Bench Pulse dataset is exclusively on HuggingFace with `.parquet` files, therefore, we utilize the `datasets` library directly to download the dataset. All you have to do is simply define `map_data` in the preprocess script as `ecg_bench_pulse`.
+
+#### ECG Grounding Datasets curated by [GEM, Lan et al.](https://github.com/lanxiang1017/GEM)
+
+1. Create a `data/ecg_grounding` directory and download the `ECG_Grounding_30k.json`, `ecg-grounding-test.json` and `grounding_train_30k.json` from this [link](https://huggingface.co/datasets/LANSG/ECG-Grounding/tree/main/ecg_jsons). A quick note is that `grounding_train_30k.json` is a subset of `ECG_Grounding_30k.json`, where `ECG_Grounding_30k.json` contains all 30k ECG grounding samples found in `grounding_train_30k.json`, with additional ECG conversational data from the ECG Instruct PULSE dataset.
+
 
 ### Preprocessing
 
@@ -559,7 +567,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 
 - [ ] Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
 - [ ] Add [GEM model](https://www.arxiv.org/abs/2503.06073)
-- [ ] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
+- [x] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
 - [ ] Provide HuggingFace dataset and model card push ability.
 - [ ] Create an offline demo for ELMs with unified preference collection.
 - [x] [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
