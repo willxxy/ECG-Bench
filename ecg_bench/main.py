@@ -1,5 +1,5 @@
 import torch
-torch.set_num_threads(2)
+torch.set_num_threads(6)
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Adam

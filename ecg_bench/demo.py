@@ -225,6 +225,12 @@ def main(args):
     model_object = train_utils.create_model()
     
     model = model_object['llm']
+    if args.checkpoint != None:
+        checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=device)
+        model.load_state_dict(checkpoint['model'])
+        print('Model loaded')
+    else:
+        print('No checkpoint provided')
     tokenizer = model_object['llm_tokenizer']
     
     chat_fn = partial(end2end_chat, model=model, tokenizer=tokenizer, train_utils=train_utils)
