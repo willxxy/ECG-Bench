@@ -526,7 +526,7 @@ We provide attention visualizations and tokenization analysis scripts taken from
  
  ## Known Issues + Tips <a name="issues"></a>
 
-We encountered some issues during development of ECG-Byte and hope to contribute to the open source community by reporting them here and adding any tips if possible. If you happen to know a good solution to any of them, please do not hesitate to open an issue or pull request!
+We encountered some issues during development of ECG-Bench (mostly taken from [ECG-Byte](https://github.com/willxxy/ECG-Byte)) and hope to contribute to the open source community by reporting them here and adding any tips if possible. If you happen to know a good solution to any of them, please do not hesitate to open an issue or pull request!
 
 1. **`tqdm` bar freezing script with multiprocessing** - We noticed that the tqdm bar freezes sometimes when we put it inside a multiprocessing job (especially during preprocessing). We recommend adding print statements before and after the main operations inside the tqdm loop to ensure the operations are being executed. This is a [thread of the issue](https://github.com/tqdm/tqdm/issues/1160) from the tqdm repository. Please feel free to look at it!
 
@@ -536,7 +536,7 @@ We encountered some issues during development of ECG-Byte and hope to contribute
 
 4. **Nan values during preprocessing** - We noticed that the MIMIC-IV ECG dataset has many nan values during preprocessing so we workaround this by skipping them.
 
-5. **Crash during ECG sampling** - When sampling ECGs (`ecg_byte/preprocess/sample_ecg.py`, we currently have the following configurations for the number of threads:
+5. **Crash during ECG sampling** - When sampling ECGs using morphological clustering during preprocessing, we currently have the following configurations for the number of threads:
 
 ```
 os.environ['OPENBLAS_NUM_THREADS'] = '4'
