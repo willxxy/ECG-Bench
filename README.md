@@ -555,14 +555,14 @@ We welcome contributions to the repository! Please feel free to open an issue or
 
 ## TODO <a name="todo"></a>
 
-1. Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
-2. Add [GEM model](https://www.arxiv.org/abs/2503.06073)
-3. Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
-4. More documentation and examples!
-5. Provide HuggingFace dataset and model card push ability.
-6. Create a offline demo for ELMs with unified preference collection.
-7. [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
-8. Create more tests and integrate with workflows for codebase.
+- [ ] Add default chat templates for LLMs without chat templates (e.g., GPT 2, OPT).
+- [ ] Add [GEM model](https://www.arxiv.org/abs/2503.06073)
+- [ ] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
+- [ ] More documentation and examples!
+- [ ] Provide HuggingFace dataset and model card push ability.
+- [ ] Create an offline demo for ELMs with unified preference collection.
+- [x] [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
+- [ ] Create more tests and integrate with workflows for codebase.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital. 
