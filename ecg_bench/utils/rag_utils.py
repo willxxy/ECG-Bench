@@ -59,6 +59,7 @@ class RAGECGDatabase:
         first_vector = self.index.reconstruct(0)
         self.feature_dim = 288
         self.signal_dim = len(first_vector) - self.feature_dim
+        print('Building sub-indices...')
         self._build_sub_indices()
         
         print('features dim:', self.feature_dim)
