@@ -32,6 +32,9 @@ def get_args():
     data_group.add_argument('--ecg_tokenizer', type=str, help='Tokenizer specification')
     data_group.add_argument('--percentiles', type=str, default=None, help='Percentiles computed during preprocessing')
     data_group.add_argument('--system_prompt', type=str, default=None, help='System prompt')
+    data_group.add_argument('--image', action = 'store_true', default=None, help='Turn Image Generation on')
+    data_group.add_argument('--augment_image', action = 'store_true', default=None, help='Turn Image Augmentation on')
+    data_group.add_argument('--instance_normalize', action = 'store_true', default=True, help='Turn Instance Normalization on')
     
     ### Model
     model_group = parser.add_argument_group('Model')
@@ -56,12 +59,15 @@ def get_args():
     mode_group.add_argument('--inference', type=str, default = 'end2end', choices=['second', 'end2end'], help='Inference mode')
     mode_group.add_argument('--train', type=str, default = None, choices=['first', 'second', 'end2end'], help='Training mode')
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
+    mode_group.add_argument('--post_train', action='store_true', default=None, help='Post-training mode')
+    model_group.add_argument('--train_encoder', action='store_true', default=None, help='Train encoder too')
+    mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
+    mode_group.add_argument('--rag', action='store_true', default=None, help='RAG mode')
     
     ### Checkpoints and Paths
     ckpt_group = parser.add_argument_group('Checkpoints')
     ckpt_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint path')
     ckpt_group.add_argument('--encoder_checkpoint', type=str, default=None, help='Encoder checkpoint path')
-    ckpt_group.add_argument('--encoder_data', type=str, default=None, help='Encoder data path')
 
     return parser.parse_args()
 

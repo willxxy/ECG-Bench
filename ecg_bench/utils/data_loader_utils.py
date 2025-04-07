@@ -14,6 +14,10 @@ class BaseECGDataset(Dataset):
         self.args = self.train_utils.args
         self.encoder_tokenizer = encoder_tokenizer
         self.llm_tokenizer = llm_tokenizer
+        if self.args.rag:
+            from ecg_bench.utils.rag_utils import RAGECGDatabase
+            self.args.create_rag_db = None
+            self.rag_db = RAGECGDatabase(self.args, self.train_utils.fm)
         if llm_tokenizer is not None:
             self.create_special_tokens()
             self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(['<signal>'])
@@ -103,7 +107,7 @@ class BaseECGDataset(Dataset):
                 altered_text = [{'from': 'human', 'value': question}, {'from': 'assistant', 'value': answer}]
         return altered_text
         
-    def append_messages_to_conv(self, conv, altered_text):
+    def append_messages_to_conv(self, conv, altered_text, signal=None):
         count = 0
         for message in altered_text:
             is_human = message['from'].lower() in ['human', 'user']
@@ -114,7 +118,12 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
-                message_value = f"<signal>\n{message_value}"
+                if self.args.rag:
+                    rag_results = self.rag_db.search_similar(query_signal=signal, k=5, mode='signal')
+                    filtered_rag_results = self.rag_db.format_search(rag_results)
+                    message_value = f"{filtered_rag_results}<signal>\n{message_value}"
+                else:
+                    message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
         return conv
@@ -188,7 +197,8 @@ class EncoderInputPreparation(BaseECGDataset):
             normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(ecg_signal)
         else:
             normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
-        return {'signal': normalized_signal.astype(np.float32)}
+        return {'signal': normalized_signal.astype(np.float32),
+                'orig_signal': ecg_signal.astype(np.float32)}
         
     def prepare_vit_input(self, ecg_signal, num_patches):
         image_signal = self.signal_to_image(ecg_signal)
@@ -198,7 +208,8 @@ class EncoderInputPreparation(BaseECGDataset):
         mask = torch.rand(size=(1, num_patches)) < 0.75
         return {
             'vit_pixel': pixel_values,
-            'vit_mask': mask[0].contiguous()
+            'vit_mask': mask[0].contiguous(),
+            'orig_signal': ecg_signal.astype(np.float32)
         }
     
     def prepare_clip_input(self, ecg_signal, original_report):
@@ -212,7 +223,8 @@ class EncoderInputPreparation(BaseECGDataset):
         return {
             'clip_input_ids': clip_inputs['input_ids'][0].contiguous(),
             'clip_att_mask': clip_inputs['attention_mask'][0].contiguous(),
-            'clip_pixel': clip_inputs['pixel_values'][0].contiguous()
+            'clip_pixel': clip_inputs['pixel_values'][0].contiguous(),
+            'orig_signal': ecg_signal.astype(np.float32)
         }
         
     def prepare_siglip_input(self, ecg_signal, original_report):
@@ -229,7 +241,8 @@ class EncoderInputPreparation(BaseECGDataset):
         return {
             'siglip_input_ids': siglip_inputs['input_ids'][0].contiguous(),
             'siglip_att_mask': attention_mask.contiguous(),
-            'siglip_pixel': siglip_inputs['pixel_values'][0].contiguous()
+            'siglip_pixel': siglip_inputs['pixel_values'][0].contiguous(),
+            'orig_signal': ecg_signal.astype(np.float32)
         }
     
     def prepare_merl_input(self, ecg_signal, original_report):
@@ -245,7 +258,8 @@ class EncoderInputPreparation(BaseECGDataset):
         return {
             'merl_input_ids': merl_inputs['input_ids'][0].contiguous(),
             'merl_att_mask': merl_inputs['attention_mask'][0].contiguous(),
-            'signal': normalized_signal.astype(np.float32)
+            'signal': normalized_signal.astype(np.float32),
+            'orig_signal': ecg_signal.astype(np.float32)
         }
 
 
@@ -305,7 +319,7 @@ class End2EndECGChatDataset(BaseECGDataset):
     def prepare_training_end2end(self, ecg_signal, altered_text):
         conv = self.setup_conversation_template()
         altered_text = self.process_altered_text(altered_text)
-        conv = self.append_messages_to_conv(conv, altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text, ecg_signal)
         
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
@@ -363,7 +377,7 @@ class End2EndECGChatDataset(BaseECGDataset):
     def prepare_inference_end2end(self, ecg_signal, altered_text):
         conv = self.setup_conversation_template()
         altered_text = self.process_altered_text(altered_text)
-        conv = self.append_messages_to_conv(conv, altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text, ecg_signal)
         
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
@@ -425,7 +439,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
     def prepare_training_second(self, encoder_out, altered_text):
         conv = self.setup_conversation_template()
         altered_text = self.process_altered_text(altered_text)
-        conv = self.append_messages_to_conv(conv, altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text, encoder_out['orig_signal'])
         
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
@@ -456,7 +470,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
     def prepare_inference_second(self, encoder_out, altered_text):
         conv = self.setup_conversation_template()
         altered_text = self.process_altered_text(altered_text)
-        conv = self.append_messages_to_conv(conv, altered_text)
+        conv = self.append_messages_to_conv(conv, altered_text, encoder_out['orig_signal'])
         
         tokens_before, tokens_after = self.get_input_tokens(conv)
         

@@ -82,6 +82,9 @@ def get_args():
     model_group.add_argument('--train_encoder', action='store_true', default=None, help='Train encoder too')
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
     mode_group.add_argument('--rag', action='store_true', default=None, help='RAG mode')
+    mode_group.add_argument('--rag_k', type=int, default=1, help='RAG k')
+    parser.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
+    parser.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')
     mode_group.add_argument('--log', action='store_true', default=None, help='Enable logging')
     

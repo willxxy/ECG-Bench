@@ -3,22 +3,52 @@ import faiss
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
+import time
 
 class RAGECGDatabase:
     def __init__(self, args, fm):
         self.args = args
         self.fm = fm
-        self.preprocessed_dir = f"./data/{self.args.base_data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
-        self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
+        self.ecg_feature_list = [
+                    "mean",
+                    "std",
+                    "max",
+                    "min",
+                    "median",
+                    "25th percentile",
+                    "75th percentile",
+                    "total power",
+                    "peak frequency power",
+                    "dominant frequency",
+                    "spectral centroid",
+                    "heart rate",
+                    "heart rate variability",
+                    "qrs duration",
+                    "t wave amplitude",
+                    "st deviation",
+                    "wavelet coefficient approximation",
+                    "wavelet coefficient detail level 5",
+                    "wavelet coefficient detail level 4",
+                    "wavelet coefficient detail level 3",
+                    "wavelet coefficient detail level 2",
+                    "wavelet coefficient detail level 1",
+                    "average absolute difference",
+                    "root mean square difference"
+                ]
         
         print('Loading RAG database...')
-        if self.args.load_rag_db_idx is None and self.args.load_rag_db is None:
+        if self.args.create_rag_db:
+            self.preprocessed_dir = f"./data/{self.args.base_data}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
+            self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
+            print('Creating RAG database...')
             print('No RAG database found. Creating new one...')
             self.metadata = self.create_and_save_db()
-        else:
+        elif self.args.load_rag_db != None and self.args.load_rag_db_idx != None:
             print('Loading RAG database from file...')
             self.metadata = self.fm.open_json(self.args.load_rag_db)
             self.index = faiss.read_index(self.args.load_rag_db_idx)
+        else:
+            print('Please either create a RAG datbse or load one in.')
         
         print('Metadata loaded.')
         self.reports = [item['report'] for item in self.metadata]
@@ -158,11 +188,52 @@ class RAGECGDatabase:
         
         return results
     
+    def format_search(self, results):
+        results = self.filter_results(results)
+        output = f"The following is the top {len(results)} retrieved ECGs and their corresponding features and diagnosis. Utilize this information to further enhance your response.\n\n"
+        
+        for idx, res in results.items():
+            # Filter out entries where all feature values are zero
+            if np.all(np.array(res['feature']) == 0):
+                continue
+            
+            output += f"Retrieved ECG {idx+1}\n"
+            output += "Diagnosis Information:\n"
+            output += f"{res['report']}\n\n"
+            output += "Feature Information:\n"
+            # Zip through feature names and feature values to format each line.
+            for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
+                output += f"{feature_name}: {str(float(feature_value))}\n"
+            output += "\n"
+        return output
+    
+    def filter_results(self, results):
+        filtered_results = {}
+        count = 0
+        for idx, res in results.items():
+            # Check if more than x% of values are exactly zero or if the sum is too small
+            feature_array = np.array(res['feature'])
+            zero_percentage = np.sum(np.abs(feature_array) < 1e-3) / len(feature_array)
+            total_magnitude = np.sum(np.abs(feature_array))
+            
+            # Filter out entries that are mostly zeros or have very low total magnitude
+            if zero_percentage > 0.5 or total_magnitude < 0.5:
+                continue
+            
+            filtered_results[count] = res
+            count += 1
+        return filtered_results
+
     def test_search(self):
         npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
         query_signal = self.fm.open_npy(npy_files[0])['ecg']
         print('query_signal', query_signal.shape)
         # Flatten the signal to match the expected dimensions
         # query_signal = query_signal.flatten()
+        start_time = time.time()
         results = self.search_similar(query_signal=query_signal, k=5, mode='signal')
         print(results)
+        formatted_results = self.format_search(results)
+        print(formatted_results)
+        end_time = time.time()
+        print(f"Search time: {end_time - start_time:.2f} seconds")

@@ -27,7 +27,7 @@ def get_args():
     parser.add_argument('--max_clusters', type = int, default = 200, help = 'Maximum number of clusters for tokenizer training')
     parser.add_argument('--dev', action = 'store_true', default = False, help = 'Run in development mode')
     parser.add_argument('--toy', action = 'store_true', default = False, help = 'Create a toy dataset')
-    parser.add_argument('--create_rag_db', action = 'store_true', default = False, help = 'Create a RAG database')
+    parser.add_argument('--create_rag_db', action = 'store_true', default = None, help = 'Create a RAG database')
     parser.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
     parser.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
     return parser.parse_args()
@@ -55,7 +55,7 @@ def main(args: argparse.Namespace):
                 elif args.stratified_sampling:
                     if not fm.ensure_directory_exists(file = f'./data/sampled_{args.num_tok_samples}_{args.max_clusters}.txt'):
                         sample_base_ecg.stratified_sampling()
-        elif args.create_rag_db:
+        elif args.create_rag_db != None or args.load_rag_db != None or args.load_rag_db_idx != None:
             rag_db = RAGECGDatabase(args, fm)
             rag_db.test_search()
     else:
