@@ -7,7 +7,7 @@ for d in "${data[@]}"; do
     python main.py \
     --data=$d \
     --model=llama-3.2-1b-instruct \
-    --device=cuda:6 \
+    --device=cuda:3 \
     --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \
     --seg_len=1250 \
     --peft \
