@@ -34,7 +34,7 @@ This current repository considers 4 input representations of ECGS as defined bel
 **ECG Image:** An ECG image is derived from $X_{\text{sig}}$ via plotting and represented as a tensor $X_{\text{img}} \in \mathbb{R}^{H \times W \times C'}$, where $H$ and $W$ denote the image height and width, respectively, and $C'$ is the number of color channels. 
 
 **Stacked ECG Signal:** We also create a synthetic three-channel version of $X_{\text{sig}}$, denoted 
-$X_{\text{sig}^*} \in \mathbb{R}^{C \times L \times 3}$, by stacking $X_{\text{sig}}$ three times along the color dimension $C'$ as seen in ECG Image.
+$X{^*}_{\text{sig}} \in \mathbb{R}^{C \times L \times 3}$, by stacking $X_{\text{sig}}$ three times along the color dimension $C'$ as seen in ECG Image.
 
 **ECG Text:** We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal $X_{\text{sig}}$ is mapped to a symbolic sequence using a set of symbols $\mathcal{A} = \{\text{a}, \text{b}, \dots, \text{z}\}$. This sequence is then flattened into a one-dimensional array $X_{\text{symb}} \in \mathcal{A}^{C\cdot L}$. Finally, a byte-pair encoding (BPE) process compresses $X_{\text{symb}}$ into a sequence of tokens from an extended vocabulary $\mathcal{V}$, resulting in the final textual representation $X_{\text{ID}} \in \mathcal{V}^{m}$, where $m$ is the length of the token sequence.
 
@@ -62,13 +62,13 @@ SSL approaches, such as masked image modeling or contrastive learning, are emplo
 
 **2-Stage LLaVA**
 
-In this approach, we utilize general pretrained image encoders, such as CLIP or ViT, as $f_{\text{ECG}}$. Since these encoders expect image inputs, the ECG data must be adapted: either by creating a synthetic three-channel ECG signal $X^*_{\text{sig}}$, or by using an image representation $X_{\text{img}}$ of the ECG.
+In this approach, we utilize general pretrained image encoders, such as CLIP or ViT, as $f_{\text{ECG}}$. Since these encoders expect image inputs, the ECG data must be adapted: either by creating a synthetic three-channel ECG signal $X{^*}_{\text{sig}}$, or by using an image representation $X_{\text{img}}$ of the ECG.
 
 In the LLaVA-style approach, $f_{\text{ECG}}$ is frozen, and a learnable projection matrix $W \in \mathbb{R}^{h \times d}$ is introduced, where $h$ is the hidden dimension of the LLM. During the second stage, the latent vector $z = f_{\text{ECG}}(X)$ is projected to $z' = W z$, concatenated with the embedded query $Q$, and fed into the LLM to generate the response $S$. Only $W$ and the LLM are trained, while $f_{\text{ECG}}$ remains fixed.
 
 **2-Stage Finetune**
 
-Another approach finetunes the general, pretrained image encoder $f_{\text{ECG}}$ on either $X^*_{\text{sig}}$ or $X_{\text{img}}$ before the second stage. 
+Another approach finetunes the general, pretrained image encoder $f_{\text{ECG}}$ on either $X{^*}_{\text{sig}}$ or $X_{\text{img}}$ before the second stage. 
 
 **2-Stage End-to-End**
 
