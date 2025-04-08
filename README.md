@@ -30,16 +30,16 @@ Currently, we are working on a benchmarking paper for ELMs and different ECG inp
 This current repository considers 4 input representations of ECGs as defined below:
 
 **ECG Signal:**  
-The raw ECG signal is represented as a matrix `X_sig` in R^(C x L), where `C` denotes the number of leads (channels) and `L` is the number of time samples per lead. All other modalities are derived from `X_sig`.
+The raw ECG signal is represented as a matrix `X_sig` $\in$ `R^(C x L)`, where `C` denotes the number of leads and `L` is the number of time samples per lead. All other modalities are derived from `X_sig`.
 
 **ECG Image:**  
-An ECG image is derived from `X_sig` via plotting and is represented as a tensor `X_img` in R^(H x W x C′), where `H` and `W` denote the image height and width, respectively, and `C′` is the number of color channels.
+An ECG image is derived from `X_sig` via plotting and is represented as a tensor `X_img` $\in$ `R^(H x W x C′)`, where `H` and `W` denote the image height and width, respectively, and `C′` is the number of color channels.
 
 **Stacked ECG Signal:**  
-We also create a synthetic three-channel version of `X_sig`, denoted `X_sig*` in R^(C x L x 3), by stacking `X_sig` three times along the color dimension (as seen in ECG Image).
+We also create a synthetic three-channel version of `X_sig`, denoted `X_sig*` $\in$ `R^(C x L x 3)`, by stacking `X_sig` three times along the color dimension (as seen in ECG Image).
 
 **ECG Text:**  
-We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols A = {a, b, …, z}. This sequence is then flattened into a one-dimensional array `X_symb` in A^(C * L). Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary V, resulting in the final textual representation `X_ID` in V^(m), where `m` is the length of the token sequence.
+We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols A = {a, b, …, z}. This sequence is then flattened into a one-dimensional array `X_symb` $\in$ `A^(C * L)`. Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary V, resulting in the final textual representation `X_ID` $\in$ V^(m), where `m` is the length of the token sequence.
 
 We consider 2 broadly defined training paradigms for ELMs in this repository:
 
@@ -65,7 +65,7 @@ SSL approaches, such as masked image modeling or contrastive learning, are emplo
 
 In this approach, we utilize general pretrained image encoders, such as CLIP or ViT, as `f_ECG`. Since these encoders expect image inputs, the ECG data must be adapted: either by creating a synthetic three-channel ECG signal `X_sig*`, or by using an image representation `X_img` of the ECG.
 
-In the LLaVA-style approach, `f_ECG` is frozen, and a learnable projection matrix `W` in R^(h x d) is introduced, where `h` is the hidden dimension of the LLM. During the second stage, the latent vector `z = f_ECG(X)` is projected to `z′ = W z`, concatenated with the embedded query `Q`, and fed into the LLM to generate the response `S`. Only `W` and the LLM are trained, while `f_ECG` remains fixed.
+In the LLaVA-style approach, `f_ECG` is frozen, and a learnable projection matrix `W` $\in$ `R^(h x d)` is introduced, where `h` is the hidden dimension of the LLM. During the second stage, the latent vector `z = f_ECG(X)` is projected to `z′ = W z`, concatenated with the embedded query `Q`, and fed into the LLM to generate the response `S`. Only `W` and the LLM are trained, while `f_ECG` remains fixed.
 
 
 **2-Stage Finetune**
