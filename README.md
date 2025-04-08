@@ -39,7 +39,7 @@ An ECG image is derived from `X_sig` via plotting and is represented as a tensor
 We also create a synthetic three-channel version of `X_sig`, denoted `X_sig*` $\in$ `R^(C x L x 3)`, by stacking `X_sig` three times along the color dimension (as seen in ECG Image).
 
 **ECG Text:**  
-We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols A = {a, b, …, z}. This sequence is then flattened into a one-dimensional array `X_symb` $\in$ `A^(C * L)`. Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary V, resulting in the final textual representation `X_ID` $\in$ V^(m), where `m` is the length of the token sequence.
+We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols `A = {a, b, …, z}`. This sequence is then flattened into a one-dimensional array `X_symb` $\in$ `A^(C * L)`. Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary V, resulting in the final textual representation `X_ID` $\in$ V^(m), where `m` is the length of the token sequence.
 
 We consider 2 broadly defined training paradigms for ELMs in this repository:
 
