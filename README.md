@@ -38,7 +38,47 @@ $X_{\text{sig}^*} \in \mathbb{R}^{C \times L \times 3}$, by stacking $X_{\text{s
 
 **ECG Text:** We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal $X_{\text{sig}}$ is mapped to a symbolic sequence using a set of symbols $\mathcal{A} = \{\text{a}, \text{b}, \dots, \text{z}\}$. This sequence is then flattened into a one-dimensional array $X_{\text{symb}} \in \mathcal{A}^{C\cdot L}$. Finally, a byte-pair encoding (BPE) process compresses $X_{\text{symb}}$ into a sequence of tokens from an extended vocabulary $\mathcal{V}$, resulting in the final textual representation $X_{\text{ID}} \in \mathcal{V}^{m}$, where $m$ is the length of the token sequence.
 
-We describe the different training paradigms in the Main Methods section.
+We consider 2 broadly defined training paradigms for ELMs in this repository:
+
+1. **2-Stage Training** (can also be seen as Encoder methods)
+
+2. **End-to-End Training** (can also be seen as Encoder-Free methods)
+
+However, we further break down 2-Stage Training into 4 sub-methods:
+
+1. **2-Stage Scratch**
+
+2. **2-Stage LLaVA**
+
+3. **2-Stage Finetune**
+
+4. **2-Stage End-to-End**
+
+**2-Stage Scratch**
+
+In this approach, we train an ECG-specific encoder $f_{\text{ECG}} : \mathbb{R}^{C \times L} \to \mathbb{R}^d$ using self-supervised learning (SSL) on the raw ECG signal $X_{\text{sig}}$. Here, $C$ represents the number of channels, $L$ the number of time steps, and $d$ the dimension of the latent space where ECG data is encoded.
+
+SSL approaches, such as masked image modeling or contrastive learning, are employed. In contrastive learning, a text encoder $f_{\text{text}} : \mathbb{R} \to \mathbb{R}^d$ may map textual reports to the same $d$-dimensional latent space for alignment with ECG encodings.
+
+**2-Stage LLaVA**
+
+In this approach, we utilize general pretrained image encoders, such as CLIP or ViT, as $f_{\text{ECG}}$. Since these encoders expect image inputs, the ECG data must be adapted: either by creating a synthetic three-channel ECG signal $X^*_{\text{sig}}$, or by using an image representation $X_{\text{img}}$ of the ECG.
+
+In the LLaVA-style approach, $f_{\text{ECG}}$ is frozen, and a learnable projection matrix $W \in \mathbb{R}^{h \times d}$ is introduced, where $h$ is the hidden dimension of the LLM. During the second stage, the latent vector $z = f_{\text{ECG}}(X)$ is projected to $z' = W z$, concatenated with the embedded query $Q$, and fed into the LLM to generate the response $S$. Only $W$ and the LLM are trained, while $f_{\text{ECG}}$ remains fixed.
+
+**2-Stage Finetune**
+
+Another approach finetunes the general, pretrained image encoder $f_{\text{ECG}}$ on either $X^*_{\text{sig}}$ or $X_{\text{img}}$ before the second stage. 
+
+**2-Stage End-to-End**
+
+In this approach, we train the LLM and $f_{\text{ECG}}$ jointly with only an autoregressive objective. We find this approach to be not that effective, but [some previous works](https://arxiv.org/abs/2403.04945v3) have used it.
+
+**NOTE:** In all 2-stage approaches, the second stage trains the LLM with an autoregressive objective. The latent vector $z$ from $f_{\text{ECG}}$ is projected via $W$ to $z'$, concatenated with the embedded query $Q$, and input to the LLM to generate the response $S$. Note that $W$ is also trained for all 2-stage approaches.
+
+**End-to-End Training**
+
+For the **End-to-End** training setting, the ECG signal $X_{\text{sig}}$ is transformed to tokens $X_{\text{ID}}$ similar to text utilizing methods from ECG-Byte. Therefore, one can directly train the LLM for autoregressive generation since $X_{\text{ID}}$ and text are all tokens.
 
 We also provide preprocessing pipelines for various datasets in this repository.
 
@@ -461,7 +501,7 @@ python main.py \
 
 2. For image representations of ECGs (e.g., ECG image), the image representation is automatically plotted using the `ecg-plot` package.
 
-3. For any 2-stage method, if you want to fully finetune the encoder during the second stage with only the autoregressive objective, you can add the following argument:
+3. For any 2-stage method, if you want to fully finetune the encoder during the second stage (i.e., 2-stage End-to-End) with only the autoregressive objective, you can add the following argument:
 
 ```
 python main.py \
