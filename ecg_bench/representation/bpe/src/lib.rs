@@ -195,7 +195,7 @@ fn encode_symbol(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>>
 }
 
 #[pymodule]
-fn bpe(_py: Python, m: &PyModule) -> PyResult<()> {
+fn bpe(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(byte_pair_encoding, m)?)?;
     m.add_function(wrap_pyfunction!(encode_symbol, m)?)?;
     Ok(())
