@@ -27,7 +27,7 @@ This repository is a unified framework for training and evaluating electrocardio
 
 Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
 
-This current repository considers 4 input representations of ECGS as defined below:
+<!-- This current repository considers 4 input representations of ECGS as defined below:
 
 **ECG Signal:** The raw ECG signal is represented as a matrix $X_{\text{sig}} \in \mathbb{R}^{C \times L}$, where $C$ denotes the number of leads (channels) and $L$ is the number of time samples per lead. All other modalities derived from $X_{\text{sig}}$.
 
@@ -78,7 +78,7 @@ In this approach, we train the LLM and $f_{\text{ECG}}$ jointly with only an aut
 
 **End-to-End Training**
 
-For the **End-to-End** training setting, the ECG signal $X_{\text{sig}}$ is transformed to tokens $X_{\text{ID}}$ similar to text utilizing methods from ECG-Byte. Therefore, one can directly train the LLM for autoregressive generation since $X_{\text{ID}}$ and text are all tokens.
+For the **End-to-End** training setting, the ECG signal $X_{\text{sig}}$ is transformed to tokens $X_{\text{ID}}$ similar to text utilizing methods from ECG-Byte. Therefore, one can directly train the LLM for autoregressive generation since $X_{\text{ID}}$ and text are all tokens. -->
 
 We also provide preprocessing pipelines for various datasets in this repository.
 
