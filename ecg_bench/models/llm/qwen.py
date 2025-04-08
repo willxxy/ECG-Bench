@@ -61,7 +61,7 @@ class qwen(nn.Module):
                 attention_mask=attention_mask.to(self.llm.device),
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0],
+                eos_token_id=tokenizer.convert_tokens_to_ids(['<|im_end|>'])[0],
                 do_sample=True,
                 use_cache=True,
             )
@@ -72,7 +72,7 @@ class qwen(nn.Module):
                 inputs_embeds=inputs_embeds.to(self.llm.device),
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0],
+                eos_token_id=tokenizer.convert_tokens_to_ids(['<|im_end|>'])[0],
                 do_sample=True,
                 use_cache=True,
             )
@@ -87,7 +87,9 @@ class qwen(nn.Module):
             attention_mask=attention_mask.to(self.llm.device),
             max_new_tokens=128,
             pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0],
+            eos_token_id=tokenizer.convert_tokens_to_ids(['<|im_end|>'])[0],
+            do_sample=True,
+            use_cache=True,
         )
         decoded_text = tokenizer.batch_decode(generated_ids[:, input_len:], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         return decoded_text
