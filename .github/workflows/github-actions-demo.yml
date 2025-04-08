@@ -1,5 +1,7 @@
 name: ECG-Bench CI/CD
 run-name: ${{ github.actor }} is running tests 🚀
+permissions:
+  contents: read
 on: [push, pull_request]
 jobs:
   Build-and-Test:
