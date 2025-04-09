@@ -277,7 +277,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
         all_seed_results.append(seed_results)
         
-        with open(f"{args.checkpoint}/seed_{seed}.json", 'w') as f:
+        with open(f"{args.checkpoint}/seed_{seed}_{args.rag}_{args.rag_k}.json", 'w') as f: # To indicate whether RAG is used during inference
             json.dump({
                 'averages': seed_results['metrics'],
                 'qa_results': seed_results['qa_results']
@@ -287,7 +287,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     statistical_results = train_utils.run_statistical_analysis(all_seed_results)
     print(f'Statistical results: {statistical_results}')
     
-    with open(f"{args.checkpoint}/statistical_results.json", 'w') as f:
+    with open(f"{args.checkpoint}/statistical_results_{args.rag}_{args.rag_k}.json", 'w') as f:
         json.dump(statistical_results, f)
 
 def main(rank, world_size):
