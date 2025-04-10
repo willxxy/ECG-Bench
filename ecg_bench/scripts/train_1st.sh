@@ -1,6 +1,9 @@
 #!/bin/bash
 
-models=("vit" "clip" "siglip" "stmem" "merl" "mlae" "mtae")
+models=("stmem" "merl" "mlae" "mtae" "siglip" "clip")
+
+# VIT DONE
+# CLIP SO SLOW
 
 # ### MULTI GPU
 for model in "${models[@]}"; do

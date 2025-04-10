@@ -1,27 +1,22 @@
-python main.py \
---data=ecg_instruct_45k_mapped \
---model=llama-3.2-1b \
---device=cuda:7 \
---percentiles=./data/mimic_percentiles_2500_250_300000.npy \
---ecg_tokenizer=./data/tokenizer_3500_300000.pkl \
---peft \
---inference=end2end \
---checkpoint=llama-3.2-1b_1_2_0.0001_0.9_0.99_1e-08_500_0.01 \
---system_prompt=./data/system_prompt_e2e.txt \
---attn_implementation=flash_attention_2 \
---dev
+#!/bin/bash
+
+data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
 
 
-
-# python main.py \
-# --data=ecg_instruct_45k_mapped \
-# --model=siglip_llama-3.2-1b \
-# --device=cuda:7 \
-# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
-# --peft \
-# --inference=second \
-# --checkpoint=siglip_llama-3.2-1b_1_2_0.0001_0.9_0.99_1e-08_500_0.01 \
-# --system_prompt=./data/system_prompt_e2e.txt \
-# --encoder_checkpoint=siglip_1_2_0.0001_0.9_0.99_1e-08_500_0.01 \
-# --encoder_data=pretrain_mimic_mapped \
-# --dev
+for d in "${data[@]}"; do
+    python main.py \
+    --data=$d \
+    --model=llama-3.2-1b-instruct \
+    --device=cuda:3 \
+    --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \
+    --seg_len=1250 \
+    --peft \
+    --inference=end2end \
+    --checkpoint=./runs/$d/0/llama-3.2-1b-instruct_8_1_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_None \
+    --system_prompt=./data/system_prompt_e2e.txt \
+    --batch_size=1 \
+    --pad_to_max=1024 \
+    --epochs=1 \
+    --instance_normalize \
+    --attn_implementation=flash_attention_2
+done

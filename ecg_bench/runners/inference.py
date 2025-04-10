@@ -30,7 +30,9 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                     end = conv_turn['end'] + 1 + offset
                     curr_input_ids = chat_input_ids[:, :start]
                     curr_attention_mask = chat_attention_mask[:, :start]
-                    # print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
+                    if args.dev:
+                        print('curr_input_ids', tokenizer.decode(curr_input_ids[0]))
+                        print('--------------------------------' * 3)
                     
                     if args.inference == 'second':
                         out = model.generate_chat(
@@ -50,15 +52,19 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                         out[:, start:].cpu(),
                         gt_input_ids[:, end-offset:]
                     ], dim=1)
-                    # print('chat_input_ids', tokenizer.decode(chat_input_ids[0]))
+                    if args.dev:
+                        print('chat_input_ids', tokenizer.decode(chat_input_ids[0]))
+                        print('--------------------------------' * 3)
                     chat_attention_mask = torch.ones_like(chat_input_ids)
                     decoded_out = tokenizer.batch_decode(out[:, start:], skip_special_tokens=False)[0]
                     gt_out = tokenizer.batch_decode(gt_input_ids[:, start-offset:end-offset], skip_special_tokens=False)[0]
                     gt_answers.append(gt_out)
                     gen_answers.append(decoded_out)
                     offset += out[:, start:].size(1) - (end - start)
-                    # print('decoded_out', decoded_out)
-                    # print('gt_out', gt_out)
+                    if args.dev:
+                        print('decoded_out', decoded_out)
+                        print('gt_out', gt_out)
+                        print('--------------------------------' * 3)
             except Exception as e:
                 print('\nError occurred during evaluation:')
                 print(f"Error type: {type(e).__name__}")
