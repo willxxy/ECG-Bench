@@ -710,16 +710,16 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
 
 5. **Crash during ECG sampling** - When sampling ECGs using morphological clustering during preprocessing, we currently have the following configurations for the number of threads:
 
-```
-os.environ['OPENBLAS_NUM_THREADS'] = '4'
-os.environ['MKL_NUM_THREADS'] = '4'
-os.environ['VECLIB_MAXIMUM_THREADS'] = '4'
-os.environ['NUMEXPR_NUM_THREADS'] = '4'
-```
+    ```
+    os.environ['OPENBLAS_NUM_THREADS'] = '4'
+    os.environ['MKL_NUM_THREADS'] = '4'
+    os.environ['VECLIB_MAXIMUM_THREADS'] = '4'
+    os.environ['NUMEXPR_NUM_THREADS'] = '4'
+    ```
 
-We noticed that on some machines under computational constraints this number is too high when largely launching the PCA analysis, thus resulting in a crash. 
-In this case, simply reduce the maximum number of threads for each os.environ to either 1 or 2.
-Reducing this number should solve the problem, however, if you continue to run into crashes please feel free to report an issue!
+    We noticed that on some machines under computational constraints this number is too high when largely launching the PCA analysis, thus resulting in a crash. 
+    In this case, simply reduce the maximum number of threads for each os.environ to either 1 or 2.
+    Reducing this number should solve the problem, however, if you continue to run into crashes please feel free to report an issue!
 
 ## Contributions <a name="contributions"></a>
 
