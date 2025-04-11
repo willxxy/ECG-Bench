@@ -623,6 +623,56 @@ python main.py \
 --batch_size=1
 ```
 
+### RAG Training + Inferencing
+
+For RAG inferencing, we provide the script in `scripts/inference_end2end_rag.sh`. We provide the basic configurations in the file but feel free to modify it. Here is an example of inferencing End-to-End with RAG:
+
+```
+python main.py \
+--data=$d \
+--model=$llm \
+--device=cuda:3 \
+--ecg_tokenizer=$ecg_tokenizer \
+--seg_len=1250 \
+--peft \
+--inference=$inference_method \
+--checkpoint=$checkpoint \
+--system_prompt=$system_prompt.txt \
+--batch_size=1 \
+--pad_to_max=1024 \
+--instance_normalize \
+--attn_implementation=flash_attention_2 \
+--rag \
+--rag_k=$k \
+--load_rag_db=$rag_db.json \
+--load_rag_db_idx=$rag_db_idx.index
+```
+
+where `$k` is the number of retrieved ECGs and `$rag_db.json` and `$rag_db_idx.index` are the RAG database and index, respectively.
+
+Although its unconventional, you can also train with RAG by adding the same arguments during training:
+
+```
+python main.py \
+--data=$data \
+--model=$llm \
+--device=cuda:5 \
+--ecg_tokenizer=$ecg_tokenizer \
+--seg_len=1250 \
+--peft \
+--train=$train_method \
+--system_prompt=$system_prompt.txt \
+--batch_size=8 \
+--pad_to_max=1024 \
+--epochs=1 \
+--attn_implementation=flash_attention_2 \
+--log \
+--rag \
+--rag_k=$k \
+--load_rag_db=$rag_db.json \
+--load_rag_db_idx=$rag_db_idx.index
+```
+
 ### Demo
 
 We provide a demo for chatting with your own trained ELM! To run the demo, please execute the script in `scripts/run_demo.sh`. For the demo, it is the same command as the inference script but utilizing the `demo.py` file. Currently, the demo is only supporting End-to-End methods.
