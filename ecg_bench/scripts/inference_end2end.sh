@@ -4,8 +4,14 @@ data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_
 
 
 for d in "${data[@]}"; do
+    if [ "$d" = "ecg_instruct_pulse_mapped_1250" ]; then
+        data_arg="ecg_bench_pulse_mapped_1250"
+    else
+        data_arg="$d"
+    fi
+    
     python main.py \
-    --data=$d \
+    --data=$data_arg \
     --model=llama-3.2-1b-instruct \
     --device=cuda:3 \
     --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \

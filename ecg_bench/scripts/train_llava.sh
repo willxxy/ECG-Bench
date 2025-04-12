@@ -6,7 +6,7 @@ data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_
 for d in "${data[@]}"; do
     python main.py \
     --data=$d \
-    --model=clip_llama-3.2-1b-instruct \
+    --model=siglip_llama-3.2-1b-instruct \
     --device=cuda:7 \
     --seg_len=1250 \
     --peft \

@@ -83,7 +83,7 @@ class BaseECGDataset(Dataset):
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
         
-    def setup_conversation_template(self):
+    def setup_conversation_template(self, signal = None):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         elif 'qwen' in self.args.model:
@@ -92,7 +92,12 @@ class BaseECGDataset(Dataset):
             conv = get_conv_template('gemma')
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
-            conv.set_system_message(self.system_prompt)
+            if self.args.rag:
+                rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+                filtered_rag_results = self.rag_db.format_search(rag_results)
+                modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+            # conv.set_system_message(self.system_prompt)
+            conv.set_system_message(modified_system_prompt)
             
         return conv
         
@@ -118,12 +123,12 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
-                if self.args.rag:
-                    rag_results = self.rag_db.search_similar(query_signal=signal, k=5, mode='signal')
-                    filtered_rag_results = self.rag_db.format_search(rag_results)
-                    message_value = f"{filtered_rag_results}<signal>\n{message_value}"
-                else:
-                    message_value = f"<signal>\n{message_value}"
+                # if self.args.rag:
+                #     rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+                #     filtered_rag_results = self.rag_db.format_search(rag_results)
+                #     message_value = f"{filtered_rag_results}<signal>\n{message_value}"
+                # else:
+                message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
         return conv
@@ -317,7 +322,7 @@ class End2EndECGChatDataset(BaseECGDataset):
             return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
-        conv = self.setup_conversation_template()
+        conv = self.setup_conversation_template(signal=ecg_signal)
         altered_text = self.process_altered_text(altered_text)
         conv = self.append_messages_to_conv(conv, altered_text, ecg_signal)
         
@@ -375,7 +380,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_end2end(self, ecg_signal, altered_text):
-        conv = self.setup_conversation_template()
+        conv = self.setup_conversation_template(signal=ecg_signal)
         altered_text = self.process_altered_text(altered_text)
         conv = self.append_messages_to_conv(conv, altered_text, ecg_signal)
         
@@ -437,7 +442,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
             return self.prepare_inference_second(encoder_out, altered_text)
     
     def prepare_training_second(self, encoder_out, altered_text):
-        conv = self.setup_conversation_template()
+        conv = self.setup_conversation_template(signal=encoder_out['orig_signal'])
         altered_text = self.process_altered_text(altered_text)
         conv = self.append_messages_to_conv(conv, altered_text, encoder_out['orig_signal'])
         
@@ -468,7 +473,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         }
     
     def prepare_inference_second(self, encoder_out, altered_text):
-        conv = self.setup_conversation_template()
+        conv = self.setup_conversation_template(signal=encoder_out['orig_signal'])
         altered_text = self.process_altered_text(altered_text)
         conv = self.append_messages_to_conv(conv, altered_text, encoder_out['orig_signal'])
         
