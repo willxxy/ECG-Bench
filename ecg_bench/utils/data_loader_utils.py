@@ -97,6 +97,7 @@ class BaseECGDataset(Dataset):
                 filtered_rag_results = self.rag_db.format_search(rag_results)
                 modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
             # conv.set_system_message(self.system_prompt)
+            modified_system_prompt = self.system_prompt
             conv.set_system_message(modified_system_prompt)
             
         return conv
