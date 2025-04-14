@@ -96,9 +96,13 @@ class BaseECGDataset(Dataset):
                 rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
                 filtered_rag_results = self.rag_db.format_search(rag_results)
                 modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
-            # conv.set_system_message(self.system_prompt)
-            modified_system_prompt = self.system_prompt
-            conv.set_system_message(modified_system_prompt)
+                if self.args.dev:
+                    print('filtered_rag_results', filtered_rag_results)
+                    print('modified_system_prompt', modified_system_prompt)
+                    
+                conv.set_system_message(modified_system_prompt)
+            else:
+                conv.set_system_message(self.system_prompt)
             
         return conv
         
@@ -124,11 +128,6 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
-                # if self.args.rag:
-                #     rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
-                #     filtered_rag_results = self.rag_db.format_search(rag_results)
-                #     message_value = f"{filtered_rag_results}<signal>\n{message_value}"
-                # else:
                 message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
@@ -136,6 +135,8 @@ class BaseECGDataset(Dataset):
     
     def get_input_tokens(self, conv):
         prompt = conv.get_prompt()
+        if self.args.dev:
+            print('prompt', prompt)
         ecg_position = prompt.find(self.ecg_placeholder)
         prompt_before_ecg = prompt[:ecg_position]
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
