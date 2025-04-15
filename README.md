@@ -86,7 +86,7 @@ For the **End-to-End** training setting, the ECG signal `X_sig` is transformed t
 
 We also provide preprocessing pipelines for various datasets in this repository.
 
-Datasets:
+**Datasets:**
 
 1. [PTB-XL, a large publicly available electrocardiography dataset](https://physionet.org/content/ptb-xl/1.0.0/)
 2. [MIMIC-IV-ECG: Diagnostic Electrocardiogram Matched Subset](https://physionet.org/content/mimic-iv-ecg/1.0/)
@@ -98,23 +98,23 @@ Datasets:
 8. [ECG Instruct Pulse and ECG Bench Pulse from Teach Multimodal LLMs to Comprehend Electrocardiographic Images](https://arxiv.org/abs/2410.19008)
 9. [ECG Grounding Datasets from GEM: Empowering MLLM for Grounded ECG Understanding with Time Series and Images](https://www.arxiv.org/abs/2503.06073)
 
-We implement the following ELMs:
+**We implement the following ELMs:**
 
 1. [ECG-Byte: A Tokenizer for End-to-End Electrocardiogram Language Modeling](https://arxiv.org/abs/2412.14373)
 
-We also provide implementations of the following ECG-specific encoders:
+**We also provide implementations of the following ECG-specific encoders:**
 
 1. [Guiding Masked Representation Learning to Capture Spatio-Temporal Relationship of Electrocardiogram](https://arxiv.org/abs/2402.09450)
 2. [Zero-Shot ECG Classification with Multimodal Learning and Test-time Clinical Knowledge Enhancement](https://arxiv.org/abs/2403.06659)
 3. [MaeFE: Masked Autoencoders Family of Electrocardiogram for Self-Supervised Pretraining and Transfer Learning](https://ieeexplore.ieee.org/document/9980411)
 
-Utilizing HuggingFace, we also provide general, pretrained models to serve as ECG encoders:
+**Utilizing HuggingFace, we also provide general, pretrained models to serve as ECG encoders:**
 
 1. [ViT](https://arxiv.org/abs/2010.11929)
 2. [CLIP](https://arxiv.org/abs/2103.00020)
 3. [SigLIP](https://arxiv.org/abs/2303.15343)
 
-We utilize the HuggingFace API to create wrappers around the following pretrained LLMs:
+**We utilize the HuggingFace API to create wrappers around the following pretrained LLMs:**
 
 1. [Llama 3](https://arxiv.org/abs/2407.21783)
 2. [Gemma 2](https://arxiv.org/abs/2408.00118)
@@ -123,7 +123,7 @@ We utilize the HuggingFace API to create wrappers around the following pretraine
 We also have [GPT 2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) and [OPT](https://arxiv.org/abs/2205.01068) LLMs, however, we do not have chat tempaltes for them yet.
 
 
-We provide the following features for training and evaluating ELMs:
+**We provide the following features for training and evaluating ELMs:**
 1. Single and distributed training.
 2. We impemented an LLM judge with llm-blender and utilized [DPO](https://arxiv.org/abs/2305.18290) for post-training.
 3. [Flash Attention 2](https://arxiv.org/abs/2307.08691) for faster training and inference.
@@ -696,6 +696,7 @@ python demo.py \
 
 We provide attention visualizations and tokenization analysis scripts taken from [ECG-Byte](https://github.com/willxxy/ECG-Byte). Please view the README in the official ECG-Byte repository and the scripts `scripts/token_dist.sh` and `scripts/track_encode.sh` for more details.
  
+
  ## Known Issues + Tips <a name="issues"></a>
 
 We encountered some issues during development of ECG-Bench (mostly taken from [ECG-Byte](https://github.com/willxxy/ECG-Byte)) and hope to contribute to the open source community by reporting them here and adding any tips if possible. If you happen to know a good solution to any of them, please do not hesitate to open an issue or pull request!
@@ -724,6 +725,8 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
 ## Contributions <a name="contributions"></a>
 
 We welcome contributions to the repository! Please feel free to open an issue or pull request for any bugs or features you would like to add. We are always looking for new ECG datasets to benchmark our methods on. If you have any recommendations, please let us know! Also, a good place to start is by looking at the [TODO](#todo) section.
+
+For most processes, we have a `--dev` flag to run in a smaller scale and add some verbosity for debugging. Feel free to add this flag when needed! 
 
 ### Contributors
 
