@@ -752,7 +752,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Addition for new input representation: [ECG features](https://proceedings.mlr.press/v225/yu23b.html)
 - [ ] Reasoning ability for ELMs (akin to OpenAI o1, Deepseek R1, etc.).
 - [ ] Curate higher quality instruction tuning and reasoning datasets for ELMs.
-- [ ] Expand upon current naive distributed training setting to include more efficient distributed training strategies.
+- [ ] Expand upon current naive distributed training setting to include more efficient and explicit distributed training strategies (i.e., data, tensor, context, pipeline, and expert parallelism as noted in [here](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=5d_parallelism_in_a_nutshell)).
 - [ ] Add option for data mixing.
 
 ## Acknowledgements <a name="ack"></a>
