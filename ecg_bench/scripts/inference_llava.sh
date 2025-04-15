@@ -1,13 +1,17 @@
 #!/bin/bash
 
-data=("ecg_instruct_45k_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
-
-#DID "ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" 
-
+data=("ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
+#DID "ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_mapped_1250"
 
 for d in "${data[@]}"; do
+    if [ "$d" = "ecg_instruct_pulse_mapped_1250" ]; then
+        data_arg="ecg_bench_pulse_mapped_1250"
+    else
+        data_arg="$d"
+    fi
+    
     python main.py \
-    --data=$d \
+    --data=$data_arg \
     --model=vit_llama-3.2-1b-instruct \
     --device=cuda:3 \
     --seg_len=1250 \

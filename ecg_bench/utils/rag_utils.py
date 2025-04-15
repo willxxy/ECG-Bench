@@ -209,8 +209,8 @@ class RAGECGDatabase:
             
             output += f"Retrieved ECG {idx+1}\n"
             output += "Diagnosis Information:\n"
-            # output += f"{res['report']}\n\n"
-            output += f"{res['report']}\n"
+            output += f"{res['report']}\n\n"
+            # output += f"{res['report']}\n"
             # output += "Feature Information:\n"
             # Zip through feature names and feature values to format each line.
             # for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):

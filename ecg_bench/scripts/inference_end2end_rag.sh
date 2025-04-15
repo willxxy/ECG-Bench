@@ -26,7 +26,7 @@ for d in "${data[@]}"; do
     --instance_normalize \
     --attn_implementation=flash_attention_2 \
     --rag \
-    --rag_k=3 \
+    --rag_k=10 \
     --load_rag_db=./data/mimic/rag_metadata.json \
     --load_rag_db_idx=./data/mimic/combined.index
 done
