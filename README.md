@@ -750,6 +750,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Reasoning ability for ELMs (akin to OpenAI o1, Deepseek R1, etc.).
 - [ ] Curate higher quality instruction tuning and reasoning datasets for ELMs.
 - [ ] Expand upon current naive distributed training setting to include more efficient distributed training strategies.
+- [ ] Add option for data mixing.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital.
