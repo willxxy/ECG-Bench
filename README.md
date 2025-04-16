@@ -331,6 +331,14 @@ python preprocess_ecg.py \
 
 where `$map_data` is one of `ecg_instruct_45k`, `pretrain_mimic`, `ecg_instruct_pulse`, `ecg_bench_pulse`, `ecg-qa_mimic-iv-ecg`, `ecg-qa_ptbxl`, `ecg_grounding_pulse`, `ecg_grounding`, or `ecg_grounding_test`.
 
+You can also mix multiple datasets together by defining `mix_data` in the preprocess script. Here is an example configuration:
+
+```
+python preprocess_ecg.py \
+--mix_data=$mix_data
+```
+where `$mix_data` can be `ecg_instruct_45k_mapped_1250,ecg_bench_pulse_mapped_1250`.
+
 For RAG dataset curation, an example configuration looks like so:
 
 ```
