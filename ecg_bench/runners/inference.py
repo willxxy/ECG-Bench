@@ -74,10 +74,9 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                 gen_answers.append("")
             
             len_of_batch += 1
-            # print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
-            # input()
             
             if args.dev:
+                print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
                 dev_count += 1
                 if dev_count == 25:
                     print("\nDev mode: Stopping after 25 batches")
