@@ -623,6 +623,15 @@ python main.py \
 --batch_size=1
 ```
 
+### Organizing Results
+
+For all inferencing results, we inference over multiple seeds and provide statistical results over the multiple seeds (e.g., 95% confidence intervals, standard deviation, etc.). To organize the results and have them printed out in a nice format, we provide the script in `scripts/org_results.sh`. We provide the basic configurations in the file but feel free to modify it. Here is an example of organizing results:
+
+```
+python organize_results.py \
+--checkpoint=$checkpoint
+```
+
 ### RAG Training + Inferencing
 
 For RAG inferencing, we provide the script in `scripts/inference_end2end_rag.sh`. We provide the basic configurations in the file but feel free to modify it. Here is an example of inferencing End-to-End with RAG:

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
+data=("ecg_instruct_45k_mapped_1250")
 
 
 for d in "${data[@]}"; do

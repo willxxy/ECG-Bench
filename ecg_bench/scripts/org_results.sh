@@ -7,6 +7,7 @@ checkpoints=(
     "siglip_llama-3.2-1b-instruct_8_1_0.0001_0.9_0.99_1e-08_500_0.01_True_True_None_None_None"
     "clip_llama-3.2-1b-instruct_8_1_0.0001_0.9_0.99_1e-08_500_0.01_True_True_None_None_None"
     "stmem_llama-3.2-1b-instruct_8_1_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_None"
+    "gemma-2b-it_4_1_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_None"
 )
 
 for d in "${data[@]}"; do
