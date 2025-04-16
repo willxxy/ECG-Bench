@@ -163,6 +163,7 @@ def create_save_path(args):
             args.model,
             args.batch_size,
             args.epochs,
+            args.pad_to_max,
             args.lr,
             args.beta1,
             args.beta2,
