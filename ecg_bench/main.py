@@ -154,7 +154,7 @@ def setup_wandb(args):
         config=args
     )
 
-def create_save_path(args):
+def create_save_path(args, fm):
     if args.train != None or args.post_train != None:
         base_dir = "./runs"
         dataset_config = f"{args.data}"
@@ -178,6 +178,7 @@ def create_save_path(args):
         ]
         model_config = '_'.join(str(param) for param in model_params)    
         save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
+        fm.ensure_directory_exists(folder=save_path)
         return save_path
     else:
         return args.checkpoint
@@ -299,8 +300,7 @@ def main(rank, world_size):
     ecg_tokenizer_utils = ECGByteTokenizer(args, fm)
     train_utils = TrainingUtils(args, fm, viz, device, ecg_tokenizer_utils)
     
-    args.save_path = create_save_path(args)
-    fm.ensure_directory_exists(folder=args.save_path)
+    args.save_path = create_save_path(args, fm)
     if args.log:
         setup_wandb(args)
     save_config(args)
