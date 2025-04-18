@@ -25,10 +25,8 @@ for d in "${data[@]}"; do
     --pad_to_max=1024 \
     --epochs=1 \
     --instance_normalize \
-    --attn_implementation=flash_attention_2
+    --attn_implementation=flash_attention_2 \
+    --rag \
+    --load_rag_db=./data/mimic/rag_metadata.json \
+    --load_rag_db_idx=./data/mimic/combined.index
 done
-
-# --rag \
-#     --rag_k=10 \
-#     --load_rag_db=./data/mimic/rag_metadata.json \
-#     --load_rag_db_idx=./data/mimic/combined.index

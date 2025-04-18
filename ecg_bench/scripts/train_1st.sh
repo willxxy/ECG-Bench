@@ -1,6 +1,7 @@
 #!/bin/bash
 
-models=("stmem" "merl" "mlae" "mtae" "siglip" "clip")
+models=("siglip" "clip")
+# "stmem" "merl" "mlae" "mtae" " done
 
 # VIT DONE
 # CLIP SO SLOW

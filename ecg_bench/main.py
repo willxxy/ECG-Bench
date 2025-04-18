@@ -94,7 +94,7 @@ def get_args():
     dist_group.add_argument('--gpus', type=str, default='0', help='Comma-separated GPU ids')
     dist_group.add_argument('--ports', type=str, default='12356', help='Comma-separated ports')
     
-    ### Checkpoints and Paths
+    ### Checkpoints
     ckpt_group = parser.add_argument_group('Checkpoints')
     ckpt_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint path')
     ckpt_group.add_argument('--encoder_checkpoint', type=str, default=None, help='Encoder checkpoint path')
