@@ -27,6 +27,7 @@ This repository is a unified framework for training and evaluating electrocardio
 
 Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
 
+### ECG Input Representations
 This current repository considers 4 input representations of ECGs as defined below:
 
 **ECG Signal:**  
@@ -41,6 +42,7 @@ We also create a synthetic three-channel version of `X_sig`, denoted `X_sig*` $\
 **ECG Text:**  
 We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols `A = {a, b, …, z}`. This sequence is then flattened into a one-dimensional array `X_symb` $\in$ `A^(C * L)`. Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary V, resulting in the final textual representation `X_ID` $\in$ V^(m), where `m` is the length of the token sequence.
 
+### ELM Training Paradigms
 We consider 2 broadly defined training paradigms for ELMs in this repository:
 
 1. **2-Stage Training** (can also be seen as Encoder methods)
@@ -84,6 +86,8 @@ In this approach, we train the LLM and `f_ECG` jointly with only an autoregressi
 
 For the **End-to-End** training setting, the ECG signal `X_sig` is transformed to tokens `X_ID` (similar to text) using methods from ECG-Byte. Therefore, one can directly train the LLM for autoregressive generation since both `X_ID` and text are tokenized.
 
+
+### ECG Datasets
 We also provide preprocessing pipelines for various datasets in this repository.
 
 **Datasets:**
@@ -97,6 +101,8 @@ We also provide preprocessing pipelines for various datasets in this repository.
 7. [Pretrain MIMIC-IV and ECG Instruct 45K from ECG-Chat: A Large ECG-Language Model for Cardiac Disease Diagnosis](https://arxiv.org/abs/2408.08849)
 8. [ECG Instruct Pulse and ECG Bench Pulse from Teach Multimodal LLMs to Comprehend Electrocardiographic Images](https://arxiv.org/abs/2410.19008)
 9. [ECG Grounding Datasets from GEM: Empowering MLLM for Grounded ECG Understanding with Time Series and Images](https://www.arxiv.org/abs/2503.06073)
+
+### ELMs and Their Components
 
 **We implement the following ELMs:**
 
@@ -122,6 +128,7 @@ We also provide preprocessing pipelines for various datasets in this repository.
 
 We also have [GPT 2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) and [OPT](https://arxiv.org/abs/2205.01068) LLMs, however, we do not have chat tempaltes for them yet.
 
+### Final Notes
 
 **We provide the following features for training and evaluating ELMs:**
 1. Single and distributed training.
