@@ -220,6 +220,7 @@ def save_checkpoint(model, epoch, args, is_best=False):
 def run_train(model, train_loader, optimizer, args, viz):
     all_epochs = []
     train_losses = []
+    best_loss = float('inf')
     
     if args.checkpoint != None:
         checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
@@ -229,23 +230,33 @@ def run_train(model, train_loader, optimizer, args, viz):
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
         train_dic = trainer(model, train_loader, optimizer, args, epoch)
-        train_losses.append(train_dic['average_loss'])
+        current_loss = train_dic['average_loss']
+        train_losses.append(current_loss)
         
         if args.log:
             wandb.log({
-                'train_epoch_loss': train_dic['average_loss'],
+                'train_epoch_loss': current_loss,
                 'epoch': epoch
             })
         
-        if train_dic['average_loss'] <= min(train_losses):
+        # Only save model if the loss is finite and better than previous best
+        if current_loss < best_loss and current_loss != float('inf'):
+            best_loss = current_loss
             save_checkpoint(model, epoch, args, is_best=True)
+            if args.dis and dist.get_rank() == 0 or not args.dis:
+                print(f"New best loss: {best_loss} at epoch {epoch+1}")
     
-    viz.plot_train_val_loss(train_losses, dir_path=args.save_path)
-    
-    
+    # Only use finite losses for plotting
+    finite_losses = [loss for loss in train_losses if loss != float('inf')]
+    if finite_losses:
+        viz.plot_train_val_loss(finite_losses, dir_path=args.save_path)
+    else:
+        print("Warning: No finite losses recorded during training")
+
 def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz):
     all_epochs = []
     train_losses = []
+    best_loss = float('inf')
     
     checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
     model.load_state_dict(checkpoint['model'])
@@ -258,18 +269,28 @@ def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, 
     for epoch in range(args.epochs):
         all_epochs.append(epoch)
         train_dic = post_trainer_dpo(model, test_loader, tokenizer, args, optimizer, epoch, judger, dpo, ref_model)
-        train_losses.append(train_dic['average_loss'])
+        current_loss = train_dic['average_loss']
+        train_losses.append(current_loss)
         
         if args.log:
             wandb.log({
-                'train_epoch_loss': train_dic['average_loss'],
+                'train_epoch_loss': current_loss,
                 'epoch': epoch
             })
         
-        if train_dic['average_loss'] <= min(train_losses):
+        # Only save model if the loss is finite and better than previous best
+        if current_loss < best_loss and current_loss != float('inf'):
+            best_loss = current_loss
             save_checkpoint(model, epoch, args, is_best=True)
+            if args.dis and dist.get_rank() == 0 or not args.dis:
+                print(f"New best loss: {best_loss} at epoch {epoch+1}")
     
-    viz.plot_train_val_loss(train_losses, dir_path=args.save_path)
+    # Only use finite losses for plotting
+    finite_losses = [loss for loss in train_losses if loss != float('inf')]
+    if finite_losses:
+        viz.plot_train_val_loss(finite_losses, dir_path=args.save_path)
+    else:
+        print("Warning: No finite losses recorded during training")
 
 def run_inference(model, test_loader, tokenizer, args, train_utils):
     print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')

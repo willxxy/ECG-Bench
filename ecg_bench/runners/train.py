@@ -73,7 +73,7 @@ def trainer(model, dataloader, optimizer, args, epoch):
 
     if len_of_batch == 0:
         if show_progress:
-            print("No valid batches for training.")
+            print("Warning: No valid batches for training in this epoch. This could indicate a data loading issue.")
         average_loss = float('inf')
     else:
         average_loss = total_loss / len_of_batch
