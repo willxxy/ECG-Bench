@@ -141,8 +141,19 @@ class ECGByteTokenizer:
             return ''.join(symbol_signal.flatten())
 
     def process_ecg(self, ecg_path):
-        ecg_array = self.fm.open_npy(ecg_path)['ecg']
-        return self._to_symbol_string(ecg_array)
+        try:
+            data = self.fm.open_npy(ecg_path)
+            if 'ecg' not in data:
+                print(f"Warning: ECG data not found in {ecg_path}. File may be corrupted or in unexpected format.")
+                return ""
+            ecg_array = data['ecg']
+            if np.any(np.isnan(ecg_array)) or np.any(np.isinf(ecg_array)):
+                print(f"Warning: NaN or Inf values detected in {ecg_path}. Skipping this ECG.")
+                return ""
+            return self._to_symbol_string(ecg_array)
+        except Exception as e:
+            print(f"Error processing ECG file {ecg_path}: {str(e)}")
+            return ""
 
     def discretize_ecgs(self, file_path, n=None):
         def file_path_generator():
@@ -160,13 +171,32 @@ class ECGByteTokenizer:
                     pool.imap(self.process_ecg, file_paths),
                     total=len(file_paths),
                     desc="Discretizing ECGs"))
+        
+        # Filter out empty strings that could result from errors
+        ecg_strings = [s for s in ecg_strings if s]
+        if not ecg_strings:
+            raise ValueError("No valid ECG files were processed. Check your input files and error messages.")
+        
         return ''.join(ecg_strings)
 
     def analyze_single_ecg(self, path):
-        signal = self.fm.open_npy(path)['ecg']
-        single_lead_str = self._to_symbol_string(signal)
-        all_encoded_ids = list(self.encode_symbol(single_lead_str, self.merges))
-        return Counter(all_encoded_ids), len(all_encoded_ids)
+        try:
+            data = self.fm.open_npy(path)
+            if 'ecg' not in data:
+                print(f"Warning: ECG data not found in {path}. File may be corrupted or in unexpected format.")
+                return Counter(), 0
+                
+            signal = data['ecg']
+            if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
+                print(f"Warning: NaN or Inf values detected in {path}. Skipping this ECG.")
+                return Counter(), 0
+                
+            single_lead_str = self._to_symbol_string(signal)
+            all_encoded_ids = list(self.encode_symbol(single_lead_str, self.merges))
+            return Counter(all_encoded_ids), len(all_encoded_ids)
+        except Exception as e:
+            print(f"Error analyzing ECG file {path}: {str(e)}")
+            return Counter(), 0
 
     def analyze_token_distribution(self, test_data):
         with mp.Pool(self.args.num_processes) as pool:
@@ -178,10 +208,19 @@ class ECGByteTokenizer:
 
         token_counts = Counter()
         token_lengths = []
+        valid_results_count = 0
+        
         for count, length in results:
-            token_counts.update(count)
-            token_lengths.append(length)
-
+            if length > 0:
+                token_counts.update(count)
+                token_lengths.append(length)
+                valid_results_count += 1
+        
+        if valid_results_count == 0:
+            print("Warning: No valid ECG files were analyzed. Check your input files and error messages.")
+            return Counter(), []
+            
+        print(f"Successfully analyzed {valid_results_count} out of {len(test_data)} ECG files.")
         return token_counts, token_lengths
     
     def track_encoding(self, single_lead_str):
