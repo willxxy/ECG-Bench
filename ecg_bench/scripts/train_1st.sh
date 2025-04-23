@@ -11,7 +11,7 @@ for model in "${models[@]}"; do
     python main.py \
     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
     --model=$model \
-    --device=cuda:2 \
+    --device=cuda:6 \
     --train=first \
     --batch_size=256 \
     --seg_len=1250 \
@@ -29,7 +29,7 @@ for model in "${models[@]}"; do
     python main.py \
     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
     --model=$model \
-    --device=cuda:2 \
+    --device=cuda:6 \
     --train=first \
     --batch_size=256 \
     --seg_len=1250 \

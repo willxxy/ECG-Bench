@@ -199,8 +199,8 @@ class RAGECGDatabase:
     
     def format_search(self, results):
         results = self.filter_results(results)
-        # output = f"The following is the top {len(results)} retrieved ECGs and their corresponding features and diagnosis. Utilize this information to further enhance your response.\n\n"
-        output = f"The following is the top {len(results)} retrieved ECGs and their corresponding diagnosis. Utilize this information to further enhance your response.\n\n"
+        output = f"The following is the top {len(results)} retrieved ECGs and their corresponding features and diagnosis. Utilize this information to further enhance your response.\n\n"
+        # output = f"The following is the top {len(results)} retrieved ECGs and their corresponding diagnosis. Utilize this information to further enhance your response.\n\n"
         
         for idx, res in results.items():
             # Filter out entries where all feature values are zero
@@ -210,12 +210,12 @@ class RAGECGDatabase:
             output += f"Retrieved ECG {idx+1}\n"
             output += "Diagnosis Information:\n"
             output += f"{res['report']}\n\n"
-            # output += f"{res['report']}\n"
-            # output += "Feature Information:\n"
+            output += f"{res['report']}\n"
+            output += "Feature Information:\n"
             # Zip through feature names and feature values to format each line.
-            # for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
-            #     output += f"{feature_name}: {str(float(feature_value))}\n"
-            # output += "\n"
+            for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
+                output += f"{feature_name}: {str(float(feature_value))}\n"
+            output += "\n"
         return output
     
     def filter_results(self, results):

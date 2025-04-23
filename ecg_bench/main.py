@@ -189,23 +189,33 @@ def save_config(args):
         yaml.dump(args_dict, f, default_flow_style=False)
 
 def save_checkpoint(model, epoch, args, is_best=False):
-    model_state_dict = model.module.state_dict() if args.dis else model.state_dict()
-    checkpoint = {
-        'model': model_state_dict,
-        'epoch': epoch
-    }
-    
-    checkpoint_path = f"{args.save_path}/{'best_model' if is_best else f'epoch_{epoch}'}.pth"
-    
+    # Only save the model on the main process to avoid corruption from race conditions
     if args.dis:
+        # Add barrier to synchronize all processes before saving
         dist.barrier()
         if dist.get_rank() == 0:
+            model_state_dict = model.module.state_dict()
+            checkpoint = {
+                'model': model_state_dict,
+                'epoch': epoch
+            }
+            checkpoint_path = f"{args.save_path}/{'best_model' if is_best else f'epoch_{epoch}'}.pth"
             torch.save(checkpoint, checkpoint_path)
+            # Print only from main process
+            if is_best:
+                print(f"Best model saved at epoch: {epoch+1}")
+        # Add another barrier to ensure all processes wait until the save is complete
+        dist.barrier()
     else:
+        model_state_dict = model.state_dict()
+        checkpoint = {
+            'model': model_state_dict,
+            'epoch': epoch
+        }
+        checkpoint_path = f"{args.save_path}/{'best_model' if is_best else f'epoch_{epoch}'}.pth"
         torch.save(checkpoint, checkpoint_path)
-    
-    if is_best:
-        print(f"Best model saved at epoch: {epoch+1}")
+        if is_best:
+            print(f"Best model saved at epoch: {epoch+1}")
 
 def run_train(model, train_loader, optimizer, args, viz):
     all_epochs = []
@@ -367,7 +377,7 @@ def main(rank, world_size):
                 dataset,
                 batch_size=args.batch_size,
                 shuffle=(sampler is None),
-                num_workers=len(args.gpus.split(',')),
+                num_workers=0,
                 sampler=sampler,
                 pin_memory=True)
             

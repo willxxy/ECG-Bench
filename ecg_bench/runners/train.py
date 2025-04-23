@@ -42,22 +42,26 @@ def trainer(model, dataloader, optimizer, args, epoch):
             wandb.log({"train_step_loss": loss.item(), "epoch": epoch, "train_step": step})
 
         if (step + 1) % 50000 == 0:
-            model_state_dict = model.module.state_dict() if args.dis else model.state_dict()
-            
-            train_checkpoint = {
-                'model': model_state_dict,
-                'epoch': epoch
-            }
-            
             if args.dis:
                 dist.barrier()
                 if dist.get_rank() == 0:
+                    model_state_dict = model.module.state_dict()
+                    train_checkpoint = {
+                        'model': model_state_dict,
+                        'epoch': epoch
+                    }
                     torch.cuda.empty_cache()
                     gc.collect()
                     checkpoint_path = f"{args.save_path}/model_{epoch}_{step}.pth"
                     torch.save(train_checkpoint, checkpoint_path)
                     print(f"Model saved at epoch: {epoch+1}, step: {step}")
+                dist.barrier()
             else:
+                model_state_dict = model.state_dict()
+                train_checkpoint = {
+                    'model': model_state_dict,
+                    'epoch': epoch
+                }
                 checkpoint_path = f"{args.save_path}/model_{epoch}_{step}.pth"
                 torch.save(train_checkpoint, checkpoint_path)
                 print(f"Model saved at epoch: {epoch+1}, step: {step}")

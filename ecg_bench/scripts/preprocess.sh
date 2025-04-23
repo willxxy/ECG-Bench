@@ -3,12 +3,12 @@
 ### BASE DATA
 # Define an array of base_data values to process
 # BASE_DATA_VALUES=("ptb" "mimic" "code15" "cpsc" "csn")
-BASE_DATA_VALUES=("mimic")
+BASE_DATA_VALUES=("code15")
 
 # # Loop through each base_data value
 for base_data in "${BASE_DATA_VALUES[@]}"; do
-#     # echo "Processing base_data: $base_data"
-    python preprocess_ecg.py --base_data=$base_data --seg_len=500 --toy --preprocess_files
+    echo "Processing base_data: $base_data"
+    python preprocess_ecg.py --base_data=$base_data --seg_len=500 --toy --preprocess_files --dev
     # python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --toy --load_rag_db=./data/mimic/rag_metadata.json --load_rag_db_idx=./data/mimic/combined.index
     
 #     # Special case for mimic: also process with seg_len=2500

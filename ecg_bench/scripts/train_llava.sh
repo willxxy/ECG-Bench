@@ -1,6 +1,7 @@
 #!/bin/bash
 
-data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
+data=("ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
+# "ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250"  done
 
 # "ecg_instruct_45k_mapped_1250" done
 
@@ -9,7 +10,7 @@ for d in "${data[@]}"; do
     python main.py \
     --data=$d \
     --model=mlae_llama-3.2-1b-instruct \
-    --device=cuda:7 \
+    --device=cuda:4 \
     --seg_len=1250 \
     --peft \
     --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \
