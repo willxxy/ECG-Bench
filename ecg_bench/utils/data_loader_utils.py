@@ -43,6 +43,18 @@ class BaseECGDataset(Dataset):
             rgb_norm_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
             return Image.fromarray(rgb_norm_signal)
     
+    def perturb_signal(self, signal):
+        noise_level = 0.05
+        noise = np.random.normal(0, noise_level * np.std(signal), signal.shape)
+        perturbed_signal = signal + noise
+        
+        if random.random() < 0.5:
+            wander_amplitude = 0.07 * np.max(np.abs(signal))
+            wander = wander_amplitude * np.sin(np.linspace(0, random.randint(1, 5) * np.pi, len(signal)))
+            perturbed_signal += wander
+            
+        return perturbed_signal
+    
     def augment_image(self, image):
         seq = iaa.Sequential([
         iaa.Sometimes(0.5, iaa.Multiply((0.8, 1.2))),    # 50% chance to change brightness
@@ -306,6 +318,8 @@ class End2EndECGChatDataset(BaseECGDataset):
             np_path = instance['ecg_path']
             ecg_path = self.train_utils.fm.open_npy(np_path)
             ecg_signal = ecg_path['ecg']
+            if self.args.perturb:
+                ecg_signal = self.perturb_signal(ecg_signal)
             altered_text = instance['text']
             return self.prepare_end2end_input(ecg_signal, altered_text)
         except Exception as e:
@@ -413,6 +427,8 @@ class SecondStageECGChatDataset(BaseECGDataset):
             np_path = instance['ecg_path']
             ecg_path = self.train_utils.fm.open_npy(np_path)
             ecg_signal = ecg_path['ecg']
+            if self.args.perturb:
+                ecg_signal = self.perturb_signal(ecg_signal)
             altered_text = instance['text']
             original_report = ecg_path['report']
             

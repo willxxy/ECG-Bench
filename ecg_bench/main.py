@@ -45,6 +45,7 @@ def get_args():
     data_group.add_argument('--image', action = 'store_true', default=None, help='Turn Image Generation on')
     data_group.add_argument('--augment_image', action = 'store_true', default=None, help='Turn Image Augmentation on')
     data_group.add_argument('--instance_normalize', action = 'store_true', default=True, help='Turn Instance Normalization on')
+    data_group.add_argument('--perturb', action = 'store_true', default=None, help='Turn ECG Perturbation on')
     
     ### Model
     model_group = parser.add_argument_group('Model')
@@ -310,7 +311,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
         all_seed_results.append(seed_results)
         
-        with open(f"{args.checkpoint}/seed_{seed}_{args.rag}_{args.rag_k}.json", 'w') as f: # To indicate whether RAG is used during inference
+        with open(f"{args.checkpoint}/seed_{seed}_{args.perturb}_{args.rag}_{args.rag_k}.json", 'w') as f: # To indicate whether RAG is used during inference
             json.dump({
                 'averages': seed_results['metrics'],
                 'qa_results': seed_results['qa_results']
@@ -320,7 +321,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     statistical_results = train_utils.run_statistical_analysis(all_seed_results)
     print(f'Statistical results: {statistical_results}')
     
-    with open(f"{args.checkpoint}/statistical_results_{args.rag}_{args.rag_k}.json", 'w') as f:
+    with open(f"{args.checkpoint}/statistical_results_{args.perturb}_{args.rag}_{args.rag_k}.json", 'w') as f:
         json.dump(statistical_results, f)
 
 def main(rank, world_size):
