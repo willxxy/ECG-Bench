@@ -291,11 +291,7 @@ class FirstStageECGDataset(BaseECGDataset):
                 return self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
             elif 'merl' in self.args.model:
                 return self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-            elif 'stmem' in self.args.model:
-                return self.encoder_prep.prepare_st_mem_input(ecg_signal)
-            elif 'mtae' in self.args.model:
-                return self.encoder_prep.prepare_st_mem_input(ecg_signal)
-            elif 'mlae' in self.args.model:
+            elif self.args.model in ['stmem', 'mtae', 'mlae']:
                 return self.encoder_prep.prepare_st_mem_input(ecg_signal)
         except Exception as e:
             print(e)
