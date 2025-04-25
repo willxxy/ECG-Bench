@@ -26,15 +26,7 @@ class LLaVA(nn.Module):
     def get_projections(self, encoder_out):
         signal_embeds = self.encoder.get_embeddings(encoder_out)
         projected_embeds = self.encoder_projection(signal_embeds.to(dtype=self.llm.llm.dtype))
-        return projected_embeds
-    
-    def generate(self, batch, tokenizer):
-        projected_embeds = self.get_projections(batch['encoder_out'])
-        llm_embeddings = self.llm.get_llm_embeddings(batch['input_ids'])
-        llm_embeddings[:, batch['signal_id_index'], :] = projected_embeds
-        batch['inputs_embeds'] = llm_embeddings
-        decoded_text = self.llm.generate(batch, tokenizer)
-        return decoded_text 
+        return projected_embeds 
     
     def generate_chat(self, input_ids, attention_mask, tokenizer, encoder_out=None, signal_id_index=None):
         projected_embeds = self.get_projections(encoder_out)
