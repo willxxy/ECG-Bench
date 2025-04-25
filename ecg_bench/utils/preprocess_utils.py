@@ -970,9 +970,6 @@ class PreprocessMixECG:
 
     
 class ECGFeatureExtractor:
-    '''
-    Class for extracting various features from ECG signals
-    '''
     def __init__(self, target_sf):
         self.target_sf = target_sf
         
@@ -994,7 +991,7 @@ class ECGFeatureExtractor:
             ])
             
             # Frequency domain features
-            freqs, psd = signal.welch(lead_signal, fs=self.target_sf, nperseg=1024)
+            freqs, psd = signal.welch(lead_signal, fs=self.target_sf, nperseg=min(1024, len(lead_signal)))
             total_power = np.sum(psd)
             features.extend([
                 total_power,  # Total power
@@ -1006,61 +1003,98 @@ class ECGFeatureExtractor:
             if total_power > 0:
                 spectral_centroid = np.sum(freqs * psd) / total_power
             else:
-                spectral_centroid = 0  # or another appropriate default value
+                spectral_centroid = 0
             features.append(spectral_centroid)
             
-            peaks, _ = signal.find_peaks(lead_signal, height=0.5*np.max(lead_signal), distance=0.2*self.target_sf)
-            if len(peaks) > 1:
-                # Heart rate
-                rr_intervals = np.diff(peaks) / self.target_sf
-                heart_rate = 60 / np.mean(rr_intervals)
-                features.append(heart_rate)
-                
-                # Heart rate variability
-                hrv = np.std(rr_intervals)
-                features.append(hrv)
-                
-                # QRS duration (simplified)
-                qrs_duration = np.mean([self.find_qrs_duration(lead_signal, peak) for peak in peaks])
-                features.append(qrs_duration)
+            # Find peaks with robust thresholding
+            if np.max(lead_signal) != np.min(lead_signal):  # Avoid division by zero
+                peak_height = 0.3 * (np.max(lead_signal) - np.min(lead_signal)) + np.min(lead_signal)
+                min_distance = max(int(0.2 * self.target_sf), 1)  # Ensure positive distance
+                peaks, _ = signal.find_peaks(lead_signal, height=peak_height, distance=min_distance)
             else:
-                features.extend([0, 0, 0])  # Placeholder values if no peaks found
+                peaks = []
+                
+            # Heart rate features
+            heart_rate_features = self._calculate_heart_rate_features(lead_signal, peaks)
+            features.extend(heart_rate_features)
             
-            # T-wave features (simplified)
-            t_wave_amp = self.find_t_wave_amplitude(lead_signal, peaks)
-            features.append(t_wave_amp)
-            
-            # ST segment features (simplified)
-            st_deviation = self.find_st_deviation(lead_signal, peaks)
-            features.append(st_deviation)
-            
-            coeffs = pywt.wavedec(lead_signal, 'db4', level=5)
-            features.extend([np.mean(np.abs(c)) for c in coeffs])
+            # Wavelet features
+            wavelet_features = self._calculate_wavelet_features(lead_signal)
+            features.extend(wavelet_features)
             
             # Non-linear features
             features.append(np.mean(np.abs(np.diff(lead_signal))))  # Average absolute difference
             features.append(np.sqrt(np.mean(np.square(np.diff(lead_signal)))))  # Root mean square of successive differences
         
         return np.array(features)
-
+    
+    def _calculate_heart_rate_features(self, ecg, peaks):
+        if len(peaks) > 1:
+            # Heart rate
+            rr_intervals = np.diff(peaks) / self.target_sf
+            heart_rate = 60 / np.mean(rr_intervals) if np.mean(rr_intervals) > 0 else 0
+            
+            # Heart rate variability
+            hrv = np.std(rr_intervals) if len(rr_intervals) > 1 else 0
+            
+            # QRS duration (simplified)
+            qrs_duration = np.mean([self.find_qrs_duration(ecg, peak) for peak in peaks])
+            
+            # T-wave features
+            t_wave_amp = self.find_t_wave_amplitude(ecg, peaks)
+            
+            # ST segment features
+            st_deviation = self.find_st_deviation(ecg, peaks)
+            
+            return [heart_rate, hrv, qrs_duration, t_wave_amp, st_deviation]
+        else:
+            # Return default values if insufficient peaks found
+            return [0, 0, 0, 0, 0]
+    
+    def _calculate_wavelet_features(self, signal):
+        try:
+            max_level = min(5, pywt.dwt_max_level(len(signal), 'db4'))
+            coeffs = pywt.wavedec(signal, 'db4', level=max_level)
+            return [np.mean(np.abs(c)) for c in coeffs]
+        except Exception:
+            # If wavelet decomposition fails, return zeros
+            return [0] * 6  # Default number of features
+    
     def find_qrs_duration(self, ecg, peak):
-        # Simplified QRS duration estimation
         window = int(0.1 * self.target_sf)  # 100 ms window
         start = max(0, peak - window)
         end = min(len(ecg), peak + window)
         qrs_segment = ecg[start:end]
-        return np.sum(np.abs(qrs_segment) > 0.1 * np.max(qrs_segment)) / self.target_sf
+        
+        if len(qrs_segment) == 0 or np.max(qrs_segment) == np.min(qrs_segment):
+            return 0
+            
+        threshold = 0.1 * (np.max(qrs_segment) - np.min(qrs_segment)) + np.min(qrs_segment)
+        return np.sum(np.abs(qrs_segment - np.mean(qrs_segment)) > threshold) / self.target_sf
 
     def find_t_wave_amplitude(self, ecg, peaks):
         if len(peaks) < 2:
             return 0
-        t_wave_region = ecg[peaks[-2]:peaks[-1]]
-        return np.max(t_wave_region) - np.min(t_wave_region)
+            
+        # Analyze region between the last two peaks
+        start_idx = peaks[-2]
+        end_idx = min(peaks[-1], len(ecg) - 1)
+        
+        if start_idx >= end_idx or start_idx < 0:
+            return 0
+            
+        t_wave_region = ecg[start_idx:end_idx]
+        return np.max(t_wave_region) - np.min(t_wave_region) if len(t_wave_region) > 0 else 0
 
     def find_st_deviation(self, ecg, peaks):
-        if len(peaks) < 2:
+
+        if len(peaks) < 1 or peaks[-1] >= len(ecg):
             return 0
-        st_point = peaks[-1] + int(0.08 * self.target_sf)  # 80 ms after R peak
+            
+        # Calculate ST point (80ms after R peak)
+        st_offset = int(0.08 * self.target_sf)  
+        st_point = min(peaks[-1] + st_offset, len(ecg) - 1)
+        
         if st_point < len(ecg):
             return ecg[st_point] - ecg[peaks[-1]]
         return 0
