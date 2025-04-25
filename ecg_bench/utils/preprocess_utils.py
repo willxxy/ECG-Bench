@@ -391,46 +391,34 @@ class PreprocessBaseECG:
         return denoised_ecg
 
     def _advanced_ecg_filter(self, ecg, fs=500, notch_freqs=[50, 60], highcut=100.0):
-        filtered_ecg = ecg.copy()
-        
-        quality_factor = 30.0
-        for notch_freq in notch_freqs:
-            b_notch, a_notch = signal.iirnotch(notch_freq, quality_factor, fs)
-            # Apply filter to each lead separately to avoid shape issues
-            for i in range(filtered_ecg.shape[1]):
-                filtered_lead = signal.filtfilt(b_notch, a_notch, filtered_ecg[:, i])
-                # Ensure the filtered lead has the same length as the original
-                if len(filtered_lead) != filtered_ecg.shape[0]:
-                    filtered_lead = signal.resample(filtered_lead, filtered_ecg.shape[0])
-                filtered_ecg[:, i] = filtered_lead
+        filtered = ecg.copy()
+        q = 30.0
+        # Notch filters
+        for f0 in notch_freqs:
+            b_notch, a_notch = signal.iirnotch(f0, q, fs)
+            filtered = self._filter_each_lead(filtered, b_notch, a_notch)
 
-        lowcut = 0.5
-        nyquist = 0.5 * fs
-        low = lowcut / nyquist
-        high = highcut / nyquist
-        order = 4
+        # Bandpass
+        nyq = fs * 0.5
+        low = 0.5 / nyq
+        high = highcut / nyq
+        b_band, a_band = signal.butter(4, [low, high], btype='band')
+        filtered = self._filter_each_lead(filtered, b_band, a_band)
 
-        b_band, a_band = signal.butter(order, [low, high], btype='band')
-        # Apply filter to each lead separately
-        for i in range(filtered_ecg.shape[1]):
-            filtered_lead = signal.filtfilt(b_band, a_band, filtered_ecg[:, i])
-            # Ensure the filtered lead has the same length as the original
-            if len(filtered_lead) != filtered_ecg.shape[0]:
-                filtered_lead = signal.resample(filtered_lead, filtered_ecg.shape[0])
-            filtered_ecg[:, i] = filtered_lead
+        # Baseline high-pass
+        b_base, a_base = signal.butter(4, (0.05 / nyq), btype='high')
+        filtered = self._filter_each_lead(filtered, b_base, a_base)
 
-        baseline_cutoff = 0.05
-        baseline_low = baseline_cutoff / nyquist
-        b_baseline, a_baseline = signal.butter(order, baseline_low, btype='high')
-        # Apply filter to each lead separately
-        for i in range(filtered_ecg.shape[1]):
-            filtered_lead = signal.filtfilt(b_baseline, a_baseline, filtered_ecg[:, i])
-            # Ensure the filtered lead has the same length as the original
-            if len(filtered_lead) != filtered_ecg.shape[0]:
-                filtered_lead = signal.resample(filtered_lead, filtered_ecg.shape[0])
-            filtered_ecg[:, i] = filtered_lead
+        return filtered
 
-        return filtered_ecg
+    def _filter_each_lead(self, ecg: np.ndarray, b: np.ndarray, a: np.ndarray) -> np.ndarray:
+        filtered = np.zeros_like(ecg)
+        for i in range(ecg.shape[1]):
+            lead = signal.filtfilt(b, a, ecg[:, i])
+            if lead.shape[0] != ecg.shape[0]:
+                lead = signal.resample(lead, ecg.shape[0])
+            filtered[:, i] = lead
+        return filtered
     
     def _nsample_ecg(self, ecg, orig_fs, target_fs):
         num_samples, num_leads = ecg.shape
