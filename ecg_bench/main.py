@@ -160,6 +160,10 @@ def create_save_path(args, fm):
         base_dir = "./runs"
         dataset_config = f"{args.data}"
         seed_dir = str(args.seed)
+        if args.encoder_checkpoint != None:
+            encoder_in = True
+        else:
+            encoder_in = False
         model_params = [
             args.model,
             args.batch_size,
@@ -175,7 +179,8 @@ def create_save_path(args, fm):
             args.image,
             args.augment_image,
             args.train_encoder,
-            args.rag
+            args.rag,
+            encoder_in
         ]
         model_config = '_'.join(str(param) for param in model_params)    
         save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
