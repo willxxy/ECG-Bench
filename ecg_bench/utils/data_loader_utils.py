@@ -246,6 +246,14 @@ class EncoderInputPreparation(BaseECGDataset):
             'orig_signal': ecg_signal.astype(np.float32)
         }
         
+    def prepare_dinov2_input(self, ecg_signal):
+        image_signal = self.signal_to_image(ecg_signal)
+        dinov2_inputs = self.encoder_tokenizer(images=image_signal,
+                                           return_tensors='pt')
+        pixel_values = dinov2_inputs['pixel_values'][0].contiguous()
+        return {'dinov2_pixel': pixel_values,
+                'orig_signal': ecg_signal.astype(np.float32)}  
+    
     def prepare_siglip_input(self, ecg_signal, original_report):
         image_signal = self.signal_to_image(ecg_signal)
         siglip_inputs = self.encoder_tokenizer(text=[original_report],
