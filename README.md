@@ -136,7 +136,7 @@ We also have [GPT 2](https://cdn.openai.com/better-language-models/language_mode
 3. [Flash Attention 2](https://arxiv.org/abs/2307.08691) for faster training and inference.
 4. A demo based on gradio for chatting with your own trained ELM and collect preference data.
 
-We hope to continouously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
+We hope to continuously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
 Please carefully read the below documentations to run the pipeline. If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
 
 All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVIDIA A5000 and A6000 GPUs.
