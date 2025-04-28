@@ -800,6 +800,23 @@ This repository contains code licensed under the MIT License, except for the fol
 If this codebase or work has helped you please cite the following:
 
 ```
+@software{willxxy_2025_15299518,
+  author       = {willxxy},
+  title        = {willxxy/ECG-Bench: 0.0.2},
+  month        = apr,
+  year         = 2025,
+  publisher    = {Zenodo},
+  version      = {0.0.2},
+  doi          = {10.5281/zenodo.15299518},
+  url          = {https://doi.org/10.5281/zenodo.15299518},
+  swhid        = {swh:1:dir:f7d66c050e58e1cee773d062aaac90d59001933c
+                   ;origin=https://doi.org/10.5281/zenodo.15299517;vi
+                   sit=swh:1:snp:b747c15550c41fac7ecb66f5802fc239911b
+                   d2c9;anchor=swh:1:rel:3c046172cae8f0fc9e2cff952897
+                   97d670c749f8;path=willxxy-ECG-Bench-898547b
+                  },
+}
+
 @misc{han2024ecgbytetokenizerendtoendgenerative,
       title={ECG-Byte: A Tokenizer for End-to-End Generative Electrocardiogram Language Modeling}, 
       author={William Han and Chaojing Duan and Michael A. Rosenberg and Emerson Liu and Ding Zhao},
