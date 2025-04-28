@@ -6,6 +6,10 @@
   <img src="./assets/fig1_2.png" alt="Our pipeline.">
 </div>
 
+## Badges
+[![DOI](https://zenodo.org/badge/907475121.svg)](https://doi.org/10.5281/zenodo.15299517)
+
+
 ## News
 
 - **[April 5, 2025] We open source ECG-Bench for training and evaluating ELMs!**
