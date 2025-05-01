@@ -1,19 +1,19 @@
 #!/bin/bash
 
-data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
+data=("ecg_instruct_45k_mapped_2500")
 
 
 for d in "${data[@]}"; do
     python main.py \
     --data=$d \
-    --model=gemma-2b-it \
+    --model=llama-3.2-1b-instruct \
     --device=cuda:5 \
     --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \
-    --seg_len=1250 \
+    --seg_len=2500 \
     --peft \
     --train=end2end \
     --system_prompt=./data/system_prompt_e2e.txt \
-    --batch_size=4 \
+    --batch_size=8 \
     --pad_to_max=1024 \
     --epochs=1 \
     --instance_normalize \

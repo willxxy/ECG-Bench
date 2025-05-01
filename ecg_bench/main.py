@@ -329,6 +329,14 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     with open(f"{args.checkpoint}/statistical_results_{args.perturb}_{args.rag}_{args.rag_k}.json", 'w') as f:
         json.dump(statistical_results, f)
 
+def collate_fn(batch):
+    # Filter out None values
+    batch = [item for item in batch if item is not None]
+    if len(batch) == 0:
+        return None
+    # Use default collate for the remaining items
+    return torch.utils.data.dataloader.default_collate(batch)
+
 def main(rank, world_size):
     args = get_args()
     device = setup_environment(rank, world_size, args)
@@ -406,7 +414,8 @@ def main(rank, world_size):
                 shuffle=(sampler is None),
                 num_workers=0,
                 sampler=sampler,
-                pin_memory=True)
+                pin_memory=True,
+                collate_fn=collate_fn)
             
             run_train(model, data_loader, optimizer, args, viz)
         
