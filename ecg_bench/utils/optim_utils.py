@@ -17,12 +17,26 @@ class ScheduledOptim():
         self._optimizer.zero_grad()
 
     def _get_lr_scale(self):
-        return np.min([
-            np.power(self.n_current_steps, -0.5),
-            np.power(self.n_warmup_steps, -1.5) * self.n_current_steps])
+        if self.n_current_steps == 0:
+            return 0.0
+            
+        d_step = 1.0 / np.sqrt(self.n_current_steps)
+        d_warmup = self.n_current_steps * np.power(self.n_warmup_steps, -1.5) if self.n_warmup_steps > 0 else float('inf')
+        
+        return min(d_step, d_warmup)
 
     def _update_learning_rate(self):
         self.n_current_steps += 1
         lr = self.init_lr * self._get_lr_scale()
+        
+        # Ensure learning rate doesn't become too small
+        min_lr = 1e-8
+        lr = max(lr, min_lr)
+        
         for param_group in self._optimizer.param_groups:
             param_group['lr'] = lr
+            
+    @property
+    def learning_rate(self):
+        "Get current learning rate"
+        return self._optimizer.param_groups[0]['lr']
