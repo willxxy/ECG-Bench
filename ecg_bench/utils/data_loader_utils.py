@@ -44,16 +44,19 @@ class BaseECGDataset(Dataset):
             return Image.fromarray(rgb_norm_signal)
     
     def perturb_signal(self, signal):
-        noise_level = 0.05
-        noise = np.random.normal(0, noise_level * np.std(signal), signal.shape)
-        perturbed_signal = signal + noise
-        
-        if random.random() < 0.5:
-            wander_amplitude = 0.07 * np.max(np.abs(signal))
-            wander = wander_amplitude * np.sin(np.linspace(0, random.randint(1, 5) * np.pi, len(signal)))
-            perturbed_signal += wander
+        if random.random() < 0.5:  # 50% chance of perturbation
+            noise_level = 0.05
+            noise = np.random.normal(0, noise_level * np.std(signal), signal.shape)
+            perturbed_signal = signal + noise
             
-        return perturbed_signal
+            if random.random() < 0.5:
+                wander_amplitude = 0.07 * np.max(np.abs(signal))
+                wander = wander_amplitude * np.sin(np.linspace(0, random.randint(1, 5) * np.pi, signal.shape[1]))
+                wander = np.tile(wander, (signal.shape[0], 1))
+                perturbed_signal += wander
+                
+            return perturbed_signal
+        return signal
     
     def augment_image(self, image):
         seq = iaa.Sequential([

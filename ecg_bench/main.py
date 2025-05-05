@@ -330,11 +330,13 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         json.dump(statistical_results, f)
 
 def collate_fn(batch):
-    # Filter out None values
     batch = [item for item in batch if item is not None]
     if len(batch) == 0:
-        return None
-    # Use default collate for the remaining items
+        return {
+            'input_ids': torch.tensor([], dtype=torch.int64),
+            'attn_mask': torch.tensor([], dtype=torch.float32),
+            'assistant_ranges': []
+        }
     return torch.utils.data.dataloader.default_collate(batch)
 
 def main(rank, world_size):
