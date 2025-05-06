@@ -2,12 +2,12 @@
   A Unified Framework for Benchmarking Generative Electrocardiogram-Language Models (ELMs)
 </h2>
 
+[![DOI](https://zenodo.org/badge/907475121.svg)](https://doi.org/10.5281/zenodo.15299517)
+
 <div align="center">
   <img src="./assets/fig1_2.png" alt="Our pipeline.">
 </div>
 
-## Badges
-[![DOI](https://zenodo.org/badge/907475121.svg)](https://doi.org/10.5281/zenodo.15299517)
 
 
 ## News
