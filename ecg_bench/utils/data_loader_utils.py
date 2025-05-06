@@ -199,9 +199,17 @@ class BaseECGDataset(Dataset):
             if message['from'].lower() in ['assistant', 'model', 'gpt']:
                 response = message['value']
                 response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
-                for j in range(len(input_ids) - len(response_tokens) + 1):
-                    if input_ids[j:j+len(response_tokens)] == response_tokens:
-                        labels[j:j+len(response_tokens)] = response_tokens
+                
+                if len(response_tokens) > 0:
+                    first_token = response_tokens[0]
+                    
+                    possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
+                    
+                    for start in possible_starts:
+                        if start + len(response_tokens) <= len(input_ids):
+                            if input_ids[start:start+len(response_tokens)] == response_tokens:
+                                labels[start:start+len(response_tokens)] = response_tokens
+                                break
         
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
