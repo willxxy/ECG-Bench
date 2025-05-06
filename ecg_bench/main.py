@@ -354,7 +354,8 @@ def main(rank, world_size):
                 dataset,
                 batch_size=1,
                 shuffle=False,
-                pin_memory=True)
+                pin_memory=True,
+                collate_fn=collate_fn)
             
             if args.post_train != None:
                 ### FROM LLM-BLENDER
