@@ -321,7 +321,11 @@ class PreprocessBaseECG:
                         save_path = f"{self.preprocessed_dir}/{exam_id}_{j}.npy"
                     else:
                         save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_{j}.npy"
-                    np.save(save_path, save_dic)
+                    if self._check_save_dictionary(save_dic):  # Check if dictionary is valid
+                        np.save(save_path, save_dic)
+                        if not self._verify_saved_file(save_path):  # Quick verify the save was successful
+                            print(f"Failed to save file properly: {save_path}")
+                            return None
             else:
                 save_dic = {
                     'ecg': np.transpose(segmented_ecg[0], (1, 0)),
@@ -337,7 +341,11 @@ class PreprocessBaseECG:
                     save_path = f"{self.preprocessed_dir}/{exam_id}_0.npy"
                 else:
                     save_path = f"{self.preprocessed_dir}/{'_'.join(self.df.iloc[idx]['path'].split('/'))}_0.npy"
-                np.save(save_path, save_dic)
+                if self._check_save_dictionary(save_dic):  # Check if dictionary is valid
+                    np.save(save_path, save_dic)
+                    if not self._verify_saved_file(save_path):  # Quick verify the save was successful
+                        print(f"Failed to save file properly: {save_path}")
+                        return None
                 
             return True
             
@@ -350,6 +358,29 @@ class PreprocessBaseECG:
             print(f"Warning: NaN or inf values detected after {step_name}")
             ecg = np.nan_to_num(ecg, nan=0.0, posinf=0.0, neginf=0.0)
         return ecg
+    
+    def _verify_saved_file(self, save_path):
+        try:
+            if not os.path.exists(save_path):
+                return False
+            if os.path.getsize(save_path) == 0:
+                os.remove(save_path)  # Remove empty file
+                return False
+            return True
+        except Exception as e:
+            print(f"Error verifying saved file {save_path}: {str(e)}")
+            if os.path.exists(save_path):
+                os.remove(save_path)  # Remove corrupted file
+            return False
+    
+    def _check_save_dictionary(self, save_dic):
+        if not save_dic or len(save_dic) == 0:
+            return False
+        if 'ecg' not in save_dic or save_dic['ecg'].size == 0:
+            return False
+        if 'report' not in save_dic or not save_dic['report']:
+            return False
+        return True
     
     def _reorder_indices(self, ecg):
         if self.args.base_data == 'mimic':
@@ -734,7 +765,7 @@ class PreprocessMapECG:
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f'Length of available ecgs: {len(self.available_ecgs)}')
         print(f"Valid instances: {len(valid_instances)}")
-        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped_{self.args.seg_len}.json')
+        self.fm.save_json(valid_instances, f'./data/{self.args.map_data}_mapped_{self.args.seg_len}_test.json')
     
     def _process_mapping_instance(self, instance):
         name = instance.get('name', '')

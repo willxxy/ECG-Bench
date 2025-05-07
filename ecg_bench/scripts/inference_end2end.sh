@@ -18,11 +18,12 @@ for d in "${data[@]}"; do
     --seg_len=1250 \
     --peft \
     --inference=second \
-    --checkpoint=./runs/$d/0/clip_llama-3.2-1b-instruct_8_1_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_None \
+    --checkpoint=./runs/$d/0/clip_llama-3.2-1b-instruct_8_1_0.0001_0.9_0.99_1e-08_500_0.01_True_True_None_None_None \
     --system_prompt=./data/system_prompt_e2e.txt \
     --batch_size=1 \
     --epochs=1 \
     --instance_normalize \
     --attn_implementation=flash_attention_2 \
+    --image \
     --perturb
 done
