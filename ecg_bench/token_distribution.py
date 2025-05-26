@@ -4,6 +4,7 @@ import glob
 from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.viz_utils import VizUtil
+from ecg_bench.config import get_args
 
 def get_args():
     parser = argparse.ArgumentParser(description = None)

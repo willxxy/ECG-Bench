@@ -89,4 +89,8 @@ def get_args():
     preprocess_group.add_argument('--create_rag_db', action = 'store_true', default = None, help = 'Create a RAG database')
     preprocess_group.add_argument('--mix_data', type=str, default=None, help='Mix data: comma-separated list of JSON filenames')
     
+    ### Token Distribution
+    token_dist_group = parser.add_argument_group('Token Distribution')
+    token_dist_group.add_argument('--list_of_paths', type=str, default=None, help='Path to the list of paths for token distribution analysis')
+    
     return parser.parse_args() 

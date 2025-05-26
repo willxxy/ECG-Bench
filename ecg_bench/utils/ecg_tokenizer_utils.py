@@ -40,7 +40,7 @@ class ECGByteTokenizer:
         print(list(all_string_signals)[:100])
         
         start_time = time.time()
-        ids, vocab, merges = bpe.byte_pair_encoding(all_string_signals, self.args.num_merges, self.args.num_processes)
+        ids, vocab, merges = bpe.byte_pair_encoding(all_string_signals, self.args.num_merges, self.args.num_cores)
         end_time = time.time()
         execution_time = end_time - start_time
         
@@ -165,7 +165,7 @@ class ECGByteTokenizer:
 
         file_paths = list(file_path_generator())
 
-        with mp.Pool(processes=self.args.num_processes) as pool:
+        with mp.Pool(processes=self.args.num_cores) as pool:
             ecg_strings = list(
                 tqdm(
                     pool.imap(self.process_ecg, file_paths),
@@ -199,12 +199,12 @@ class ECGByteTokenizer:
             return Counter(), 0
 
     def analyze_token_distribution(self, test_data):
-        with mp.Pool(self.args.num_processes) as pool:
+        with mp.Pool(self.args.num_cores) as pool:
             results = list(
                 tqdm(
                     pool.imap(self.analyze_single_ecg, (path for path in test_data)),
                     total=len(test_data),
-                    desc=f'Analyzing token distribution with {self.args.num_processes} processes'))
+                    desc=f'Analyzing token distribution with {self.args.num_cores} processes'))
 
         token_counts = Counter()
         token_lengths = []
