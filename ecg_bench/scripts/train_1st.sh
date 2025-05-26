@@ -1,10 +1,6 @@
 #!/bin/bash
 
-models=("siglip" "clip")
-# "stmem" "merl" "mlae" "mtae" " done
-
-# VIT DONE
-# CLIP SO SLOW
+models=("stmem" "merl" "mlae" "mtae" "siglip" "clip" "vit")
 
 # ### MULTI GPU
 for model in "${models[@]}"; do
@@ -24,7 +20,6 @@ done
 
 models=("vit" "clip" "siglip" )
 
-### MULTI GPU
 for model in "${models[@]}"; do
     python main.py \
     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
@@ -33,7 +28,7 @@ for model in "${models[@]}"; do
     --train=first \
     --batch_size=256 \
     --seg_len=1250 \
-    --epochs=10 \
+    --epochs=50 \
     --instance_normalize \
     --attn_implementation=flash_attention_2 \
     --image \
