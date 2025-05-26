@@ -7,6 +7,7 @@ use rayon::ThreadPoolBuilder;
 use std::sync::Arc;
 use fxhash::FxHashMap;
 
+
 #[inline(always)]
 fn merge(ids: &mut Vec<u32>, pair: (u32, u32), new_id: u32) {
     let mut i = 0;
@@ -98,21 +99,16 @@ fn byte_pair_encoding(
 
             merge(&mut ids, best_pair, new_id);
 
-            let first_str = &vocab[&best_pair.0];
-            let second_str = &vocab[&best_pair.1];
-            let mut combined = String::with_capacity(first_str.len() + second_str.len());
-            combined.push_str(first_str);
-            combined.push_str(second_str);
-            vocab.insert(new_id, combined);
+            vocab.insert(
+                new_id,
+                vocab[&best_pair.0].clone() + &vocab[&best_pair.1],
+            );
 
-            let first_token = &vocab_tokens[&best_pair.0];
-            let second_token = &vocab_tokens[&best_pair.1];
-            let mut new_token = Vec::with_capacity(first_token.len() + second_token.len());
-            new_token.extend_from_slice(first_token);
-            new_token.extend_from_slice(second_token);
+            let mut new_token = vocab_tokens.get(&best_pair.0).unwrap().clone();
+            new_token.extend(vocab_tokens.get(&best_pair.1).unwrap());
+            vocab_tokens.insert(new_id, new_token.clone());
 
-            merges.push((new_token.clone(), new_id));
-            vocab_tokens.insert(new_id, new_token);
+            merges.push((new_token, new_id));
 
             pb.set_message(format!("Merge {}", i + 1));
             pb.inc(1);
@@ -128,6 +124,7 @@ fn byte_pair_encoding(
 
     Ok((ids, vocab, merges))
 }
+
 
 struct TrieNode {
     children: HashMap<u32, TrieNode>,
@@ -162,7 +159,7 @@ fn encode_symbol(text: &str, merges: Vec<(Vec<u32>, u32)>) -> PyResult<Vec<u32>>
     }
 
     for (token_sequence, token_id) in &merges {
-        trie_root.insert(token_sequence, *token_id);
+        trie_root.insert(&token_sequence, *token_id);
     }
 
     let mut output_ids = Vec::new();
