@@ -11,7 +11,7 @@ for base_data in "${BASE_DATA_VALUES[@]}"; do
     # Special case for mimic: also process with seg_len=2500
     if [ "$base_data" = "mimic" ]; then
         echo "Processing mimic with seg_len=2500"
-        python preprocess_ecg.py --base_data=$base_data --seg_len=2500 --toy --sample_files --stratified_sampling --dev # or --stratified_sampling
+        python preprocess_ecg.py --base_data=$base_data --seg_len=2500 --toy --sample_files --random_sampling --dev # or --stratified_sampling
     fi
 done
 
@@ -20,7 +20,7 @@ MAP_DATA_VALUES=("ecg_bench_pulse" "ecg_instruct_pulse" "pretrain_mimic" "ecg_in
 
 for map_data in "${MAP_DATA_VALUES[@]}"; do
     echo "Processing map_data: $map_data"
-    python preprocess_ecg.py --map_data=$map_data --seg_len=1250
+    python preprocess_ecg.py --map_data=$map_data --seg_len=1250 --dev
 done
 
 
@@ -29,5 +29,5 @@ done
 MIX_DATA_VALUES=("ecg_instruct_45k_mapped_1250,ecg_bench_pulse_mapped_1250")
 for mix_data in "${MIX_DATA_VALUES[@]}"; do
     echo "Processing mix_data: $mix_data"
-    python preprocess_ecg.py --mix_data=$mix_data
+    python preprocess_ecg.py --mix_data=$mix_data --dev
 done

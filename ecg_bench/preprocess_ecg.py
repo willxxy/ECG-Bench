@@ -9,7 +9,7 @@ from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, Prepr
 from ecg_bench.utils.rag_utils import RAGECGDatabase
 from ecg_bench.config import get_args
     
-def main(args: argparse.Namespace):
+def main(args):
     fm = FileManager()
     
     if args.preprocess_files:
