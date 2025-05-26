@@ -93,4 +93,8 @@ def get_args():
     token_dist_group = parser.add_argument_group('Token Distribution')
     token_dist_group.add_argument('--list_of_paths', type=str, default=None, help='Path to the list of paths for token distribution analysis')
     
+    ### Track Encoding
+    track_enc_group = parser.add_argument_group('Track Encoding')
+    track_enc_group.add_argument('--num_plots', type=int, default=2, help='Number of plots to generate for track encoding')
+    
     return parser.parse_args() 
