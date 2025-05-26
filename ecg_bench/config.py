@@ -97,4 +97,8 @@ def get_args():
     track_enc_group = parser.add_argument_group('Track Encoding')
     track_enc_group.add_argument('--num_plots', type=int, default=2, help='Number of plots to generate for track encoding')
     
+    ### Tokenizer
+    tokenizer_group = parser.add_argument_group('Tokenizer')
+    tokenizer_group.add_argument('--sampled_files', type=str, default=None, help='Path to the sampled ECG files for tokenizer training')
+    
     return parser.parse_args() 
