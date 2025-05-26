@@ -51,12 +51,12 @@ def get_args():
     mode_group.add_argument('--train', type=str, default=None, choices=['first', 'second', 'end2end'], help='Training mode')
     mode_group.add_argument('--inference', type=str, default=None, choices=['second', 'end2end'], help='Inference mode')
     mode_group.add_argument('--post_train', action='store_true', default=None, help='Post-training mode')
-    model_group.add_argument('--train_encoder', action='store_true', default=None, help='Train encoder too')
+    mode_group.add_argument('--train_encoder', action='store_true', default=None, help='Train encoder too')
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
     mode_group.add_argument('--rag', action='store_true', default=None, help='RAG mode')
     mode_group.add_argument('--rag_k', type=int, default=1, help='RAG k')
-    parser.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
-    parser.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
+    mode_group.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
+    mode_group.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')
     mode_group.add_argument('--log', action='store_true', default=None, help='Enable logging')
     
@@ -71,4 +71,22 @@ def get_args():
     ckpt_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint path')
     ckpt_group.add_argument('--encoder_checkpoint', type=str, default=None, help='Encoder checkpoint path')
 
+    
+    ### Preprocessing
+    preprocess_group = parser.add_argument_group('Preprocessing')
+    preprocess_group.add_argument('--base_data', type = str, default = None, help = 'Base dataset to preprocess')
+    preprocess_group.add_argument('--map_data', type = str, default = None, help = 'External dataset to map to base dataset')
+    preprocess_group.add_argument('--num_cores', type = int, default = 12, help = 'Number of cores for parallel processing')
+    preprocess_group.add_argument('--num_percentiles', type = int, default = 300000, help = 'Number of samples for calculating percentiles')
+    preprocess_group.add_argument('--num_tok_samples', type = int, default = 300000, help = 'Number of samples for training the tokenizer')
+    preprocess_group.add_argument('--random_sampling', action = 'store_true', default = False, help = 'Use random sampling')
+    preprocess_group.add_argument('--stratified_sampling', action = 'store_true', default = False, help = 'Use stratified sampling')
+    preprocess_group.add_argument('--sample_percentiles', action = 'store_true', default = False, help = 'Sample percentiles')
+    preprocess_group.add_argument('--sample_files', action = 'store_true', default = False, help = 'Sample files')
+    preprocess_group.add_argument('--preprocess_files', action = 'store_true', default = False, help = 'Preprocess files')
+    preprocess_group.add_argument('--max_clusters', type = int, default = 200, help = 'Maximum number of clusters for tokenizer training')
+    preprocess_group.add_argument('--toy', action = 'store_true', default = False, help = 'Create a toy dataset')
+    preprocess_group.add_argument('--create_rag_db', action = 'store_true', default = None, help = 'Create a RAG database')
+    preprocess_group.add_argument('--mix_data', type=str, default=None, help='Mix data: comma-separated list of JSON filenames')
+    
     return parser.parse_args() 

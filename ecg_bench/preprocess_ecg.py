@@ -1,4 +1,3 @@
-import argparse
 import os
 os.environ['OPENBLAS_NUM_THREADS'] = '4'
 os.environ['MKL_NUM_THREADS'] = '4'
@@ -8,29 +7,7 @@ os.environ['NUMEXPR_NUM_THREADS'] = '4'
 from ecg_bench.utils.dir_file_utils import FileManager
 from ecg_bench.utils.preprocess_utils import PrepareDF, PreprocessBaseECG, PreprocessMapECG, SampleBaseECG, PreprocessMixECG
 from ecg_bench.utils.rag_utils import RAGECGDatabase
-
-def get_args():
-    parser = argparse.ArgumentParser(description = "ECG preprocessing pipeline")
-    parser.add_argument('--base_data', type = str, default = None, help = 'Base dataset to preprocess')
-    parser.add_argument('--map_data', type = str, default = None, help = 'External dataset to map to base dataset')
-    parser.add_argument('--seg_len', type = int, default = 500, help = 'Segment length')
-    parser.add_argument('--target_sf', type = int, default = 250, help = 'Target sampling frequency')
-    parser.add_argument('--num_cores', type = int, default = 12, help = 'Number of cores for parallel processing')
-    parser.add_argument('--num_percentiles', type = int, default = 300000, help = 'Number of samples for calculating percentiles')
-    parser.add_argument('--num_tok_samples', type = int, default = 300000, help = 'Number of samples for training the tokenizer')
-    parser.add_argument('--random_sampling', action = 'store_true', default = False, help = 'Use random sampling')
-    parser.add_argument('--stratified_sampling', action = 'store_true', default = False, help = 'Use stratified sampling')
-    parser.add_argument('--sample_percentiles', action = 'store_true', default = False, help = 'Sample percentiles')
-    parser.add_argument('--sample_files', action = 'store_true', default = False, help = 'Sample files')
-    parser.add_argument('--preprocess_files', action = 'store_true', default = False, help = 'Preprocess files')
-    parser.add_argument('--max_clusters', type = int, default = 200, help = 'Maximum number of clusters for tokenizer training')
-    parser.add_argument('--dev', action = 'store_true', default = False, help = 'Run in development mode')
-    parser.add_argument('--toy', action = 'store_true', default = False, help = 'Create a toy dataset')
-    parser.add_argument('--create_rag_db', action = 'store_true', default = None, help = 'Create a RAG database')
-    parser.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
-    parser.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
-    parser.add_argument('--mix_data', type=str, default=None, help='Mix data: comma-separated list of JSON filenames')
-    return parser.parse_args()
+from ecg_bench.config import get_args
     
 def main(args: argparse.Namespace):
     fm = FileManager()
