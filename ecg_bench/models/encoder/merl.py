@@ -46,6 +46,8 @@ class MERLPretrain(nn.Module):
             self.downconv = nn.Conv1d(in_channels=2048, out_channels=self.proj_out, kernel_size=1)
             if self.args.seg_len == 1250:
                 spacial_dim = 79
+            elif self.args.seg_len == 2500:
+                spacial_dim = 157  # 158 - 1 for CLS token
             else:
                 spacial_dim = 32
             self.att_pool_head = AttentionPool2d(spacial_dim=spacial_dim,

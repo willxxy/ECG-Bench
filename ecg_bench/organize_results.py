@@ -1,12 +1,7 @@
-import argparse
 import glob
 import json
 from collections import defaultdict
-
-def get_args():
-    parser = argparse.ArgumentParser(description="Organize and print ML experiment results")
-    parser.add_argument('--checkpoint', type=str, required=True, help='Checkpoint path')
-    return parser.parse_args()
+from ecg_bench.config import get_args
 
 def extract_file_info(file):
     parts = file.split('_')
