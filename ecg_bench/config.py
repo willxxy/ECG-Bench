@@ -100,5 +100,7 @@ def get_args():
     ### Tokenizer
     tokenizer_group = parser.add_argument_group('Tokenizer')
     tokenizer_group.add_argument('--sampled_files', type=str, default=None, help='Path to the sampled ECG files for tokenizer training')
+    tokenizer_group.add_argument('--train_tokenizer', action='store_true', default=None, help='Train a new tokenizer')
+    
     
     return parser.parse_args() 
