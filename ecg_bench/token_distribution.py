@@ -10,6 +10,8 @@ def main(args):
     fm, viz = FileManager(), VizUtil()
     ecg_tokenizer_utils = ECGByteTokenizer(args, fm)
     list_of_paths = glob.glob(args.list_of_paths)
+    if args.dev:
+        list_of_paths = list_of_paths[:100]
     print('Length of list of paths:', len(list_of_paths))
     token_counts, token_lengths = ecg_tokenizer_utils.analyze_token_distribution(list_of_paths)
     print('Plotting token distribution...')
