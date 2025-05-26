@@ -1,51 +1,40 @@
-# python main.py \
-# --data=ecg_instruct_45k_mapped \
-# --model=mlae_llama-3.2-1b \
-# --device=cuda:7 \
-# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
-# --peft \
-# --train=second \
-# --encoder_checkpoint=mlae_1_2_0.0001_0.9_0.99_1e-08_500_0.01 \
-# --encoder_data=pretrain_mimic_mapped \
-# --system_prompt=./data/system_prompt_e2e.txt \
-# --attn_implementation=flash_attention_2 \
-# --dev
+#!/bin/bash
 
-# python main.py \
-# --data=ecg_instruct_45k_mapped \
-# --model=mlae_llama-3.2-1b \
-# --dis \
-# --gpus=6,7 \
-# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
-# --peft \
-# --train=second \
-# --encoder_checkpoint=mlae_1_2_0.0001_0.9_0.99_1e-08_500_0.01 \
-# --encoder_data=pretrain_mimic_mapped \
-# --system_prompt=./data/system_prompt_e2e.txt \
-# --attn_implementation=flash_attention_2 \
-# --dev
+models=("stmem" "merl" "mlae" "mtae" "siglip" "clip" "vit")
+llms=("gemma-2-2b-it" "llama-3.2-1b-instruct" "qwen2.5-1.5b-instruct")
 
-# python main.py \
-# --data=pretrain_mimic_mapped \
-# --model=siglip_llama-3.2-1b \
-# --device=cuda:6 \
-# --percentiles=./data/mimic_percentiles_2500_250_300000.npy \
-# --peft \
-# --train=second \
-# --encoder_checkpoint=siglip_1_2_0.0001_0.9_0.99_1e-08_500_0.01 \
-# --encoder_data=pretrain_mimic_mapped \
-# --dev
+# ### MULTI GPU
+for llm in "${llms[@]}"; do
+    for model in "${models[@]}"; do
+        python main.py \
+        --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
+        --model=$model_$llm \
+        --device=cuda:6 \
+        --train=second \
+        --batch_size=256 \
+        --seg_len=1250 \
+        --epochs=50 \
+        --instance_normalize \
+        --attn_implementation=flash_attention_2 \
+        --encoder_checkpoint=./runs/ecg-qa_mimic-iv-ecg_mapped_1250/0/$model_8_1_0.0001_0.9_0.99_1e-08_500_0.01_True_True_None_None_None \
+        --dev
+    done
+done
 
 
-python main.py \
---data=ecg_instruct_45k_mapped_500 \
---model=llama-3.2-1b \
---batch_size=1 \
---device=cuda:7 \
---ecg_tokenizer=./data/tokenizer_3500_450000.pkl \
---percentiles=./data/mimic_percentiles_2500_250_300000.npy \
---peft \
---train=end2end \
---attn_implementation=flash_attention_2 \
---system_prompt=./data/system_prompt_e2e.txt \
---dev
+models=("vit" "clip" "siglip" )
+
+for model in "${models[@]}"; do
+    python main.py \
+    --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
+    --model=$model \
+    --device=cuda:6 \
+    --train=first \
+    --batch_size=256 \
+    --seg_len=1250 \
+    --epochs=50 \
+    --instance_normalize \
+    --attn_implementation=flash_attention_2 \
+    --image \
+    --log
+done
