@@ -12,6 +12,7 @@
 
 ## News
 
+- **[May 24, 2025] We release our paper ["Signal, Image, or Symbolic: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework"](https://arxiv.org/abs/2505.18847) with some interesting results when comparing input representations and training paradigms for ELMs! Check it out.**
 - **[April 5, 2025] We open source ECG-Bench for training and evaluating ELMs!**
 
 ## Table of Contents
