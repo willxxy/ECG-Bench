@@ -801,6 +801,26 @@ This repository contains code licensed under the MIT License, except for the fol
 If this codebase or work has helped you please cite the following:
 
 ```
+@misc{han2025signalimagesymbolicexploring,
+      title={Signal, Image, or Symbolic: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework}, 
+      author={William Han and Chaojing Duan and Zhepeng Cen and Yihang Yao and Xiaoyu Song and Atharva Mhaskar and Dylan Leong and Michael A. Rosenberg and Emerson Liu and Ding Zhao},
+      year={2025},
+      eprint={2505.18847},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2505.18847}, 
+}
+
+@misc{han2024ecgbytetokenizerendtoendgenerative,
+      title={ECG-Byte: A Tokenizer for End-to-End Generative Electrocardiogram Language Modeling}, 
+      author={William Han and Chaojing Duan and Michael A. Rosenberg and Emerson Liu and Ding Zhao},
+      year={2024},
+      eprint={2412.14373},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2412.14373}, 
+}
+
 @software{willxxy_2025_15299518,
   author       = {willxxy},
   title        = {willxxy/ECG-Bench: 0.0.2},
@@ -816,15 +836,5 @@ If this codebase or work has helped you please cite the following:
                    d2c9;anchor=swh:1:rel:3c046172cae8f0fc9e2cff952897
                    97d670c749f8;path=willxxy-ECG-Bench-898547b
                   },
-}
-
-@misc{han2024ecgbytetokenizerendtoendgenerative,
-      title={ECG-Byte: A Tokenizer for End-to-End Generative Electrocardiogram Language Modeling}, 
-      author={William Han and Chaojing Duan and Michael A. Rosenberg and Emerson Liu and Ding Zhao},
-      year={2024},
-      eprint={2412.14373},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2412.14373}, 
 }
 ```
