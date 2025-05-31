@@ -43,7 +43,6 @@ class gemma(nn.Module):
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.convert_tokens_to_ids(['<end_of_turn>'])[0],
-                do_sample=True,
                 use_cache=True,
             )
         elif self.args.inference == 'second':
@@ -54,7 +53,6 @@ class gemma(nn.Module):
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.convert_tokens_to_ids(['<end_of_turn>'])[0],
-                do_sample=True,
                 use_cache=True,
             )
         return out
@@ -69,7 +67,6 @@ class gemma(nn.Module):
             max_new_tokens=128,
             pad_token_id=tokenizer.pad_token_id,
             eos_token_id=tokenizer.convert_tokens_to_ids(['<end_of_turn>'])[0],
-            do_sample=True,
             use_cache=True,
         )
         decoded_text = tokenizer.batch_decode(generated_ids[:, input_len:], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]

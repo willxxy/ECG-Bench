@@ -36,7 +36,6 @@ class opt(nn.Module):
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0],
-                do_sample=True,
                 use_cache=True,
             )
         elif self.args.inference == 'second':
@@ -47,7 +46,6 @@ class opt(nn.Module):
                 max_new_tokens=128,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.convert_tokens_to_ids(['<|eot_id|>'])[0],
-                do_sample=True,
                 use_cache=True,
             )
         return out
