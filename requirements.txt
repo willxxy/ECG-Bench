@@ -40,6 +40,6 @@ spacy==3.8.4
 validators==0.18.2
 html5lib==1.1
 qrcode==7.4.2
-gradio==5.22.0
+gradio==5.31.0
 faiss-cpu==1.10.0
 termcolor==3.0.1
