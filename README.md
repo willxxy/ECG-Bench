@@ -751,27 +751,30 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
     In this case, simply reduce the maximum number of threads for each os.environ to either 1 or 2.
     Reducing this number should solve the problem, however, if you continue to run into crashes please feel free to report an issue!
 
-6. **Non-determinimsm despite seeding** - During evaluation, we set seeds for reproducibility like so:
+6. **Non-determinimsm via CuDNN/cuBLAS despite seeding** - During evaluation, we set seeds for reproducibility like so:
 
-    ```
-    print(f'Setting Seed to {args.seed}')
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    ```
+  ```
+  print(f'Setting Seed to {args.seed}')
+  random.seed(args.seed)
+  torch.manual_seed(args.seed)
+  np.random.seed(args.seed)
+  ```
+  
+  Even with these seeds in place, we observed run-to-run variation due to CuDNN/cuBLAS nondeterminism. Certain GPU kernels have nondeterministic implementations unless explicitly told otherwise.
+  To reduce this variability, add the deterministic flags below before any model creation:
+  
+  ```
+  torch.backends.cudnn.deterministic = True 
+  torch.backends.cudnn.benchmark = False
+  torch.use_deterministic_algorithms(True)
+  ```
+  
+  And in the bash launch script, set the cuBLAS workspace variable `export CUBLAS_WORKSPACE_CONFIG=":4096:8"`. 
+  
+  Note that these settings can slow training/inference and may fall back to less-efficient kernels.
 
-    Even with these seeds in place, we observed run-to-run variation. Two main causes are 1) CuDNN/cuBLAS nondeterminism - Certain GPU kernels have nondeterministic implementations unless explicitly told otherwise and 2) Stochastic decoding - Using do_sample=True (with default sampling hyperparameters) intentionally introduces randomness at generation time.
-    To reduce this variability, add the deterministic flags below before any model creation:
-
-    ```
-    torch.backends.cudnn.deterministic = True 
-    torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms(True)
-    ```
-
-    And in the bash launch script, set the cuBLAS workspace variable `export CUBLAS_WORKSPACE_CONFIG=":4096:8"`. 
-
-    Note that these settings can slow training/inference and may fall back to less-efficient kernels. Additionally, sampling (do_sample=True) will still produce different outputs unless you reseed (e.g., torch.manual_seed(...)) immediately before each generation call or switch to deterministic decoding strategies such as greedy or beam search. Therefore, we suggest to turn this off.
+7. **Non-determinimsm via `do_sample=True` despite seeding** - Using do_sample=True (with default sampling hyperparameters) intentionally introduces randomness at generation time.
+ Sampling (do_sample=True) will still produce different outputs unless you reseed (e.g., torch.manual_seed(...)) immediately before each generation call or switch to deterministic decoding strategies such as greedy or beam search. Therefore, we have updated the generation to turn this off. 
 
 ## Contributions <a name="contributions"></a>
 
