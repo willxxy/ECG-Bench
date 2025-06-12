@@ -145,7 +145,7 @@ class RAGECGDatabase:
         
         return metadata
 
-    def search_similar(self, query_features=None, query_signal=None, k=5, mode='query_signal',nprobe=10):
+    def search_similar(self, query_features=None, query_signal=None, k=5, mode='signal',nprobe=10):
         
         if mode not in ['feature', 'signal', 'combined']:
             raise ValueError("Mode must be 'feature', 'signal', or 'combined'")
