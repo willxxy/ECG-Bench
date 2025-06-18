@@ -55,6 +55,8 @@ def get_args():
     mode_group.add_argument('--interpret', action='store_true', default=None, help='Interpret mode')
     mode_group.add_argument('--rag', action='store_true', default=None, help='RAG mode')
     mode_group.add_argument('--rag_k', type=int, default=1, help='RAG k')
+    mode_group.add_argument('--retrieval_base', type=str, default='combined', choices=['signal', 'feature', 'combined'], help='Retrieval base for similarity calculation')
+    mode_group.add_argument('--retrieved_information', type=str, default='combined', choices=['feature', 'report', 'combined'], help='Type of information to retrieve in output')
     mode_group.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
     mode_group.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')

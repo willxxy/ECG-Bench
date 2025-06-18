@@ -46,7 +46,20 @@ class RAGECGDatabase:
         elif self.args.load_rag_db != None and self.args.load_rag_db_idx != None:
             print('Loading RAG database from file...')
             self.metadata = self.fm.open_json(self.args.load_rag_db)
-            self.index = faiss.read_index(self.args.load_rag_db_idx)
+            # Initialize feature extractor for potential feature extraction
+            self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
+            # Load the appropriate index based on retrieval_base
+            retrieval_base = getattr(self.args, 'retrieval_base', 'combined')
+            if retrieval_base in ['signal', 'feature', 'combined']:
+                # If specific index file is provided, use it; otherwise construct path
+                if self.args.load_rag_db_idx.endswith('.index'):
+                    self.index = faiss.read_index(self.args.load_rag_db_idx)
+                else:
+                    # Construct index path based on retrieval_base
+                    index_path = f"{self.args.load_rag_db_idx}/{retrieval_base}.index"
+                    self.index = faiss.read_index(index_path)
+            else:
+                self.index = faiss.read_index(self.args.load_rag_db_idx)
         else:
             print('Please either create a RAG datbse or load one in.')
         
@@ -96,6 +109,8 @@ class RAGECGDatabase:
     def create_and_save_db(self):
         metadata = []
         vectors_for_index = []
+        feature_vectors = []
+        signal_vectors = []
         
         
         npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
@@ -111,8 +126,13 @@ class RAGECGDatabase:
                 report = data['report']
                 features = self.feature_extractor.extract_features(ecg)
                 
-                # Store vectors for FAISS index
-                combined_vector = np.hstack([features.flatten(), ecg.flatten()])
+                # Store vectors for different indices
+                feature_vector = features.flatten()
+                signal_vector = ecg.flatten()
+                combined_vector = np.hstack([feature_vector, signal_vector])
+                
+                feature_vectors.append(feature_vector)
+                signal_vectors.append(signal_vector)
                 vectors_for_index.append(combined_vector)
                 
                 # Store only metadata in JSON
@@ -124,19 +144,36 @@ class RAGECGDatabase:
                 print(f"Error processing {file_path}: {str(e)}")
                 continue
                 
-        # Create and save index
-        vectors_array = np.stack(vectors_for_index)
+        # Convert to arrays
+        feature_array = np.stack(feature_vectors)
+        signal_array = np.stack(signal_vectors)
+        combined_array = np.stack(vectors_for_index)
 
         # Calculate optimal number of clusters based on dataset size
-        # FAISS recommends at least 30 * nlist vectors for training
-        ntotal = len(vectors_array)
+        ntotal = len(combined_array)
         nlist = min(100, max(1, ntotal // 30))
 
-        # Create IVF index for combined data
-        quantizer = faiss.IndexFlatL2(vectors_array.shape[1])
-        self.index = faiss.IndexIVFFlat(quantizer, vectors_array.shape[1], nlist)
-        self.index.train(vectors_array)
-        self.index.add(vectors_array)
+        # Create and save feature index
+        quantizer_feature = faiss.IndexFlatL2(feature_array.shape[1])
+        feature_index = faiss.IndexIVFFlat(quantizer_feature, feature_array.shape[1], nlist)
+        feature_index.train(feature_array)
+        feature_index.add(feature_array)
+        feature_index.make_direct_map()
+        faiss.write_index(feature_index, f"./data/{self.args.base_data}/feature.index")
+        
+        # Create and save signal index
+        quantizer_signal = faiss.IndexFlatL2(signal_array.shape[1])
+        signal_index = faiss.IndexIVFFlat(quantizer_signal, signal_array.shape[1], nlist)
+        signal_index.train(signal_array)
+        signal_index.add(signal_array)
+        signal_index.make_direct_map()
+        faiss.write_index(signal_index, f"./data/{self.args.base_data}/signal.index")
+        
+        # Create and save combined index
+        quantizer_combined = faiss.IndexFlatL2(combined_array.shape[1])
+        self.index = faiss.IndexIVFFlat(quantizer_combined, combined_array.shape[1], nlist)
+        self.index.train(combined_array)
+        self.index.add(combined_array)
         self.index.make_direct_map()
         faiss.write_index(self.index, f"./data/{self.args.base_data}/combined.index")
         
@@ -197,10 +234,17 @@ class RAGECGDatabase:
         
         return results
     
-    def format_search(self, results):
+    def format_search(self, results, retrieved_information='combined'):
         results = self.filter_results(results)
-        output = f"The following is the top {len(results)} retrieved ECGs and their corresponding features and diagnosis. Utilize this information to further enhance your response.\n\n"
-        # output = f"The following is the top {len(results)} retrieved ECGs and their corresponding diagnosis. Utilize this information to further enhance your response.\n\n"
+        output = f"The following is the top {len(results)} retrieved ECGs and their corresponding "
+        
+        # Adjust the description based on retrieved_information
+        if retrieved_information == 'feature':
+            output += "features. Utilize this information to further enhance your response.\n\n"
+        elif retrieved_information == 'report':
+            output += "diagnosis. Utilize this information to further enhance your response.\n\n"
+        else:  # combined
+            output += "features and diagnosis. Utilize this information to further enhance your response.\n\n"
         
         for idx, res in results.items():
             # Filter out entries where all feature values are zero
@@ -208,14 +252,19 @@ class RAGECGDatabase:
                 continue
             
             output += f"Retrieved ECG {idx+1}\n"
-            output += "Diagnosis Information:\n"
-            output += f"{res['report']}\n\n"
-            output += f"{res['report']}\n"
-            output += "Feature Information:\n"
-            # Zip through feature names and feature values to format each line.
-            for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
-                output += f"{feature_name}: {str(float(feature_value))}\n"
-            output += "\n"
+            
+            # Include diagnosis information based on retrieved_information
+            if retrieved_information in ['report', 'combined']:
+                output += "Diagnosis Information:\n"
+                output += f"{res['report']}\n\n"
+            
+            # Include feature information based on retrieved_information
+            if retrieved_information in ['feature', 'combined']:
+                output += "Feature Information:\n"
+                # Zip through feature names and feature values to format each line.
+                for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
+                    output += f"{feature_name}: {str(float(feature_value))}\n"
+                output += "\n"
         return output
     
     def filter_results(self, results):
@@ -244,8 +293,21 @@ class RAGECGDatabase:
         # Flatten the signal to match the expected dimensions
         # query_signal = query_signal.flatten()
         start_time = time.time()
-        results = self.search_similar(query_signal=query_signal, k=10, mode='signal')
-        formatted_results = self.format_search(results)
+        
+        # Use retrieval_base parameter to determine search mode
+        retrieval_base = getattr(self.args, 'retrieval_base', 'signal')
+        if retrieval_base == 'feature':
+            # Extract features for feature-based search
+            features = self.feature_extractor.extract_features(query_signal)
+            results = self.search_similar(query_features=features, k=10, mode='feature')
+        elif retrieval_base == 'combined':
+            # Extract features for combined search
+            features = self.feature_extractor.extract_features(query_signal)
+            results = self.search_similar(query_features=features, query_signal=query_signal, k=10, mode='combined')
+        else:  # signal mode (default)
+            results = self.search_similar(query_signal=query_signal, k=10, mode='signal')
+            
+        formatted_results = self.format_search(results, retrieved_information=getattr(self.args, 'retrieved_information', 'combined'))
         print(formatted_results)
         end_time = time.time()
         print(f"Search time: {end_time - start_time:.2f} seconds")
