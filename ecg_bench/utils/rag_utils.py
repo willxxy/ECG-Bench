@@ -107,6 +107,7 @@ class RAGECGDatabase:
             self.signal_mapping = np.arange(ntotal)
             
     def create_and_save_db(self):
+        print('Initializing RAG database creation...')
         metadata = []
         vectors_for_index = []
         feature_vectors = []
@@ -116,8 +117,13 @@ class RAGECGDatabase:
         npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
         if self.args.dev:
             npy_files = npy_files[:1000]
+            print(f'Development mode: Processing {len(npy_files)} files')
         if self.args.toy:
             npy_files = npy_files[:400000]
+            print(f'Toy mode: Processing {len(npy_files)} files')
+        
+        print(f'Found {len(npy_files)} files to process')
+        print('Starting feature extraction from ECG signals...')
             
         for file_path in tqdm(npy_files, desc="Extracting features"):
             try:
@@ -143,7 +149,10 @@ class RAGECGDatabase:
             except Exception as e:
                 print(f"Error processing {file_path}: {str(e)}")
                 continue
-                
+        
+        print(f'Successfully processed {len(metadata)} files')
+        print('Converting vectors to arrays...')
+        
         # Convert to arrays
         feature_array = np.stack(feature_vectors)
         signal_array = np.stack(signal_vectors)
@@ -152,33 +161,62 @@ class RAGECGDatabase:
         # Calculate optimal number of clusters based on dataset size
         ntotal = len(combined_array)
         nlist = min(100, max(1, ntotal // 30))
+        
+        print(f'Creating FAISS indices with {nlist} clusters for {ntotal} samples...')
 
         # Create and save feature index
+        print('Creating feature index...')
         quantizer_feature = faiss.IndexFlatL2(feature_array.shape[1])
         feature_index = faiss.IndexIVFFlat(quantizer_feature, feature_array.shape[1], nlist)
+        print('Training feature index...')
         feature_index.train(feature_array)
+        print('Adding vectors to feature index...')
         feature_index.add(feature_array)
         feature_index.make_direct_map()
-        faiss.write_index(feature_index, f"./data/{self.args.base_data}/feature.index")
+        feature_path = f"./data/{self.args.base_data}/feature.index"
+        print(f'Saving feature index to {feature_path}...')
+        faiss.write_index(feature_index, feature_path)
+        print('Feature index saved successfully!')
         
         # Create and save signal index
+        print('Creating signal index...')
         quantizer_signal = faiss.IndexFlatL2(signal_array.shape[1])
         signal_index = faiss.IndexIVFFlat(quantizer_signal, signal_array.shape[1], nlist)
+        print('Training signal index...')
         signal_index.train(signal_array)
+        print('Adding vectors to signal index...')
         signal_index.add(signal_array)
         signal_index.make_direct_map()
-        faiss.write_index(signal_index, f"./data/{self.args.base_data}/signal.index")
+        signal_path = f"./data/{self.args.base_data}/signal.index"
+        print(f'Saving signal index to {signal_path}...')
+        faiss.write_index(signal_index, signal_path)
+        print('Signal index saved successfully!')
         
         # Create and save combined index
+        print('Creating combined index...')
         quantizer_combined = faiss.IndexFlatL2(combined_array.shape[1])
         self.index = faiss.IndexIVFFlat(quantizer_combined, combined_array.shape[1], nlist)
+        print('Training combined index...')
         self.index.train(combined_array)
+        print('Adding vectors to combined index...')
         self.index.add(combined_array)
         self.index.make_direct_map()
-        faiss.write_index(self.index, f"./data/{self.args.base_data}/combined.index")
+        combined_path = f"./data/{self.args.base_data}/combined.index"
+        print(f'Saving combined index to {combined_path}...')
+        faiss.write_index(self.index, combined_path)
+        print('Combined index saved successfully!')
         
         # Save metadata JSON
-        self.fm.save_json(metadata, f'./data/{self.args.base_data}/rag_metadata.json')
+        metadata_path = f'./data/{self.args.base_data}/rag_metadata.json'
+        print(f'Saving metadata to {metadata_path}...')
+        self.fm.save_json(metadata, metadata_path)
+        print('Metadata saved successfully!')
+        
+        print('RAG database creation completed successfully!')
+        print(f'Total samples: {len(metadata)}')
+        print(f'Feature dimension: {feature_array.shape[1]}')
+        print(f'Signal dimension: {signal_array.shape[1]}')
+        print(f'Combined dimension: {combined_array.shape[1]}')
         
         return metadata
 
@@ -291,18 +329,22 @@ class RAGECGDatabase:
         query_signal = self.fm.open_npy(npy_files[random_idx])['ecg']
         print('query_signal', query_signal.shape)
         # Flatten the signal to match the expected dimensions
-        # query_signal = query_signal.flatten()
+        query_signal = query_signal.flatten()
         start_time = time.time()
         
         # Use retrieval_base parameter to determine search mode
         retrieval_base = getattr(self.args, 'retrieval_base', 'signal')
         if retrieval_base == 'feature':
             # Extract features for feature-based search
-            features = self.feature_extractor.extract_features(query_signal)
+            # Need to reshape back to 2D for feature extraction
+            query_signal_2d = query_signal.reshape(12, -1)
+            features = self.feature_extractor.extract_features(query_signal_2d)
             results = self.search_similar(query_features=features, k=10, mode='feature')
         elif retrieval_base == 'combined':
             # Extract features for combined search
-            features = self.feature_extractor.extract_features(query_signal)
+            # Need to reshape back to 2D for feature extraction
+            query_signal_2d = query_signal.reshape(12, -1)
+            features = self.feature_extractor.extract_features(query_signal_2d)
             results = self.search_similar(query_features=features, query_signal=query_signal, k=10, mode='combined')
         else:  # signal mode (default)
             results = self.search_similar(query_signal=query_signal, k=10, mode='signal')
