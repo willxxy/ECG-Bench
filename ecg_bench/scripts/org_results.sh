@@ -15,6 +15,6 @@ for d in "${data[@]}"; do
     
     for ckpt in "${checkpoints[@]}"; do
         python organize_results.py \
-        --checkpoint=./runs/$d/0/$ckpt/train_no_inf_no
+        --checkpoint=./runs/$d/0/$ckpt/
     done
 done
