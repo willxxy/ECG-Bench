@@ -3,7 +3,7 @@
 # data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
 data=("ecg-qa_ptbxl_mapped_1250")
 
-
+retrieved_information="combined"
 for d in "${data[@]}"; do
     if [ "$d" = "ecg_instruct_pulse_mapped_1250" ]; then
         data_arg="ecg_bench_pulse_mapped_1250"
@@ -26,6 +26,8 @@ for d in "${data[@]}"; do
     --instance_normalize \
     --attn_implementation=flash_attention_2 \
     --rag \
+    --retrieval_base=signal \
+    --retrieved_information=$retrieved_information \
     --load_rag_db=./data/mimic/rag_metadata.json \
-    --load_rag_db_idx=./data/mimic/combined.index
+    --load_rag_db_idx=./data/mimic/${retrieved_information}.index \
 done
