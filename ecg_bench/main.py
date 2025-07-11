@@ -113,7 +113,8 @@ def create_save_path(args, fm):
         if args.rag:
             model_params.extend([
                 args.retrieval_base,
-                args.retrieved_information
+                args.retrieved_information,
+                args.rag_k
             ])
             
         model_params.append(encoder_in)

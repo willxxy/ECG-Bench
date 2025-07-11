@@ -98,6 +98,56 @@ class BaseECGDataset(Dataset):
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
         
+    def _get_rag_results(self, signal):
+        """Helper method to get RAG results"""
+        if not self.args.rag:
+            return None
+        rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+        return self.rag_db.format_search(rag_results)
+
+    def _setup_system_prompt_rag(self, conv, signal):
+        """Approach 1: Put retrieved information in system prompt"""
+        filtered_rag_results = self._get_rag_results(signal)
+        if filtered_rag_results:
+            modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+            if self.args.dev:
+                print('=== System Prompt RAG Mode ===')
+                print('filtered_rag_results:', filtered_rag_results)
+                print('modified_system_prompt:', modified_system_prompt)
+                print('='*50)
+            conv.set_system_message(modified_system_prompt)
+        else:
+            conv.set_system_message(self.system_prompt)
+        return conv
+
+    def _setup_user_query_rag(self, conv, signal):
+        """Approach 2: Put retrieved information in user's query"""
+        conv.set_system_message(self.system_prompt)
+        filtered_rag_results = self._get_rag_results(signal)
+        if filtered_rag_results:
+            if self.args.dev:
+                print('=== User Query RAG Mode ===')
+                print('filtered_rag_results:', filtered_rag_results)
+                print('Will be added to first user query')
+                print('='*50)
+            # Store RAG results to be appended to the first user query
+            self.current_rag_results = filtered_rag_results
+        return conv
+
+    def _setup_separate_rag(self, conv, signal):
+        """Approach 3: Put retrieved information as separate message"""
+        conv.set_system_message(self.system_prompt)
+        filtered_rag_results = self._get_rag_results(signal)
+        if filtered_rag_results:
+            if self.args.dev:
+                print('=== Separate RAG Mode ===')
+                print('filtered_rag_results:', filtered_rag_results)
+                print('Added as separate assistant message')
+                print('='*50)
+            # Add RAG results as a separate system message
+            conv.append_message(conv.roles[1], f"Here is relevant information from similar ECGs:\n{filtered_rag_results}")
+        return conv
+
     def setup_conversation_template(self, signal = None):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
@@ -107,15 +157,13 @@ class BaseECGDataset(Dataset):
             conv = get_conv_template('gemma')
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
-            if self.args.rag:
-                rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
-                filtered_rag_results = self.rag_db.format_search(rag_results)
-                modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
-                if self.args.dev:
-                    print('filtered_rag_results', filtered_rag_results)
-                    print('modified_system_prompt', modified_system_prompt)
-                    
-                conv.set_system_message(modified_system_prompt)
+            rag_prompt_mode = getattr(self.args, 'rag_prompt_mode', 'system_prompt')
+            if rag_prompt_mode == 'system_prompt':
+                conv = self._setup_system_prompt_rag(conv, signal)
+            elif rag_prompt_mode == 'user_query':
+                conv = self._setup_user_query_rag(conv, signal)
+            elif rag_prompt_mode == 'separate':
+                conv = self._setup_separate_rag(conv, signal)
             else:
                 conv.set_system_message(self.system_prompt)
             
@@ -142,9 +190,16 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<image>', '')
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            
+            # For user_query RAG mode, append RAG results to first user message
             if is_human and count == 0:
-                message_value = f"<signal>\n{message_value}"
+                if hasattr(self, 'current_rag_results') and self.current_rag_results:
+                    message_value = f"<signal>\n{self.current_rag_results}\n{message_value}"
+                    self.current_rag_results = None  # Clear after using
+                else:
+                    message_value = f"<signal>\n{message_value}"
                 count += 1
+                
             conv.append_message(role, message_value)
         return conv
     
