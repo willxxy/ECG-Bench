@@ -114,7 +114,8 @@ def create_save_path(args, fm):
             model_params.extend([
                 args.retrieval_base,
                 args.retrieved_information,
-                args.rag_k
+                args.rag_k,
+                args.rag_prompt_mode
             ])
             
         model_params.append(encoder_in)

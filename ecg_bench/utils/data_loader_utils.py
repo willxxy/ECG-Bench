@@ -102,14 +102,14 @@ class BaseECGDataset(Dataset):
         """Helper method to get RAG results"""
         if not self.args.rag:
             return None
-        rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+        rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='combined')
         return self.rag_db.format_search(rag_results)
 
     def _setup_system_prompt_rag(self, conv, signal):
         """Approach 1: Put retrieved information in system prompt"""
         filtered_rag_results = self._get_rag_results(signal)
         if filtered_rag_results:
-            modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+            modified_system_prompt = f"{self.system_prompt}\n\nBased on analysis of similar ECG patterns, here is relevant information:\n{filtered_rag_results}"
             if self.args.dev:
                 print('=== System Prompt RAG Mode ===')
                 print('filtered_rag_results:', filtered_rag_results)
@@ -131,7 +131,11 @@ class BaseECGDataset(Dataset):
                 print('Will be added to first user query')
                 print('='*50)
             # Store RAG results to be appended to the first user query
-            self.current_rag_results = filtered_rag_results
+            user_message = {
+                "from": "human",
+                "value": f"Based on analysis of similar ECG patterns, here is relevant information:\n{filtered_rag_results}\n\n"
+            }
+            self.current_rag_results = user_message["value"]
         return conv
 
     def _setup_separate_rag(self, conv, signal):
@@ -144,8 +148,12 @@ class BaseECGDataset(Dataset):
                 print('filtered_rag_results:', filtered_rag_results)
                 print('Added as separate assistant message')
                 print('='*50)
-            # Add RAG results as a separate system message
-            conv.append_message(conv.roles[1], f"Here is relevant information from similar ECGs:\n{filtered_rag_results}")
+            # Add RAG results as a separate assistant message
+            rag_message = {
+                'from': 'assistant',
+                'value': f"Based on analysis of similar ECG patterns, here is relevant information:\n\n{filtered_rag_results}\n\nPlease use this context to help answer the user's question about the current ECG signal."
+            }
+            conv.append_message(conv.roles[1], rag_message['value'])
         return conv
 
     def setup_conversation_template(self, signal = None):
@@ -199,6 +207,12 @@ class BaseECGDataset(Dataset):
                 else:
                     message_value = f"<signal>\n{message_value}"
                 count += 1
+            
+            if self.args.dev:
+                print(f'=== Appending {message["from"]} message ===')
+                print('from:', message['from'])
+                print('value:', message_value)
+                print('='*50)
                 
             conv.append_message(role, message_value)
         return conv
