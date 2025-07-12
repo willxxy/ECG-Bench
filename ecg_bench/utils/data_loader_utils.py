@@ -504,7 +504,6 @@ class SecondStageECGChatDataset(BaseECGDataset):
                 print("No valid labels found (all are -100)")
             print('='*100)
         
-        labels = torch.tensor(labels, dtype=torch.int64)    
         position_ids = self.create_position_ids(input_ids)
         attention_mask = self.create_attention_mask(input_ids)
         
