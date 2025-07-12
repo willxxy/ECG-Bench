@@ -158,7 +158,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 5. Activate the environment `conda activate ecg`
 
-6. `pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121` (make sure when executing `nvcc --version` you get version 12.1)
+6. `pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
 
 7. `git clone https://github.com/willxxy/ECG-Bench.git`
 
@@ -186,7 +186,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
     `pip install trl[judges]`
 
-16. `cd` into `ECG-Bench/ecg_bench/rust_bpe` and execute `maturin develop --release` to compile the tokenizer.
+16. `cd` into `ECG-Bench/ecg_bench/representation/bpe` and execute `maturin develop --release` to compile the tokenizer.
 
 17. Run all the tests by executing `python tests/run_all_tests.py`.
 
