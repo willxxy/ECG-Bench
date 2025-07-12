@@ -107,8 +107,7 @@ def create_save_path(args, fm):
             args.image,
             args.augment_image,
             args.train_encoder,
-            args.rag,
-            'right_padding' # added for test
+            args.rag
         ]
         
         if args.rag:

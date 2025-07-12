@@ -486,11 +486,23 @@ class SecondStageECGChatDataset(BaseECGDataset):
         
         input_ids = self.pad_to_max_chat(input_ids)
         signal_id_index = input_ids.index(self.signal_id[0])
-        labels = self.pad_to_max_chat(labels)
+        labels = torch.tensor(self.pad_to_max_chat(labels), dtype=torch.int64)
         labels[labels == self.pad_id] = -100
             
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
+        
+        if self.args.dev:
+            labels_np = np.array(labels)
+            non_neg_indices = np.where(labels_np != -100)[0]
+            if len(non_neg_indices) > 0:
+                non_neg_values = labels_np[non_neg_indices].tolist()
+                tokens = self.llm_tokenizer.convert_ids_to_tokens(non_neg_values)
+                for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)):
+                    print(f"{idx}: {token} -> {token_id}")
+            else:
+                print("No valid labels found (all are -100)")
+            print('='*100)
         
         labels = torch.tensor(labels, dtype=torch.int64)    
         position_ids = self.create_position_ids(input_ids)

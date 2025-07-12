@@ -11,11 +11,11 @@ for llm in "${llms[@]}"; do
         python main.py \
         --data=ecg-qa_ptbxl_mapped_1250 \
         --model=clip_llama-3.2-1b-instruct \
-        --device=cuda:4 \
+        --device=cuda:0 \
         --train=second \
         --batch_size=8 \
         --seg_len=1250 \
-        --epochs=2 \
+        --epochs=1 \
         --peft \
         --instance_normalize \
         --pad_to_max=1024 \
@@ -27,19 +27,19 @@ for llm in "${llms[@]}"; do
 done
 
 
-models=("vit" "clip" "siglip" )
+# models=("vit" "clip" "siglip" )
 
-for model in "${models[@]}"; do
-    python main.py \
-    --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
-    --model=$model \
-    --device=cuda:6 \
-    --train=first \
-    --batch_size=8 \
-    --seg_len=1250 \
-    --epochs=2 \
-    --instance_normalize \
-    --attn_implementation=flash_attention_2 \
-    --image \
-    --log
-done
+# for model in "${models[@]}"; do
+#     python main.py \
+#     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
+#     --model=$model \
+#     --device=cuda:6 \
+#     --train=first \
+#     --batch_size=8 \
+#     --seg_len=1250 \
+#     --epochs=2 \
+#     --instance_normalize \
+#     --attn_implementation=flash_attention_2 \
+#     --image \
+#     --log
+# done
