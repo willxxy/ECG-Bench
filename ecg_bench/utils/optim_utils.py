@@ -1,11 +1,16 @@
 import numpy as np
 
 class ScheduledOptim():
-    def __init__(self, optimizer, d_model, n_warmup_steps):
+    def __init__(self, optimizer, d_model, args):
         self._optimizer = optimizer
-        self.n_warmup_steps = n_warmup_steps
+        self.n_warmup_steps = args.warmup
         self.n_current_steps = 0
-        self.init_lr = np.power(d_model, -0.5)
+        self.args = args
+        if self.args.train == 'first':
+            peak_lr = args.lr
+            self.init_lr = peak_lr * np.power(self.n_warmup_steps, 0.5)
+        else:
+            self.init_lr = np.power(d_model, -0.5)
     
     def step_and_update_lr(self):
         "Step with the inner optimizer"

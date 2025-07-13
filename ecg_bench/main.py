@@ -310,7 +310,7 @@ def main(rank, world_size):
         optimizer = ScheduledOptim(
             Adam(filter(lambda x: x.requires_grad, model.parameters()),
                  betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
-            model_object['model_hidden_size'], args.warmup)
+            model_object['model_hidden_size'], args)
         
         json_data_file = fm.open_json(f'./data/{args.data}.json')
         
