@@ -97,47 +97,7 @@ class BaseECGDataset(Dataset):
         
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
-
-    def _setup_system_prompt_rag(self, conv, filtered_rag_results):
-        """Approach 1: Put retrieved information in system prompt"""
-        if filtered_rag_results:
-            modified_system_prompt = f"{self.system_prompt}\n\n{filtered_rag_results}"
-            if self.args.dev:
-                print('=== System Prompt RAG Mode ===')
-                print('filtered_rag_results:', filtered_rag_results)
-                print('modified_system_prompt:', modified_system_prompt)
-                print('='*50)
-            conv.set_system_message(modified_system_prompt)
-        else:
-            conv.set_system_message(self.system_prompt)
-        return conv
-
-    def _setup_user_query_rag(self, conv, filtered_rag_results):
-        """Approach 2: Put retrieved information in user's query"""
-        conv.set_system_message(self.system_prompt)
-        if filtered_rag_results:
-            if self.args.dev:
-                print('=== User Query RAG Mode ===')
-                print('filtered_rag_results:', filtered_rag_results)
-                print('Will be added to first user query')
-                print('='*50)
-            # Store RAG results to be prepended to the first user query
-            self.current_rag_results = f"{filtered_rag_results}"
-        return conv
-
-    def _setup_separate_rag(self, conv, filtered_rag_results):
-        """Approach 3: Put retrieved information as separate message"""
-        conv.set_system_message(self.system_prompt)
-        if filtered_rag_results:
-            if self.args.dev:
-                print('=== Separate RAG Mode ===')
-                print('filtered_rag_results:', filtered_rag_results)
-                print('Added as separate assistant message')
-                print('='*50)
-            # Store RAG results to be added as a separate assistant message
-            self.current_rag_results = f"{filtered_rag_results}"
-        return conv
-
+        
     def setup_conversation_template(self, signal = None):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
@@ -148,16 +108,17 @@ class BaseECGDataset(Dataset):
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
             if self.args.rag:
-                rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='combined')
+                rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
                 filtered_rag_results = self.rag_db.format_search(rag_results)
-                if self.args.rag_prompt_mode == 'system_prompt':
-                    conv = self._setup_system_prompt_rag(conv, filtered_rag_results)
-                elif self.args.rag_prompt_mode == 'user_query':
-                    conv = self._setup_user_query_rag(conv, filtered_rag_results)
-                elif self.args.rag_prompt_mode == 'separate':
-                    conv = self._setup_separate_rag(conv, filtered_rag_results)
+                modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+                if self.args.dev:
+                    print('filtered_rag_results', filtered_rag_results)
+                    print('modified_system_prompt', modified_system_prompt)
+                    
+                conv.set_system_message(modified_system_prompt)
             else:
                 conv.set_system_message(self.system_prompt)
+            
         return conv
         
     def process_altered_text(self, altered_text):
@@ -182,23 +143,8 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
-                if hasattr(self, 'current_rag_results') and self.current_rag_results:
-                    if self.args.rag_prompt_mode == 'user_query':
-                        message_value = f"<signal>\n{self.current_rag_results}{message_value}"
-                    elif self.args.rag_prompt_mode == 'separate':
-                        conv.append_message(conv.roles[1], self.current_rag_results)
-                        message_value = f"<signal>\n{message_value}"
-                    self.current_rag_results = None  # Clear after using
-                else:
-                    message_value = f"<signal>\n{message_value}"
+                message_value = f"<signal>\n{message_value}"
                 count += 1
-            
-            if self.args.dev:
-                print(f'=== Appending {message["from"]} message ===')
-                print('from:', message['from'])
-                print('value:', message_value)
-                print('='*50)
-                
             conv.append_message(role, message_value)
         return conv
     
@@ -244,43 +190,26 @@ class BaseECGDataset(Dataset):
                         break
         
         return assistant_ranges
-
-    def create_labels_from_responses(self, input_ids, altered_text, conv=None):
+    
+    def create_labels_from_responses(self, input_ids, altered_text):
         labels = [-100] * len(input_ids)
         _, _, eot_id = self.get_special_token_ids()
         
-        
-        if conv is not None:
-            for role, message in conv.messages:
-                if role == conv.roles[1]:  # Assistant role
-                    if message:  
-                        response_tokens = self.llm_tokenizer.encode(message, add_special_tokens=False)
-                        
-                        if len(response_tokens) > 0:
-                            first_token = response_tokens[0]
-                            possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
-                            
-                            for start in possible_starts:
-                                if start + len(response_tokens) <= len(input_ids):
-                                    if input_ids[start:start+len(response_tokens)] == response_tokens:
-                                        labels[start:start+len(response_tokens)] = response_tokens
-                                        break
-        else:
-            for message in altered_text:
-                if message['from'].lower() in ['assistant', 'model', 'gpt']:
-                    response = message['value']
-                    response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+        for message in altered_text:
+            if message['from'].lower() in ['assistant', 'model', 'gpt']:
+                response = message['value']
+                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+                
+                if len(response_tokens) > 0:
+                    first_token = response_tokens[0]
                     
-                    if len(response_tokens) > 0:
-                        first_token = response_tokens[0]
-                        
-                        possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
-                        
-                        for start in possible_starts:
-                            if start + len(response_tokens) <= len(input_ids):
-                                if input_ids[start:start+len(response_tokens)] == response_tokens:
-                                    labels[start:start+len(response_tokens)] = response_tokens
-                                    break
+                    possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
+                    
+                    for start in possible_starts:
+                        if start + len(response_tokens) <= len(input_ids):
+                            if input_ids[start:start+len(response_tokens)] == response_tokens:
+                                labels[start:start+len(response_tokens)] = response_tokens
+                                break
         
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
@@ -453,7 +382,7 @@ class End2EndECGChatDataset(BaseECGDataset):
             padding_length = self.args.pad_to_max - len(input_ids)
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
         
-        labels = self.create_labels_from_responses(input_ids, altered_text, conv)
+        labels = self.create_labels_from_responses(input_ids, altered_text)
         
         if self.args.dev:
             labels_np = np.array(labels)
@@ -553,7 +482,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
         input_ids = tokens_before + self.signal_id + tokens_after
-        labels = self.create_labels_from_responses(input_ids, altered_text, conv)
+        labels = self.create_labels_from_responses(input_ids, altered_text)
         
         input_ids = self.pad_to_max_chat(input_ids)
         signal_id_index = input_ids.index(self.signal_id[0])
@@ -562,7 +491,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
             
         assert len(input_ids) == self.args.pad_to_max, f"Expected length {self.args.pad_to_max}, got {len(input_ids)}"
         assert len(input_ids) == len(labels), "Tokens and labels length mismatch"
-
+        
         if self.args.dev:
             labels_np = np.array(labels)
             non_neg_indices = np.where(labels_np != -100)[0]
