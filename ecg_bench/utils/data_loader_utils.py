@@ -152,6 +152,7 @@ class BaseECGDataset(Dataset):
                             message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
                         elif self.args.retrieved_information == 'report':
                             message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+
                     elif self.args.retrieval_base == 'signal':
                         rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
                         filtered_rag_results = self.rag_db.format_search(rag_results)
@@ -159,6 +160,7 @@ class BaseECGDataset(Dataset):
                             message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
                         elif self.args.retrieved_information == 'report':
                             message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+                            
                     elif self.args.retrieval_base == 'feature':
                         rag_results = self.rag_db.search_similar(query_features=feature, k=self.args.rag_k, mode=self.args.retrieval_base)
                         filtered_rag_results = self.rag_db.format_search(rag_results)
