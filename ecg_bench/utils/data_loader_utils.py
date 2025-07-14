@@ -98,47 +98,8 @@ class BaseECGDataset(Dataset):
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
 
-    def _setup_system_prompt_rag(self, conv, filtered_rag_results):
-        """Approach 1: Put retrieved information in system prompt"""
-        if filtered_rag_results:
-            modified_system_prompt = f"{self.system_prompt}\n\n{filtered_rag_results}"
-            if self.args.dev:
-                print('=== System Prompt RAG Mode ===')
-                print('filtered_rag_results:', filtered_rag_results)
-                print('modified_system_prompt:', modified_system_prompt)
-                print('='*50)
-            conv.set_system_message(modified_system_prompt)
-        else:
-            conv.set_system_message(self.system_prompt)
-        return conv
 
-    def _setup_user_query_rag(self, conv, filtered_rag_results):
-        """Approach 2: Put retrieved information in user's query"""
-        conv.set_system_message(self.system_prompt)
-        if filtered_rag_results:
-            if self.args.dev:
-                print('=== User Query RAG Mode ===')
-                print('filtered_rag_results:', filtered_rag_results)
-                print('Will be added to first user query')
-                print('='*50)
-            # Store RAG results to be prepended to the first user query
-            self.current_rag_results = f"{filtered_rag_results}"
-        return conv
-
-    def _setup_separate_rag(self, conv, filtered_rag_results):
-        """Approach 3: Put retrieved information as separate message"""
-        conv.set_system_message(self.system_prompt)
-        if filtered_rag_results:
-            if self.args.dev:
-                print('=== Separate RAG Mode ===')
-                print('filtered_rag_results:', filtered_rag_results)
-                print('Added as separate assistant message')
-                print('='*50)
-            # Store RAG results to be added as a separate assistant message
-            self.current_rag_results = f"{filtered_rag_results}"
-        return conv
-
-    def setup_conversation_template(self, signal = None):
+    def setup_conversation_template(self, signal = None,feature=None):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         elif 'qwen' in self.args.model:
@@ -147,15 +108,14 @@ class BaseECGDataset(Dataset):
             conv = get_conv_template('gemma')
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
-            if self.args.rag:
-                rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='combined')
+            if self.args.rag and self.args.rag_prompt_mode == 'system_prompt': 
+                rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
                 filtered_rag_results = self.rag_db.format_search(rag_results)
-                if self.args.rag_prompt_mode == 'system_prompt':
-                    conv = self._setup_system_prompt_rag(conv, filtered_rag_results)
-                elif self.args.rag_prompt_mode == 'user_query':
-                    conv = self._setup_user_query_rag(conv, filtered_rag_results)
-                elif self.args.rag_prompt_mode == 'separate':
-                    conv = self._setup_separate_rag(conv, filtered_rag_results)
+                modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+                if self.args.dev:
+                    print('filtered_rag_results', filtered_rag_results)
+                    print('modified_system_prompt', modified_system_prompt)
+                conv.set_system_message(modified_system_prompt)
             else:
                 conv.set_system_message(self.system_prompt)
         return conv
@@ -181,24 +141,34 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<image>', '')
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
+            if self.args.retrieval_base in ['feature', 'combined']:
+                feature=self.rag_db.feature_extractor.extract_features(signal)
             if is_human and count == 0:
-                if hasattr(self, 'current_rag_results') and self.current_rag_results:
-                    if self.args.rag_prompt_mode == 'user_query':
-                        message_value = f"<signal>\n{self.current_rag_results}{message_value}"
-                    elif self.args.rag_prompt_mode == 'separate':
-                        conv.append_message(conv.roles[1], self.current_rag_results)
-                        message_value = f"<signal>\n{message_value}"
-                    self.current_rag_results = None  # Clear after using
+                if self.args.rag and self.args.rag_prompt_mode == 'user_query':
+                    if self.args.retrieval_base == 'combined':
+                        rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
+                        filtered_rag_results = self.rag_db.format_search(rag_results)
+                        if self.args.retrieved_information == 'combined':
+                            message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
+                        elif self.args.retrieved_information == 'report':
+                            message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+                    elif self.args.retrieval_base == 'signal':
+                        rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
+                        filtered_rag_results = self.rag_db.format_search(rag_results)
+                        if self.args.retrieved_information == 'combined':
+                            message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
+                        elif self.args.retrieved_information == 'report':
+                            message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+                    elif self.args.retrieval_base == 'feature':
+                        rag_results = self.rag_db.search_similar(query_features=feature, k=self.args.rag_k, mode=self.args.retrieval_base)
+                        filtered_rag_results = self.rag_db.format_search(rag_results)
+                        if self.args.retrieved_information == 'combined':
+                            message_value = f"<signal>\nFeature Information:\sn{feature}\n\n{filtered_rag_results}\n{message_value}"
+                        elif self.args.retrieved_information == 'report':
+                            message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
                 else:
                     message_value = f"<signal>\n{message_value}"
                 count += 1
-            
-            if self.args.dev:
-                print(f'=== Appending {message["from"]} message ===')
-                print('from:', message['from'])
-                print('value:', message_value)
-                print('='*50)
-                
             conv.append_message(role, message_value)
         return conv
     
