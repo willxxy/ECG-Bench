@@ -67,7 +67,7 @@ class RAGECGDatabase:
         self.reports = [item['report'] for item in self.metadata]
         self.file_paths = [item['file_path'] for item in self.metadata]
         
-        print('RAG database loaded.')
+        print(f'RAG {self.args.retrieval_base} database loaded.')
         # Get dimensions from first vector in index
         first_vector = self.index.reconstruct(0)
         self.feature_dim = 288
@@ -238,12 +238,15 @@ class RAGECGDatabase:
             query_features = query_features.reshape(1, self.feature_dim)
             distances, indices = self.feature_index.search(query_features, k)
             original_indices = [int(self.index_mapping[idx]) for idx in indices[0]]
+
             
         elif mode == 'signal':
             self.signal_index.nprobe = nprobe
             query_signal = query_signal.reshape(1, -1)
             distances, indices = self.signal_index.search(query_signal, k)
+            print("🔍 DEBUG: Signal index search completed")
             original_indices = [int(self.signal_mapping[idx]) for idx in indices[0]]
+            print("🔍 DEBUG: Original index search completed")
             
         else:  # combined mode
             self.index.nprobe = nprobe
@@ -273,6 +276,8 @@ class RAGECGDatabase:
         return results
     
     def format_search(self, results, retrieved_information='combined'):
+        if retrieved_information not in ['feature', 'report', 'combined']:
+            raise ValueError("retrieved_information must be 'feature', 'report', or 'combined'")
         results = self.filter_results(results)
         output = f"The following is the top {len(results)} retrieved ECGs and their corresponding "
         

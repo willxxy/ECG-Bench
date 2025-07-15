@@ -99,25 +99,36 @@ class BaseECGDataset(Dataset):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
 
 
-    def setup_conversation_template(self, signal = None,feature=None):
+    def setup_conversation_template(self, signal = None):
         if 'llama' in self.args.model:
             conv = get_conv_template('llama-3')
         elif 'qwen' in self.args.model:
             conv = get_conv_template('qwen-7b-chat')
         elif 'gemma' in self.args.model:
             conv = get_conv_template('gemma')
+        feature=None
+        if self.args.retrieval_base in ['feature', 'combined']:
+            print("🔍 DEBUG: Extracting features")
+            feature=self.rag_db.feature_extractor.extract_features(signal)
+            print("🔍 DEBUG: Features extracted, shape: ", feature.shape)
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
             if self.args.rag and self.args.rag_prompt_mode == 'system_prompt': 
+                print("🔍 DEBUG: Setting ptompt for system_prompt modes")
                 rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
-                filtered_rag_results = self.rag_db.format_search(rag_results)
+                print("🔍 DEBUG: RAG results retrieved")
+                filtered_rag_results = self.rag_db.format_search(rag_results,self.args.retrieved_information)
+                print("🔍 DEBUG: RAG results formatted")
                 modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+                print("🔍 DEBUG: Modified system prompt set")
                 if self.args.dev:
                     print('filtered_rag_results', filtered_rag_results)
                     print('modified_system_prompt', modified_system_prompt)
                 conv.set_system_message(modified_system_prompt)
+                print("System prompt set!")
             else:
                 conv.set_system_message(self.system_prompt)
+                print("System prompt set!")
         return conv
         
     def process_altered_text(self, altered_text):
@@ -133,6 +144,7 @@ class BaseECGDataset(Dataset):
         
     def append_messages_to_conv(self, conv, altered_text, signal=None):
         count = 0
+        feature=None
         for message in altered_text:
             is_human = message['from'].lower() in ['human', 'user']
             role = conv.roles[0] if is_human else conv.roles[1]
@@ -141,37 +153,21 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<image>', '')
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if self.args.retrieval_base in ['feature', 'combined']:
+            if self.args.retrieval_base in ['feature', 'combined'] or self.args.retrieved_information in ['feature','combined']:
                 feature=self.rag_db.feature_extractor.extract_features(signal)
             if is_human and count == 0:
                 if self.args.rag and self.args.rag_prompt_mode == 'user_query':
-                    if self.args.retrieval_base == 'combined':
-                        rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
-                        filtered_rag_results = self.rag_db.format_search(rag_results)
-                        if self.args.retrieved_information == 'combined':
-                            message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
-                        elif self.args.retrieved_information == 'report':
-                            message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
-
-                    elif self.args.retrieval_base == 'signal':
-                        rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
-                        filtered_rag_results = self.rag_db.format_search(rag_results)
-                        if self.args.retrieved_information == 'combined':
-                            message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
-                        elif self.args.retrieved_information == 'report':
-                            message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
-                            
-                    elif self.args.retrieval_base == 'feature':
-                        rag_results = self.rag_db.search_similar(query_features=feature, k=self.args.rag_k, mode=self.args.retrieval_base)
-                        filtered_rag_results = self.rag_db.format_search(rag_results)
-                        if self.args.retrieved_information == 'combined':
-                            message_value = f"<signal>\nFeature Information:\sn{feature}\n\n{filtered_rag_results}\n{message_value}"
-                        elif self.args.retrieved_information == 'report':
-                            message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+                    rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
+                    filtered_rag_results = self.rag_db.format_search(rag_results,self.args.retrieved_information)
+                    if self.args.retrieved_information == 'combined':
+                        message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
+                    elif self.args.retrieved_information == 'report':
+                        message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
                 else:
                     message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
+        print("Message appended to conv!")
         return conv
     
     def get_input_tokens(self, conv):
@@ -236,6 +232,7 @@ class BaseECGDataset(Dataset):
                                 if start + len(response_tokens) <= len(input_ids):
                                     if input_ids[start:start+len(response_tokens)] == response_tokens:
                                         labels[start:start+len(response_tokens)] = response_tokens
+                                        print("response tokens matched!")
                                         break
         else:
             for message in altered_text:
@@ -396,9 +393,12 @@ class End2EndECGChatDataset(BaseECGDataset):
             return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
+        print("🔍 DEBUG: Preparing training end2end input")
         conv = self.setup_conversation_template(signal=ecg_signal)
+        print("🔍 DEBUG: Conversation template set!")
         altered_text = self.process_altered_text(altered_text)
         conv = self.append_messages_to_conv(conv, altered_text, ecg_signal)
+        print("🔍 DEBUG: Messages appended to conv!")
         
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
@@ -424,7 +424,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         if len(input_ids) < self.args.pad_to_max:
             padding_length = self.args.pad_to_max - len(input_ids)
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
-        
+        print("🔍 DEBUG: About to call create_labels_from_responses")
         labels = self.create_labels_from_responses(input_ids, altered_text, conv)
         
         if self.args.dev:
