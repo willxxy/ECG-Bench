@@ -82,7 +82,7 @@ class RAGECGDatabase:
     
     def _build_sub_indices(self):
             ntotal = self.index.ntotal
-            nlist = min(100, max(1, ntotal // 30))
+            nlist = min(100, max(1, ntotal // 30s))
             
             feature_vectors = np.zeros((ntotal, self.feature_dim), dtype=np.float32)
             signal_vectors = np.zeros((ntotal, self.signal_dim), dtype=np.float32)
@@ -311,7 +311,7 @@ class RAGECGDatabase:
                 output += "Feature Information:\n"
                 # Zip through feature names and feature values to format each line.
                 for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
-                    output += f"{feature_name}: {str(float(feature_value))}\n"
+                    output += f"{feature_name}: {format(float(feature_value), '.6f')}\n"
                 output += "\n"
 
             # Include diagnosis information based on retrieved_information

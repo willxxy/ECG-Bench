@@ -221,44 +221,24 @@ class BaseECGDataset(Dataset):
         
         return assistant_ranges
 
-    def create_labels_from_responses(self, input_ids, altered_text, conv=None):
+    def create_labels_from_responses(self, input_ids, altered_text):
         labels = [-100] * len(input_ids)
         _, _, eot_id = self.get_special_token_ids()
-        
-        
-        if conv is not None:
-            for role, message in conv.messages:
-                if role == conv.roles[1]:  # Assistant role
-                    if message:  
-                        response_tokens = self.llm_tokenizer.encode(message, add_special_tokens=False)
-                        
-                        if len(response_tokens) > 0:
-                            first_token = response_tokens[0]
-                            possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
-                            
-                            for start in possible_starts:
-                                if start + len(response_tokens) <= len(input_ids):
-                                    if input_ids[start:start+len(response_tokens)] == response_tokens:
-                                        labels[start:start+len(response_tokens)] = response_tokens
-                                        if self.args.dev:
-                                            print("🔍 DEBUG: response tokens matched!")
-                                        break
-        else:
-            for message in altered_text:
-                if message['from'].lower() in ['assistant', 'model', 'gpt']:
-                    response = message['value']
-                    response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+        for message in altered_text:
+            if message['from'].lower() in ['assistant', 'model', 'gpt']:
+                response = message['value']
+                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+                
+                if len(response_tokens) > 0:
+                    first_token = response_tokens[0]
                     
-                    if len(response_tokens) > 0:
-                        first_token = response_tokens[0]
-                        
-                        possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
-                        
-                        for start in possible_starts:
-                            if start + len(response_tokens) <= len(input_ids):
-                                if input_ids[start:start+len(response_tokens)] == response_tokens:
-                                    labels[start:start+len(response_tokens)] = response_tokens
-                                    break
+                    possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
+                    
+                    for start in possible_starts:
+                        if start + len(response_tokens) <= len(input_ids):
+                            if input_ids[start:start+len(response_tokens)] == response_tokens:
+                                labels[start:start+len(response_tokens)] = response_tokens
+                                break
         
         for i, token_id in enumerate(input_ids):
             if token_id == eot_id:
@@ -438,7 +418,7 @@ class End2EndECGChatDataset(BaseECGDataset):
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
         if self.args.dev:
             print("🔍 DEBUG: About to call create_labels_from_responses")
-        labels = self.create_labels_from_responses(input_ids, altered_text, conv)
+        labels = self.create_labels_from_responses(input_ids, altered_text)
         
         if self.args.dev:
             labels_np = np.array(labels)
@@ -538,7 +518,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
         input_ids = tokens_before + self.signal_id + tokens_after
-        labels = self.create_labels_from_responses(input_ids, altered_text, conv)
+        labels = self.create_labels_from_responses(input_ids, altered_text)
         
         input_ids = self.pad_to_max_chat(input_ids)
         signal_id_index = input_ids.index(self.signal_id[0])
