@@ -158,7 +158,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 5. Activate the environment `conda activate ecg`
 
-6. Install the `uv` package manager via `pip instal uv`.
+6. Install the `uv` package manager via `pip install uv`.
 
 6. `uv pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
 
