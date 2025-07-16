@@ -158,7 +158,9 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 5. Activate the environment `conda activate ecg`
 
-6. `pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
+6. Install the `uv` package manager via `pip instal uv`.
+
+6. `uv pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
 
 7. `git clone https://github.com/willxxy/ECG-Bench.git`
 
@@ -168,23 +170,23 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 10. `git submodule update`
 
-11. Please `cd` into the `ECG-Bench/transformers` directory and `pip install -e .`.
+11. Please `cd` into the `ECG-Bench/transformers` directory and `uv pip install -e .`.
 
-12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `pip install -e .`.
+12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `uv pip install -e .`.
 
-13. Now `cd ../` and `pip install -e .`
+13. Now `cd ../` and `uv pip install -e .`
 
 14. To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
 
     `pip cache remove flash_attn`
 
-    `pip install flash-attn==2.7.4.post1 --no-cache-dir`
+    `uv pip install flash-attn==2.7.4.post1`
 
 15. To install the `llm-blender` and `trl[judges]` packages please run the following commands:
 
-    `pip install git+https://github.com/yuchenlin/LLM-Blender.git`
+    `uv pip install git+https://github.com/yuchenlin/LLM-Blender.git`
 
-    `pip install trl[judges]`
+    `uv pip install trl[judges]`
 
 16. `cd` into `ECG-Bench/ecg_bench/representation/bpe` and execute `maturin develop --release` to compile the tokenizer.
 

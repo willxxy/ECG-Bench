@@ -301,7 +301,7 @@ class RAGECGDatabase:
                 output += "Feature Information:\n"
                 # Zip through feature names and feature values to format each line.
                 for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
-                    output += f"{feature_name}: {str(float(feature_value))}\n"
+                    output += f"{feature_name}: {str(round(float(feature_value), 6))}\n"
                 output += "\n"
         return output
     
