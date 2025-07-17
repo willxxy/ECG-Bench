@@ -85,6 +85,31 @@ class TrainingUtils:
         return_dict['find_unused_parameters'] = False
         return return_dict
     
+    def get_model_hidden_size(self, model):
+        """
+        Helper function to get hidden size from different model configurations.
+        Handles various model architectures including Gemma3.
+        """
+        config = model.llm.config
+        
+        # For Gemma3 models, check text_config first
+        if hasattr(config, 'text_config') and hasattr(config.text_config, 'hidden_size'):
+            return config.text_config.hidden_size
+        # For regular models, check hidden_size directly
+        elif hasattr(config, 'hidden_size'):
+            return config.hidden_size
+        # For some models, it might be in different attributes
+        elif hasattr(config, 'd_model'):
+            return config.d_model
+        elif hasattr(config, 'n_embd'):
+            return config.n_embd
+        else:
+            # Fallback: try to infer from model structure
+            if hasattr(model.llm, 'embed_tokens') and hasattr(model.llm.embed_tokens, 'embedding_dim'):
+                return model.llm.embed_tokens.embedding_dim
+            else:
+                raise AttributeError(f"Could not determine hidden size for model type: {type(config)}")
+    
     def get_llm(self):
         # Model configuration mapping
         model_configs = {
@@ -162,7 +187,7 @@ class TrainingUtils:
             'llm': llm,
             'llm_tokenizer': llm_tokenizer,
             'find_unused_parameters': False,
-            'model_hidden_size': llm.llm.config.hidden_size,
+            'model_hidden_size': self.get_model_hidden_size(llm),
             'strict': True
         }
         
