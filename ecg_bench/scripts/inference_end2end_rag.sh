@@ -4,12 +4,13 @@
 # data=("ecg_instruct_45k_mapped_1250")
 
 
-# for d in "${data[@]}"; do
-#     if [ "$d" = "ecg_instruct_pulse_mapped_1250" ]; then
-#         data_arg="ecg_bench_pulse_mapped_1250"
-#     else
-#         data_arg="$d"
-#     fi
+retrieval_base="signal"
+for d in "${data[@]}"; do
+    if [ "$d" = "ecg_instruct_pulse_mapped_1250" ]; then
+        data_arg="ecg_bench_pulse_mapped_1250"
+    else
+        data_arg="$d"
+    fi
     
 python main.py \
 --data=ecg_instruct_45k_mapped_1250 \

@@ -114,7 +114,9 @@ def create_save_path(args, fm):
         if args.rag:
             model_params.extend([
                 args.retrieval_base,
-                args.retrieved_information
+                args.retrieved_information,
+                args.rag_k,
+                args.rag_prompt_mode
             ])
             
         model_params.append(encoder_in)
@@ -253,7 +255,13 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         seed_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
         all_seed_results.append(seed_results)
         
-        with open(f"{args.checkpoint}/seed_{seed}_{args.perturb}_{args.rag}_{args.rag_k}.json", 'w') as f: # To indicate whether RAG is used during inference
+        # Construct filename based on args.rag
+        if args.rag:
+            filename = f"seed_{seed}_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}.json"
+        else:
+            filename = f"seed_{seed}_{args.perturb}_{args.rag}.json"
+            
+        with open(f"{args.checkpoint}/{filename}", 'w') as f:
             json.dump({
                 'averages': seed_results['metrics'],
                 'qa_results': seed_results['qa_results']
@@ -263,7 +271,13 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     statistical_results = train_utils.run_statistical_analysis(all_seed_results)
     print(f'Statistical results: {statistical_results}')
     
-    with open(f"{args.checkpoint}/statistical_results_{args.perturb}_{args.rag}_{args.rag_k}.json", 'w') as f:
+    # Update statistical results filename similarly
+    if args.rag:
+        stat_filename = f"statistical_results_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}.json"
+    else:
+        stat_filename = f"statistical_results_{args.perturb}_{args.rag}.json"
+        
+    with open(f"{args.checkpoint}/{stat_filename}", 'w') as f:
         json.dump(statistical_results, f)
 
 def collate_fn(batch):

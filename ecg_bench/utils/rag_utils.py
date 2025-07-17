@@ -46,20 +46,23 @@ class RAGECGDatabase:
         elif self.args.load_rag_db != None and self.args.load_rag_db_idx != None:
             print('Loading RAG database from file...')
             self.metadata = self.fm.open_json(self.args.load_rag_db)
-            # Initialize feature extractor for potential feature extraction
             self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
-            # Load the appropriate index based on retrieval_base
-            retrieval_base = getattr(self.args, 'retrieval_base', 'combined')
-            if retrieval_base in ['signal', 'feature', 'combined']:
-                # If specific index file is provided, use it; otherwise construct path
-                if self.args.load_rag_db_idx.endswith('.index'):
-                    self.index = faiss.read_index(self.args.load_rag_db_idx)
-                else:
-                    # Construct index path based on retrieval_base
-                    index_path = f"{self.args.load_rag_db_idx}/{retrieval_base}.index"
-                    self.index = faiss.read_index(index_path)
+            self.index = faiss.read_index(f"./data/mimic/combined.index")
+            if self.args.dev:
+                print("🔍 DEBUG: Combined index loaded directly")
+            self.feature_dim = 288
+            self.signal_dim = self.index.d - self.feature_dim
+            if self.args.retrieval_base == 'signal':
+                self.signal_index = faiss.read_index(self.args.load_rag_db_idx)
+                if self.args.dev:
+                    print("🔍 DEBUG: Signal index loaded directly")
+                
+            elif self.args.retrieval_base == 'feature':
+                self.feature_index = faiss.read_index(self.args.load_rag_db_idx)
+                if self.args.dev:
+                    print("🔍 DEBUG: Feature index loaded directly")            
             else:
-                self.index = faiss.read_index(self.args.load_rag_db_idx)
+                raise ValueError("Please provide a valid retrieval base.")
         else:
             print('Please either create a RAG datbse or load one in.')
         
@@ -67,13 +70,10 @@ class RAGECGDatabase:
         self.reports = [item['report'] for item in self.metadata]
         self.file_paths = [item['file_path'] for item in self.metadata]
         
-        print('RAG database loaded.')
-        # Get dimensions from first vector in index
-        first_vector = self.index.reconstruct(0)
-        self.feature_dim = 288
-        self.signal_dim = len(first_vector) - self.feature_dim
-        print('Building sub-indices...')
-        self._build_sub_indices()
+        print(f'RAG {self.args.retrieval_base} database loaded.')
+
+        # print('Building sub-indices...')
+        # self._build_sub_indices()
         
         print('features dim:', self.feature_dim)
         print('signals dim:', self.signal_dim)
@@ -82,7 +82,7 @@ class RAGECGDatabase:
     
     def _build_sub_indices(self):
             ntotal = self.index.ntotal
-            nlist = min(100, max(1, ntotal // 30))
+            nlist=min(100, max(1, ntotal // 30))
             
             feature_vectors = np.zeros((ntotal, self.feature_dim), dtype=np.float32)
             signal_vectors = np.zeros((ntotal, self.signal_dim), dtype=np.float32)
@@ -97,7 +97,7 @@ class RAGECGDatabase:
             self.feature_index = faiss.IndexIVFFlat(quantizer_feature, self.feature_dim, nlist)
             self.feature_index.train(feature_vectors)
             self.feature_index.add(feature_vectors)
-            self.index_mapping = np.arange(ntotal)
+            self.feature_mapping = np.arange(ntotal)
 
             # Build signal index
             quantizer_signal = faiss.IndexFlatL2(self.signal_dim)
@@ -167,29 +167,29 @@ class RAGECGDatabase:
         # Create and save feature index
         print('Creating feature index...')
         quantizer_feature = faiss.IndexFlatL2(feature_array.shape[1])
-        feature_index = faiss.IndexIVFFlat(quantizer_feature, feature_array.shape[1], nlist)
+        self.feature_index = faiss.IndexIVFFlat(quantizer_feature, feature_array.shape[1], nlist)
         print('Training feature index...')
-        feature_index.train(feature_array)
+        self.feature_index.train(feature_array)
         print('Adding vectors to feature index...')
-        feature_index.add(feature_array)
-        feature_index.make_direct_map()
+        self.feature_index.add(feature_array)
+        self.feature_index.make_direct_map()
         feature_path = f"./data/{self.args.base_data}/feature.index"
         print(f'Saving feature index to {feature_path}...')
-        faiss.write_index(feature_index, feature_path)
+        faiss.write_index(self.feature_index, feature_path)
         print('Feature index saved successfully!')
         
         # Create and save signal index
         print('Creating signal index...')
         quantizer_signal = faiss.IndexFlatL2(signal_array.shape[1])
-        signal_index = faiss.IndexIVFFlat(quantizer_signal, signal_array.shape[1], nlist)
+        self.signal_index = faiss.IndexIVFFlat(quantizer_signal, signal_array.shape[1], nlist)
         print('Training signal index...')
-        signal_index.train(signal_array)
+        self.signal_index.train(signal_array)
         print('Adding vectors to signal index...')
-        signal_index.add(signal_array)
-        signal_index.make_direct_map()
+        self.signal_index.add(signal_array)
+        self.signal_index.make_direct_map()
         signal_path = f"./data/{self.args.base_data}/signal.index"
         print(f'Saving signal index to {signal_path}...')
-        faiss.write_index(signal_index, signal_path)
+        faiss.write_index(self.signal_index, signal_path)
         print('Signal index saved successfully!')
         
         # Create and save combined index
@@ -237,20 +237,31 @@ class RAGECGDatabase:
             self.feature_index.nprobe = nprobe
             query_features = query_features.reshape(1, self.feature_dim)
             distances, indices = self.feature_index.search(query_features, k)
-            original_indices = [int(self.index_mapping[idx]) for idx in indices[0]]
-            
+            original_indices = indices[0]
+            if self.args.dev:
+                print("🔍 DEBUG: Feature index search completed")
         elif mode == 'signal':
+            if self.args.dev:
+                print("🔍 DEBUG: Signal index search started")
             self.signal_index.nprobe = nprobe
+            if self.args.dev:
+                print("🔍 DEBUG: Reshaping query signal")
             query_signal = query_signal.reshape(1, -1)
+            if self.args.dev:
+                print("🔍 DEBUG: Computing distances and indices")
             distances, indices = self.signal_index.search(query_signal, k)
-            original_indices = [int(self.signal_mapping[idx]) for idx in indices[0]]
+            if self.args.dev:
+                print("🔍 DEBUG: Signal index search completed")
+            original_indices = indices[0]
+            if self.args.dev:
+                print("🔍 DEBUG: Original index search completed")
             
         else:  # combined mode
             self.index.nprobe = nprobe
             query_combined = np.hstack([query_features, query_signal])
             query_combined = query_combined.reshape(1, -1)
             distances, indices = self.index.search(query_combined, k)
-            original_indices = [int(idx) for idx in indices[0]]
+            original_indices = indices[0]
 
 
     
@@ -273,7 +284,11 @@ class RAGECGDatabase:
         return results
     
     def format_search(self, results, retrieved_information='combined'):
+        if retrieved_information not in ['feature', 'report', 'combined']:
+            raise ValueError("retrieved_information must be 'feature', 'report', or 'combined'")
         results = self.filter_results(results)
+        if self.args.dev:
+            print(f"🔍 DEBUG   - Number of filtered results: {len(results)}")
         output = f"The following is the top {len(results)} retrieved ECGs and their corresponding "
         
         # Adjust the description based on retrieved_information
@@ -290,12 +305,7 @@ class RAGECGDatabase:
                 continue
             
             output += f"Retrieved ECG {idx+1}\n"
-            
-            # Include diagnosis information based on retrieved_information
-            if retrieved_information in ['report', 'combined']:
-                output += "Diagnosis Information:\n"
-                output += f"{res['report']}\n\n"
-            
+
             # Include feature information based on retrieved_information
             if retrieved_information in ['feature', 'combined']:
                 output += "Feature Information:\n"
@@ -303,6 +313,17 @@ class RAGECGDatabase:
                 for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
                     output += f"{feature_name}: {str(round(float(feature_value), 6))}\n"
                 output += "\n"
+
+            # Include diagnosis information based on retrieved_information
+            if retrieved_information in ['report', 'combined']:
+                output += "Diagnosis Information:\n"
+                output += f"{res['report']}\n\n"
+            
+            
+
+        if self.args.dev:
+            print("🔍 DEBUG: First 300 characters of formatted output:")
+            print(output[:300] + "..." if len(output) > 300 else output)
         return output
     
     def filter_results(self, results):
