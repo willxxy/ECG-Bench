@@ -82,7 +82,7 @@ class RAGECGDatabase:
     
     def _build_sub_indices(self):
             ntotal = self.index.ntotal
-            nlist = min(100, max(1, ntotal // 30s))
+            nlist=min(100, max(1, ntotal // 30))
             
             feature_vectors = np.zeros((ntotal, self.feature_dim), dtype=np.float32)
             signal_vectors = np.zeros((ntotal, self.signal_dim), dtype=np.float32)
