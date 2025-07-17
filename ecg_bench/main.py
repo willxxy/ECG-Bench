@@ -107,7 +107,8 @@ def create_save_path(args, fm):
             args.image,
             args.augment_image,
             args.train_encoder,
-            args.rag
+            args.rag,
+            'user_input'
         ]
         
         if args.rag:
@@ -119,7 +120,7 @@ def create_save_path(args, fm):
             ])
             
         model_params.append(encoder_in)
-        model_config = '_'.join(str(param) for param in model_params)    
+        model_config = '_'.join(str(param) for param in model_params)
         save_path = os.path.join(base_dir, dataset_config, seed_dir, model_config)
         fm.ensure_directory_exists(folder=save_path)
         return save_path
@@ -324,7 +325,7 @@ def main(rank, world_size):
         optimizer = ScheduledOptim(
             Adam(filter(lambda x: x.requires_grad, model.parameters()),
                  betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
-            model_object['model_hidden_size'], args.warmup)
+            model_object['model_hidden_size'], args)
         
         json_data_file = fm.open_json(f'./data/{args.data}.json')
         

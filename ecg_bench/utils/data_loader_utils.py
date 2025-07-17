@@ -115,6 +115,7 @@ class BaseECGDataset(Dataset):
                 print("🔍 DEBUG: Features extracted, shape: ", feature.shape)
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
+<<<<<<< HEAD
             if self.args.rag and self.args.rag_prompt_mode == 'system_prompt': 
                 if self.args.dev:
                     print("🔍 DEBUG: Setting ptompt for system_prompt modes")
@@ -136,6 +137,20 @@ class BaseECGDataset(Dataset):
                 conv.set_system_message(self.system_prompt)
                 if self.args.dev:
                     print("🔍 DEBUG: System prompt set!")
+=======
+            # if self.args.rag:
+            #     rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+            #     filtered_rag_results = self.rag_db.format_search(rag_results)
+            #     modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+            #     if self.args.dev:
+            #         print('filtered_rag_results', filtered_rag_results)
+            #         print('modified_system_prompt', modified_system_prompt)
+                    
+            #     conv.set_system_message(modified_system_prompt)
+            # else:
+            conv.set_system_message(self.system_prompt)
+            
+>>>>>>> origin/main
         return conv
         
     def process_altered_text(self, altered_text):
@@ -163,6 +178,7 @@ class BaseECGDataset(Dataset):
             if self.args.retrieval_base in ['feature', 'combined'] or self.args.retrieved_information in ['feature','combined']:
                 feature=self.rag_db.feature_extractor.extract_features(signal)
             if is_human and count == 0:
+<<<<<<< HEAD
                 if self.args.rag and self.args.rag_prompt_mode == 'user_query':
                     rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
                     filtered_rag_results = self.rag_db.format_search(rag_results,self.args.retrieved_information)
@@ -170,6 +186,12 @@ class BaseECGDataset(Dataset):
                         message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
                     elif self.args.retrieved_information == 'report':
                         message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+=======
+                if self.args.rag:
+                    rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+                    filtered_rag_results = self.rag_db.format_search(rag_results)
+                    message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+>>>>>>> origin/main
                 else:
                     message_value = f"<signal>\n{message_value}"
                 count += 1
@@ -540,6 +562,21 @@ class SecondStageECGChatDataset(BaseECGDataset):
                 print("No valid labels found (all are -100)")
             print('='*100)
         
+<<<<<<< HEAD
+=======
+        if self.args.dev:
+            labels_np = np.array(labels)
+            non_neg_indices = np.where(labels_np != -100)[0]
+            if len(non_neg_indices) > 0:
+                non_neg_values = labels_np[non_neg_indices].tolist()
+                tokens = self.llm_tokenizer.convert_ids_to_tokens(non_neg_values)
+                for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)):
+                    print(f"{idx}: {token} -> {token_id}")
+            else:
+                print("No valid labels found (all are -100)")
+            print('='*100)
+        
+>>>>>>> origin/main
         position_ids = self.create_position_ids(input_ids)
         attention_mask = self.create_attention_mask(input_ids)
         

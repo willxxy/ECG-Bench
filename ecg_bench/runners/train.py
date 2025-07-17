@@ -68,7 +68,7 @@ def trainer(model, dataloader, optimizer, args, epoch):
 
         if args.dev:
             dev_count += 1
-            if dev_count == 10:
+            if dev_count == 100:
                 break
 
     average_loss = total_loss / len_of_batch if len_of_batch > 0 else float('inf')

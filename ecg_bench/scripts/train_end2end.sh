@@ -5,11 +5,11 @@ data=("ecg_instruct_45k_mapped_2500")
 
 for d in "${data[@]}"; do
     python main.py \
-    --data=$d \
+    --data=ecg-qa_ptbxl_mapped_1250 \
     --model=llama-3.2-1b-instruct \
-    --device=cuda:5 \
+    --device=cuda:1 \
     --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \
-    --seg_len=2500 \
+    --seg_len=1250 \
     --peft \
     --train=end2end \
     --system_prompt=./data/system_prompt_e2e.txt \
@@ -18,5 +18,5 @@ for d in "${data[@]}"; do
     --epochs=1 \
     --instance_normalize \
     --attn_implementation=flash_attention_2 \
-    --log
+    --dev
 done

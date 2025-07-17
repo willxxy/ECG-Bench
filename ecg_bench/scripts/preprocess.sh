@@ -17,11 +17,12 @@
 
 # ### MAPPING DATA
 # MAP_DATA_VALUES=("ecg_bench_pulse" "ecg_instruct_pulse" "pretrain_mimic" "ecg_instruct_45k" "ecg-qa_ptbxl" "ecg-qa_mimic-iv-ecg")
+MAP_DATA_VALUES=("ecg_instruct_45k")
 
-# for map_data in "${MAP_DATA_VALUES[@]}"; do
-#     echo "Processing map_data: $map_data"
-#     python preprocess_ecg.py --map_data=$map_data --seg_len=1250 --dev
-# done
+for map_data in "${MAP_DATA_VALUES[@]}"; do
+    echo "Processing map_data: $map_data"
+    python preprocess_ecg.py --map_data=$map_data --seg_len=1250
+done
 
 
 
@@ -32,5 +33,5 @@
 #     python preprocess_ecg.py --mix_data=$mix_data --dev
 # done
 
-base_data="mimic"
-python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --create_rag_db
+# base_data="mimic"
+# python preprocess_ecg.py --base_data=$base_data --seg_len=1250 --create_rag_db

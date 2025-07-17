@@ -43,3 +43,4 @@ qrcode==7.4.2
 gradio==5.31.0
 faiss-cpu==1.10.0
 termcolor==3.0.1
+pytest
