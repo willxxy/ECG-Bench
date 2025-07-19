@@ -1047,6 +1047,61 @@ class ECGFeatureExtractor:
         
         return np.array(features)
     
+    def extract_rag_features(self, ecg):
+        """
+        Extract a subset of features for RAG applications.
+        Keeps only: max, min, dominant_frequency, total_power, spectral_centroid, 
+        peak_frequency_power, Heart Rate Features, Wavelet Features, average_absolute_difference, root_mean_square_difference
+        """
+        features = []
+        
+        for lead in range(ecg.shape[0]):
+            lead_signal = ecg[lead, :]
+            
+            # Basic statistical features (only max and min)
+            features.extend([
+                np.max(lead_signal),
+                np.min(lead_signal)
+            ])
+            
+            # Frequency domain features
+            freqs, psd = signal.welch(lead_signal, fs=self.target_sf, nperseg=min(1024, len(lead_signal)))
+            total_power = np.sum(psd)
+            features.extend([
+                total_power,  # Total power
+                np.max(psd),  # Peak frequency power
+                freqs[np.argmax(psd)],  # Dominant frequency
+            ])
+            
+            # Spectral centroid with NaN handling
+            if total_power > 0:
+                spectral_centroid = np.sum(freqs * psd) / total_power
+            else:
+                spectral_centroid = 0
+            features.append(spectral_centroid)
+            
+            # Find peaks with robust thresholding
+            if np.max(lead_signal) != np.min(lead_signal):  # Avoid division by zero
+                peak_height = 0.3 * (np.max(lead_signal) - np.min(lead_signal)) + np.min(lead_signal)
+                min_distance = max(int(0.2 * self.target_sf), 1)  # Ensure positive distance
+                peaks, _ = signal.find_peaks(lead_signal, height=peak_height, distance=min_distance)
+            else:
+                peaks = []
+                
+            # Heart rate features
+            heart_rate_features = self._calculate_heart_rate_features(lead_signal, peaks)
+            features.extend(heart_rate_features)
+            
+            # Wavelet features
+            wavelet_features = self._calculate_wavelet_features(lead_signal)
+            features.extend(wavelet_features)
+            
+            # Non-linear features
+            features.append(np.mean(np.abs(np.diff(lead_signal))))  # Average absolute difference
+            features.append(np.sqrt(np.mean(np.square(np.diff(lead_signal)))))  # Root mean square of successive differences
+        
+        return np.array(features)
+    
     def _calculate_heart_rate_features(self, ecg, peaks):
         if len(peaks) > 1:
             # Heart rate
@@ -1118,4 +1173,58 @@ class ECGFeatureExtractor:
             return ecg[st_point] - ecg[peaks[-1]]
         return 0
         
+    def signal_lead_normalization(ecg):
+        """
+        Normalize each lead individually using z-score normalization.
+        """
+        if ecg.shape[0] == 12: 
+            ecg = ecg.T
+            transpose_back = True
+        else:
+            transpose_back = False
+        
+        normalized_ecg = np.zeros_like(ecg, dtype=np.float32)
+        
+        for lead_idx in range(12):
+            lead_signal = ecg[:, lead_idx]
+            lead_mean = np.mean(lead_signal)
+            lead_std = np.std(lead_signal) + 1e-10
+            normalized_ecg[:, lead_idx] = (lead_signal - lead_mean) / lead_std
+
+        if transpose_back:
+            normalized_ecg = normalized_ecg.T
+        
+        return normalized_ecg
+        
+    def feature_normalization(self, rag_features):
+        """
+        Normalize RAG features using z-score normalization.
+        """
+        features_per_lead = len(self.ecg_feature_list)
+        expected_total_features = 12 * features_per_lead
+        
+        if rag_features.ndim != 1:
+            raise ValueError(f"Expected 1D array, got shape {rag_features.shape}")
+        
+        if len(rag_features) != expected_total_features:
+            raise ValueError(f"Expected {expected_total_features} features for 12-lead ECG, got {len(rag_features)}")
+        
+        normalized_features = np.zeros_like(rag_features, dtype=np.float32)
+        
+        for feature_idx, feature_name in enumerate(self.ecg_feature_list):
+            feature_values = []
+            for lead_idx in range(12):
+                feature_pos = lead_idx * features_per_lead + feature_idx
+                feature_values.append(rag_features[feature_pos])
+            
+            feature_values = np.array(feature_values)
+            
+            feature_mean = np.mean(feature_values)
+            feature_std = np.std(feature_values) + 1e-10 
+            
+            for lead_idx in range(12):
+                feature_pos = lead_idx * features_per_lead + feature_idx
+                normalized_features[feature_pos] = (rag_features[feature_pos] - feature_mean) / feature_std
+        
+        return normalized_features
     

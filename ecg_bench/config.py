@@ -60,6 +60,7 @@ def get_args():
     mode_group.add_argument('--retrieved_information', type=str, default='combined', choices=['feature', 'report', 'combined'], help='Type of information to retrieve in output')
     mode_group.add_argument('--load_rag_db', type = str, default = None, help = 'Load a RAG database')
     mode_group.add_argument('--load_rag_db_idx', type = str, default = None, help = 'Load a RAG database index')
+    mode_group.add_argument('--normalized_rag_feature', action='store_true', default=True, help='Enable normalization for RAG features and signals')
     mode_group.add_argument('--dev', action='store_true', default=None, help='Development mode')
     mode_group.add_argument('--log', action='store_true', default=None, help='Enable logging')
     

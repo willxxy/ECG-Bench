@@ -10,13 +10,13 @@ class RAGECGDatabase:
         self.args = args
         self.fm = fm
         self.ecg_feature_list = [
-                    "mean",
-                    "std",
+                    # "mean",
+                    # "std",
                     "max",
                     "min",
-                    "median",
-                    "25th percentile",
-                    "75th percentile",
+                    # "median",
+                    # "25th percentile",
+                    # "75th percentile",
                     "total power",
                     "peak frequency power",
                     "dominant frequency",
@@ -35,6 +35,7 @@ class RAGECGDatabase:
                     "average absolute difference",
                     "root mean square difference"
                 ]
+    
         
         print('Loading RAG database...')
         if self.args.create_rag_db:
@@ -47,11 +48,13 @@ class RAGECGDatabase:
             print('Loading RAG database from file...')
             self.metadata = self.fm.open_json(self.args.load_rag_db)
             self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
-            self.index = faiss.read_index(f"./data/mimic/combined.index")
+            self.index = faiss.read_index(f"./data/mimic/combined_normalized.index")
             if self.args.dev:
                 print("🔍 DEBUG: Combined index loaded directly")
-            self.feature_dim = 288
+            self.feature_dim = 12*len(self.ecg_feature_list)
             self.signal_dim = self.index.d - self.feature_dim
+            
+                
             if self.args.retrieval_base == 'signal':
                 self.signal_index = faiss.read_index(self.args.load_rag_db_idx)
                 if self.args.dev:
@@ -69,7 +72,8 @@ class RAGECGDatabase:
         print('Metadata loaded.')
         self.reports = [item['report'] for item in self.metadata]
         self.file_paths = [item['file_path'] for item in self.metadata]
-        
+        self.original_ecgs = [item['signal'] for item in self.metadata]
+        self.original_features = [item['features'] for item in self.metadata]
         print(f'RAG {self.args.retrieval_base} database loaded.')
 
         # print('Building sub-indices...')
@@ -78,8 +82,64 @@ class RAGECGDatabase:
         print('features dim:', self.feature_dim)
         print('signals dim:', self.signal_dim)
         print('total samples:', len(self.reports))
+        print(f'Normalization enabled: {self.args.normalized_rag_feature}')
         print('Index loaded.')
     
+    def query_signal_lead_normalization(self, signal):
+        """
+        Normalize each lead individually using z-score normalization.
+        """
+        if signal.shape[0] == 12: 
+            signal = signal.T
+            transpose_back = True
+        else:
+            transpose_back = False
+        
+        normalized_signal = np.zeros_like(signal, dtype=np.float32)
+
+        for lead_idx in range(12):
+            lead_signal = signal[:, lead_idx]
+            lead_mean = np.mean(lead_signal)
+            lead_std = np.std(lead_signal) + 1e-10
+            normalized_signal[:, lead_idx] = (lead_signal - lead_mean) / lead_std
+
+        if transpose_back:
+            normalized_signal = normalized_signal.T
+    
+        return normalized_signal
+    
+    def query_feature_normalization(self, rag_features):
+        """
+        Normalize RAG features using z-score normalization.
+        """
+        features_per_lead = len(self.ecg_feature_list)
+        expected_total_features = 12 * features_per_lead
+        
+        if rag_features.ndim != 1:
+            raise ValueError(f"Expected 1D array, got shape {rag_features.shape}")
+        
+        if len(rag_features) != expected_total_features:
+            raise ValueError(f"Expected {expected_total_features} features for 12-lead ECG, got {len(rag_features)}")
+        
+        normalized_features = np.zeros_like(rag_features, dtype=np.float32)
+        
+        for feature_idx, feature_name in enumerate(self.ecg_feature_list):
+            feature_values = []
+            for lead_idx in range(12):
+                feature_pos = lead_idx * features_per_lead + feature_idx
+                feature_values.append(rag_features[feature_pos])
+            
+            feature_values = np.array(feature_values)
+            
+            feature_mean = np.mean(feature_values)
+            feature_std = np.std(feature_values) + 1e-10 
+            
+            for lead_idx in range(12):
+                feature_pos = lead_idx * features_per_lead + feature_idx
+                normalized_features[feature_pos] = (rag_features[feature_pos] - feature_mean) / feature_std
+        
+        return normalized_features
+
     def _build_sub_indices(self):
             ntotal = self.index.ntotal
             nlist=min(100, max(1, ntotal // 30))
@@ -109,11 +169,10 @@ class RAGECGDatabase:
     def create_and_save_db(self):
         print('Initializing RAG database creation...')
         metadata = []
-        vectors_for_index = []
+        combined_vectors = []
         feature_vectors = []
         signal_vectors = []
-        
-        
+    
         npy_files = list(Path(self.preprocessed_dir).glob('*.npy'))
         if self.args.dev:
             npy_files = npy_files[:1000]
@@ -123,6 +182,7 @@ class RAGECGDatabase:
             print(f'Toy mode: Processing {len(npy_files)} files')
         
         print(f'Found {len(npy_files)} files to process')
+        print(f'Normalization enabled: {self.args.normalized_rag_feature}')
         print('Starting feature extraction from ECG signals...')
             
         for file_path in tqdm(npy_files, desc="Extracting features"):
@@ -130,33 +190,39 @@ class RAGECGDatabase:
                 data = self.fm.open_npy(file_path)
                 ecg = data['ecg']
                 report = data['report']
-                features = self.feature_extractor.extract_features(ecg)
-                
-                # Store vectors for different indices
-                feature_vector = features.flatten()
-                signal_vector = ecg.flatten()
-                combined_vector = np.hstack([feature_vector, signal_vector])
-                
-                feature_vectors.append(feature_vector)
-                signal_vectors.append(signal_vector)
-                vectors_for_index.append(combined_vector)
-                
+                features = self.feature_extractor.extract_rag_features(ecg).flatten()
                 # Store only metadata in JSON
                 metadata.append({
                     'report': report,
-                    'file_path': str(file_path)
+                    'file_path': str(file_path),
+                    'features': features,  
+                    'signal': ecg
                 })
+
+                if not self.args.normalized_rag_feature:
+                    signal_vector = ecg.flatten()
+                    feature_vector = features.flatten()
+                    
+                else:
+                    signal_vector = self.query_signal_lead_normalization(ecg).flatten()
+                    feature_vector = self.query_feature_normalization(features).flatten()
+
+                combined_vector = np.hstack([feature_vector, signal_vector])
+                signal_vectors.append(signal_vector)
+                feature_vectors.append(feature_vector)
+                combined_vectors.append(combined_vector)
+
+
             except Exception as e:
                 print(f"Error processing {file_path}: {str(e)}")
                 continue
-        
+
         print(f'Successfully processed {len(metadata)} files')
-        print('Converting vectors to arrays...')
-        
+ 
         # Convert to arrays
         feature_array = np.stack(feature_vectors)
         signal_array = np.stack(signal_vectors)
-        combined_array = np.stack(vectors_for_index)
+        combined_array = np.stack(combined_vectors)
 
         # Calculate optimal number of clusters based on dataset size
         ntotal = len(combined_array)
@@ -173,7 +239,7 @@ class RAGECGDatabase:
         print('Adding vectors to feature index...')
         self.feature_index.add(feature_array)
         self.feature_index.make_direct_map()
-        feature_path = f"./data/{self.args.base_data}/feature.index"
+        feature_path = f"./data/{self.args.base_data}/feature{'_normalized' if self.args.normalized_rag_feature else ''}.index"
         print(f'Saving feature index to {feature_path}...')
         faiss.write_index(self.feature_index, feature_path)
         print('Feature index saved successfully!')
@@ -187,7 +253,7 @@ class RAGECGDatabase:
         print('Adding vectors to signal index...')
         self.signal_index.add(signal_array)
         self.signal_index.make_direct_map()
-        signal_path = f"./data/{self.args.base_data}/signal.index"
+        signal_path = f"./data/{self.args.base_data}/signal{'_normalized' if self.args.normalized_rag_feature else 'unnormalized'}.index"
         print(f'Saving signal index to {signal_path}...')
         faiss.write_index(self.signal_index, signal_path)
         print('Signal index saved successfully!')
@@ -201,7 +267,7 @@ class RAGECGDatabase:
         print('Adding vectors to combined index...')
         self.index.add(combined_array)
         self.index.make_direct_map()
-        combined_path = f"./data/{self.args.base_data}/combined.index"
+        combined_path = f"./data/{self.args.base_data}/combined{'_normalized' if self.args.normalized_rag_feature else 'unnormalized'}.index"
         print(f'Saving combined index to {combined_path}...')
         faiss.write_index(self.index, combined_path)
         print('Combined index saved successfully!')
@@ -211,6 +277,7 @@ class RAGECGDatabase:
         print(f'Saving metadata to {metadata_path}...')
         self.fm.save_json(metadata, metadata_path)
         print('Metadata saved successfully!')
+        
         
         print('RAG database creation completed successfully!')
         print(f'Total samples: {len(metadata)}')
@@ -268,13 +335,9 @@ class RAGECGDatabase:
         # Prepare results using reconstructed vectors from index
         results = {}
         for i, (dist, idx) in enumerate(zip(distances[0], original_indices)):
-            full_vector = self.index.reconstruct(int(idx))
-            features = full_vector[:self.feature_dim]
-            signal = full_vector[self.feature_dim:]
-            
             result_dict = {
-                'signal': signal,
-                'feature': features,
+                'signal': self.original_ecgs[idx],
+                'feature': self.original_features[idx],
                 'report': self.reports[idx],
                 'distance': float(dist),
                 'file_path': self.file_paths[idx]
@@ -295,9 +358,11 @@ class RAGECGDatabase:
         if retrieved_information == 'feature':
             output += "features. Utilize this information to further enhance your response.\n\n"
         elif retrieved_information == 'report':
-            output += "diagnosis. Utilize this information to further enhance your response.\n\n"
+            output += "diagnosis. Utilize this information to further enhance your response. The lead order is I, II, III, aVL, aVR, aVF, V1, V2, V3, V4, V5, V6.\n\n"
         else:  # combined
-            output += "features and diagnosis. Utilize this information to further enhance your response.\n\n"
+            output += "features and diagnosis. Utilize this information to further enhance your response. The lead order is I, II, III, aVL, aVR, aVF, V1, V2, V3, V4, V5, V6.\n\n"
+        
+        features_per_lead = len(self.ecg_feature_list)
         
         for idx, res in results.items():
             # Filter out entries where all feature values are zero
@@ -309,23 +374,52 @@ class RAGECGDatabase:
             # Include feature information based on retrieved_information
             if retrieved_information in ['feature', 'combined']:
                 output += "Feature Information:\n"
-                # Zip through feature names and feature values to format each line.
-                for feature_name, feature_value in zip(self.ecg_feature_list, res['feature']):
-                    output += f"{feature_name}: {str(round(float(feature_value), 6))}\n"
+                
+                # Organize features by feature type across all leads
+                for feature_idx, feature_name in enumerate(self.ecg_feature_list):
+                    feature_values = []
+                    for lead_idx in range(12):
+                        feature_pos = lead_idx * features_per_lead + feature_idx
+                        feature_values.append(round(float(res['feature'][feature_pos]), 6))
+                    output += f"{feature_name}: {feature_values}\n"
                 output += "\n"
 
             # Include diagnosis information based on retrieved_information
             if retrieved_information in ['report', 'combined']:
                 output += "Diagnosis Information:\n"
                 output += f"{res['report']}\n\n"
-            
-            
-
+        
         if self.args.dev:
             print("🔍 DEBUG: First 300 characters of formatted output:")
             print(output[:300] + "..." if len(output) > 300 else output)
         return output
     
+    def convert_features_to_structured(self, feature_array):
+            """
+            Convert a flat feature array into a formatted string organized by feature type.
+            
+            Args:
+                feature_array: numpy array of shape (228,) containing RAG features for 12 leads
+                
+            Returns:
+                formatted_string: formatted string with feature names and arrays of 12 values
+            """
+            features_per_lead = len(self.ecg_feature_list)
+            
+            if len(feature_array) != 12 * features_per_lead:
+                raise ValueError(f"Expected {12 * features_per_lead} features, got {len(feature_array)}")
+            
+            formatted_output = ""
+            
+            for feature_idx, feature_name in enumerate(self.ecg_feature_list):
+                feature_values = []
+                for lead_idx in range(12):
+                    feature_pos = lead_idx * features_per_lead + feature_idx
+                    feature_values.append(round(float(feature_array[feature_pos]), 6))
+                formatted_output += f"{feature_name}: {feature_values}\n"
+            
+            return formatted_output
+        
     def filter_results(self, results):
         filtered_results = {}
         count = 0
@@ -349,26 +443,31 @@ class RAGECGDatabase:
         random_idx = np.random.randint(0, len(npy_files))
         query_signal = self.fm.open_npy(npy_files[random_idx])['ecg']
         print('query_signal', query_signal.shape)
+        
         # Flatten the signal to match the expected dimensions
-        query_signal = query_signal.flatten()
+        query_signal_flat = query_signal.flatten()
+        
         start_time = time.time()
         
         # Use retrieval_base parameter to determine search mode
         retrieval_base = getattr(self.args, 'retrieval_base', 'signal')
         if retrieval_base == 'feature':
             # Extract features for feature-based search
-            # Need to reshape back to 2D for feature extraction
-            query_signal_2d = query_signal.reshape(12, -1)
-            features = self.feature_extractor.extract_features(query_signal_2d)
+            features = self.feature_extractor.extract_rag_features(query_signal)
+            if self.args.normalized_rag_feature:
+                features = self.query_feature_normalization(features)
             results = self.search_similar(query_features=features, k=10, mode='feature')
         elif retrieval_base == 'combined':
             # Extract features for combined search
-            # Need to reshape back to 2D for feature extraction
-            query_signal_2d = query_signal.reshape(12, -1)
-            features = self.feature_extractor.extract_features(query_signal_2d)
-            results = self.search_similar(query_features=features, query_signal=query_signal, k=10, mode='combined')
+            features = self.feature_extractor.extract_rag_features(query_signal)
+            if self.args.normalized_rag_feature:
+                features = self.query_feature_normalization(features)
+                query_signal_flat = self.query_signal_lead_normalization(query_signal).flatten()
+            results = self.search_similar(query_features=features, query_signal=query_signal_flat, k=10, mode='combined')
         else:  # signal mode (default)
-            results = self.search_similar(query_signal=query_signal, k=10, mode='signal')
+            if self.args.normalized_rag_feature:
+                query_signal_flat = self.query_signal_lead_normalization(query_signal).flatten()
+            results = self.search_similar(query_signal=query_signal_flat, k=10, mode='signal')
             
         formatted_results = self.format_search(results, retrieved_information=getattr(self.args, 'retrieved_information', 'combined'))
         print(formatted_results)

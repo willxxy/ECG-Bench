@@ -110,7 +110,11 @@ class BaseECGDataset(Dataset):
         if self.args.retrieval_base in ['feature', 'combined']:
             if self.args.dev:
                 print("🔍 DEBUG: Extracting features")
-            feature=self.rag_db.feature_extractor.extract_features(signal)
+            original_feature=self.rag_db.feature_extractor.extract_rag_features(signal)
+            feature=original_feature
+            if self.args.normalized_rag_feature:
+                feature = self.rag_db.query_feature_normalization(original_feature)
+                signal = self.rag_db.query_signal_lead_normalization(signal)
             if self.args.dev:
                 print("🔍 DEBUG: Features extracted, shape: ", feature.shape)
             
@@ -161,13 +165,17 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if self.args.retrieval_base in ['feature', 'combined'] or self.args.retrieved_information in ['feature','combined']:
-                feature=self.rag_db.feature_extractor.extract_features(signal)
+                original_feature=self.rag_db.feature_extractor.extract_rag_features(signal)
+                feature=original_feature
+                if self.args.normalized_rag_feature:
+                    feature = self.rag_db.query_feature_normalization(original_feature)
+                    signal = self.rag_db.query_signal_lead_normalization(signal)
             if is_human and count == 0:
                 if self.args.rag and self.args.rag_prompt_mode == 'user_query':
                     rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
                     filtered_rag_results = self.rag_db.format_search(rag_results,self.args.retrieved_information)
                     if self.args.retrieved_information == 'combined':
-                        message_value = f"<signal>\nFeature Information:\n{feature}\n\n{filtered_rag_results}\n{message_value}"
+                        message_value = f"<signal>\nFeature Information:\n{self.rag_db.convert_features_to_structured(original_feature)}\n\n{filtered_rag_results}\n{message_value}"
                     elif self.args.retrieved_information == 'report':
                         message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
                 else:
