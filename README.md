@@ -148,7 +148,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 ## Installation <a name="installation"></a>
 
-1. To install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.79.0 -y`
+1. To install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.82.0 -y`
 
 2. Open a new terminal to set PATH for Rust installation.
 
