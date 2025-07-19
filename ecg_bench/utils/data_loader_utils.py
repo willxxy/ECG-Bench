@@ -107,17 +107,17 @@ class BaseECGDataset(Dataset):
             conv = get_conv_template('gemma')
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
-            # if self.args.rag:
-            #     rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
-            #     filtered_rag_results = self.rag_db.format_search(rag_results)
-            #     modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
-            #     if self.args.dev:
-            #         print('filtered_rag_results', filtered_rag_results)
-            #         print('modified_system_prompt', modified_system_prompt)
+            if self.args.rag:
+                rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
+                filtered_rag_results = self.rag_db.format_search(rag_results)
+                modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
+                if self.args.dev:
+                    print('filtered_rag_results', filtered_rag_results)
+                    print('modified_system_prompt', modified_system_prompt)
                     
-            #     conv.set_system_message(modified_system_prompt)
-            # else:
-            conv.set_system_message(self.system_prompt)
+                conv.set_system_message(modified_system_prompt)
+            else:
+                conv.set_system_message(self.system_prompt)
             
         return conv
         
@@ -143,12 +143,7 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
             if is_human and count == 0:
-                if self.args.rag:
-                    rag_results = self.rag_db.search_similar(query_signal=signal, k=self.args.rag_k, mode='signal')
-                    filtered_rag_results = self.rag_db.format_search(rag_results)
-                    message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
-                else:
-                    message_value = f"<signal>\n{message_value}"
+                message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
         return conv

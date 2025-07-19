@@ -108,7 +108,6 @@ def create_save_path(args, fm):
             args.augment_image,
             args.train_encoder,
             args.rag,
-            'user_input'
         ]
         
         if args.rag:

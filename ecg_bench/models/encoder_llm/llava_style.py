@@ -36,7 +36,7 @@ class LLaVA(nn.Module):
         llm_embeddings = self.llm.get_llm_embeddings(input_ids)
         batch_size = llm_embeddings.shape[0]
         batch_indices = torch.arange(batch_size, device=llm_embeddings.device)
-        llm_embeddings[batch_indices, batch['signal_id_index'], :] = projected_embeds
+        llm_embeddings[batch_indices, signal_id_index, :] = projected_embeds
         out = self.llm.generate_chat(
             input_ids=input_ids,
             attention_mask=attention_mask,

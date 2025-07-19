@@ -11,7 +11,7 @@ for c in "${checkpoint[@]}"; do
     python main.py \
     --data=ecg-qa_ptbxl_mapped_1250 \
     --model=merl_llama-3.2-1b-instruct \
-    --device=cuda:5 \
+    --device=cuda:0 \
     --seg_len=1250 \
     --peft \
     --inference=second \
