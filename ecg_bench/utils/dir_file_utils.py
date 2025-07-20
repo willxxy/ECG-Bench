@@ -21,18 +21,8 @@ class FileManager:
     @staticmethod
     def save_json(data: dict, path: Union[str, Path]):
         """Save a dictionary to a JSON file."""
-        def convert_numpy(obj):
-            if isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, dict):
-                return {key: convert_numpy(value) for key, value in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_numpy(item) for item in obj]
-            else:
-                return obj
-        
         with open(path, 'w') as f:
-            json.dump(convert_numpy(data), f)
+            json.dump(data, f)
     
     @staticmethod
     def get_system_prompt(system_prompt_path: Union[str, Path]):

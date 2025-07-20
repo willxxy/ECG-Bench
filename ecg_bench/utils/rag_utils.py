@@ -59,6 +59,8 @@ class RAGECGDatabase:
                 self.signal_index = faiss.read_index(self.args.load_rag_db_idx)         
             elif self.args.retrieval_base == 'feature':
                 self.feature_index = faiss.read_index(self.args.load_rag_db_idx)
+            elif self.args.retrieval_base == 'combined':
+                self.combined_index = faiss.read_index(self.args.load_rag_db_idx)
             else:
                 raise ValueError("Please provide a valid retrieval base.")
         else:
@@ -76,7 +78,7 @@ class RAGECGDatabase:
         print('signals dim:', self.signal_dim)
         print('total samples:', len(self.reports))
         print(f'Normalization enabled: {self.args.normalized_rag_feature}')
-        print('Index loaded.')
+        print(f'{self.args.retrieval_base} Index loaded.')
     
     def query_signal_lead_normalization(self, signal):
         """
@@ -133,14 +135,14 @@ class RAGECGDatabase:
         return normalized_features
 
     def _build_sub_indices(self):
-            ntotal = self.index.ntotal
+            ntotal = self.combined_index.ntotal
             nlist=min(100, max(1, ntotal // 30))
             
             feature_vectors = np.zeros((ntotal, self.feature_dim), dtype=np.float32)
             signal_vectors = np.zeros((ntotal, self.signal_dim), dtype=np.float32)
 
             for i in range(ntotal):
-                full_vector = self.index.reconstruct(i)
+                full_vector = self.combined_index.reconstruct(i)
                 feature_vectors[i] = full_vector[:self.feature_dim]
                 signal_vectors[i] = full_vector[self.feature_dim:]
 
@@ -250,15 +252,15 @@ class RAGECGDatabase:
         # Create and save combined index
         print('Creating combined index...')
         quantizer_combined = faiss.IndexFlatL2(combined_array.shape[1])
-        self.index = faiss.IndexIVFFlat(quantizer_combined, combined_array.shape[1], nlist)
+        self.combined_index = faiss.IndexIVFFlat(quantizer_combined, combined_array.shape[1], nlist)
         print('Training combined index...')
-        self.index.train(combined_array)
+        self.combined_index.train(combined_array)
         print('Adding vectors to combined index...')
-        self.index.add(combined_array)
-        self.index.make_direct_map()
+        self.combined_index.add(combined_array)
+        self.combined_index.make_direct_map()
         combined_path = f"./data/{self.args.base_data}/combined_{'normalized' if self.args.normalized_rag_feature else 'unnormalized'}.index"
         print(f'Saving combined index to {combined_path}...')
-        faiss.write_index(self.index, combined_path)
+        faiss.write_index(self.combined_index, combined_path)
         print('Combined index saved successfully!')
         
         # Save metadata JSON
@@ -301,10 +303,16 @@ class RAGECGDatabase:
             original_indices = indices[0]
             
         else:  # combined mode
-            self.index.nprobe = nprobe
-            query_combined = np.hstack([query_features*self.feature_weight, query_signal])
-            query_combined = query_combined.reshape(1, -1)
-            distances, indices = self.index.search(query_combined, k)
+            self.combined_index.nprobe = nprobe
+            query_features = query_features.reshape(1, self.feature_dim)
+            query_signal = query_signal.reshape(1, -1)
+            query_combined = np.hstack([query_features*self.feature_weight, query_signal]).reshape(1, -1)
+
+            print(f"Query combined shape: {query_combined.shape}")
+            print(f"Combined index dimension: {self.combined_index.d}")
+            print(f"Combined index total: {self.combined_index.ntotal}")
+            print(f"Query combined sample values: {query_combined[0, :5]}")
+            distances, indices = self.combined_index.search(query_combined, k)
             original_indices = indices[0]
 
         # Prepare results using reconstructed vectors from index
