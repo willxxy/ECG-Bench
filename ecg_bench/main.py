@@ -116,7 +116,8 @@ def create_save_path(args, fm):
                 args.retrieval_base,
                 args.retrieved_information,
                 args.rag_k,
-                args.rag_prompt_mode
+                args.rag_prompt_mode,
+                args.normalized_rag_feature
             ])
             
         model_params.append(encoder_in)
@@ -257,7 +258,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         
         # Construct filename based on args.rag
         if args.rag:
-            filename = f"seed_{seed}_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}.json"
+            filename = f"seed_{seed}_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}_{args.normalized_rag_feature}.json"
         else:
             filename = f"seed_{seed}_{args.perturb}_{args.rag}.json"
             
@@ -273,7 +274,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     
     # Update statistical results filename similarly
     if args.rag:
-        stat_filename = f"statistical_results_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}.json"
+        stat_filename = f"statistical_results_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}_{args.normalized_rag_feature}.json"
     else:
         stat_filename = f"statistical_results_{args.perturb}_{args.rag}.json"
         
