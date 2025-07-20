@@ -307,11 +307,6 @@ class RAGECGDatabase:
             query_features = query_features.reshape(1, self.feature_dim)
             query_signal = query_signal.reshape(1, -1)
             query_combined = np.hstack([query_features*self.feature_weight, query_signal]).reshape(1, -1)
-
-            print(f"Query combined shape: {query_combined.shape}")
-            print(f"Combined index dimension: {self.combined_index.d}")
-            print(f"Combined index total: {self.combined_index.ntotal}")
-            print(f"Query combined sample values: {query_combined[0, :5]}")
             distances, indices = self.combined_index.search(query_combined, k)
             original_indices = indices[0]
 
