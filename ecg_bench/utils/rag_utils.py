@@ -51,22 +51,14 @@ class RAGECGDatabase:
             print('Loading RAG database from file...')
             self.metadata = self.fm.open_json(self.args.load_rag_db)
             self.feature_extractor = ECGFeatureExtractor(self.args.target_sf)
-            if self.args.dev:
-                print("🔍 DEBUG: Combined index loaded directly")
             self.feature_dim = 12*len(self.ecg_feature_list)
             self.signal_dim = 12*self.args.seg_len
             self.feature_weight=np.sqrt(self.signal_dim/self.feature_dim)
             
-                
             if self.args.retrieval_base == 'signal':
-                self.signal_index = faiss.read_index(self.args.load_rag_db_idx)
-                if self.args.dev:
-                    print("🔍 DEBUG: Signal index loaded directly")
-                
+                self.signal_index = faiss.read_index(self.args.load_rag_db_idx)         
             elif self.args.retrieval_base == 'feature':
                 self.feature_index = faiss.read_index(self.args.load_rag_db_idx)
-                if self.args.dev:
-                    print("🔍 DEBUG: Feature index loaded directly")            
             else:
                 raise ValueError("Please provide a valid retrieval base.")
         else:
@@ -302,23 +294,11 @@ class RAGECGDatabase:
             query_features = query_features.reshape(1, self.feature_dim)
             distances, indices = self.feature_index.search(query_features, k)
             original_indices = indices[0]
-            if self.args.dev:
-                print("🔍 DEBUG: Feature index search completed")
         elif mode == 'signal':
-            if self.args.dev:
-                print("🔍 DEBUG: Signal index search started")
             self.signal_index.nprobe = nprobe
-            if self.args.dev:
-                print("🔍 DEBUG: Reshaping query signal")
             query_signal = query_signal.reshape(1, -1)
-            if self.args.dev:
-                print("🔍 DEBUG: Computing distances and indices")
             distances, indices = self.signal_index.search(query_signal, k)
-            if self.args.dev:
-                print("🔍 DEBUG: Signal index search completed")
             original_indices = indices[0]
-            if self.args.dev:
-                print("🔍 DEBUG: Original index search completed")
             
         else:  # combined mode
             self.index.nprobe = nprobe
@@ -349,8 +329,6 @@ class RAGECGDatabase:
         if retrieved_information not in ['feature', 'report', 'combined']:
             raise ValueError("retrieved_information must be 'feature', 'report', or 'combined'")
         results = self.filter_results(results)
-        if self.args.dev:
-            print(f"🔍 DEBUG   - Number of filtered results: {len(results)}")
         output = f"The following is the top {len(results)} retrieved ECGs and their corresponding "
         
         # Adjust the description based on retrieved_information

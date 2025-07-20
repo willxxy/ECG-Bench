@@ -108,38 +108,20 @@ class BaseECGDataset(Dataset):
             conv = get_conv_template('gemma')
         feature=None
         if self.args.retrieval_base in ['feature', 'combined']:
-            if self.args.dev:
-                print("🔍 DEBUG: Extracting features")
             original_feature=self.rag_db.feature_extractor.extract_rag_features(signal)
             feature=original_feature
             if self.args.normalized_rag_feature:
                 feature = self.rag_db.query_feature_normalization(original_feature)
                 signal = self.rag_db.query_signal_lead_normalization(signal)
-            if self.args.dev:
-                print("🔍 DEBUG: Features extracted, shape: ", feature.shape)
             
         if 'gemma' not in self.args.model and ('qwen' in self.args.model or 'llama' in self.args.model):
             if self.args.rag and self.args.rag_prompt_mode == 'system_prompt': 
-                if self.args.dev:
-                    print("🔍 DEBUG: Setting ptompt for system_prompt modes")
                 rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
-                if self.args.dev:
-                    print("🔍 DEBUG: RAG results retrieved")
                 filtered_rag_results = self.rag_db.format_search(rag_results,self.args.retrieved_information)
-                if self.args.dev:
-                    print("🔍 DEBUG: RAG results formatted")
                 modified_system_prompt = f"{self.system_prompt}\n{filtered_rag_results}"
-                if self.args.dev:
-                    print("🔍 DEBUG: Modified system prompt set")
-                    print('filtered_rag_results', filtered_rag_results)
-                    print('modified_system_prompt', modified_system_prompt)
                 conv.set_system_message(modified_system_prompt)
-                if self.args.dev:
-                    print("🔍 DEBUG: System prompt set!")
             else:
                 conv.set_system_message(self.system_prompt)
-                if self.args.dev:
-                    print("🔍 DEBUG: System prompt set!")
         return conv
         
     def process_altered_text(self, altered_text):
@@ -182,8 +164,6 @@ class BaseECGDataset(Dataset):
                     message_value = f"<signal>\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
-        if self.args.dev:
-            print("🔍 DEBUG: Message appended to conv!")
         return conv
     
     def get_input_tokens(self, conv):
@@ -390,16 +370,10 @@ class End2EndECGChatDataset(BaseECGDataset):
             return self.prepare_inference_end2end(ecg_signal, altered_text)
     
     def prepare_training_end2end(self, ecg_signal, altered_text):
-        if self.args.dev:
-            print("🔍 DEBUG: Preparing training end2end input")
         conv = self.setup_conversation_template(signal=ecg_signal)
-        if self.args.dev:
-            print("🔍 DEBUG: Conversation template set!")
         altered_text = self.process_altered_text(altered_text)
         conv = self.append_messages_to_conv(conv, altered_text, ecg_signal)
-        if self.args.dev:
-            print("🔍 DEBUG: Messages appended to conv!")
-        
+    
         tokens_before, tokens_after = self.get_input_tokens(conv)
         
         symbol_signal = self.train_utils.ecg_tokenizer_utils._to_symbol_string(ecg_signal)
@@ -424,8 +398,6 @@ class End2EndECGChatDataset(BaseECGDataset):
         if len(input_ids) < self.args.pad_to_max:
             padding_length = self.args.pad_to_max - len(input_ids)
             input_ids = [self.llm_tokenizer.pad_token_id] * padding_length + input_ids
-        if self.args.dev:
-            print("🔍 DEBUG: About to call create_labels_from_responses")
         labels = self.create_labels_from_responses(input_ids, altered_text)
         
         if self.args.dev:
