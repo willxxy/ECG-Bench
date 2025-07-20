@@ -157,11 +157,11 @@ class BaseECGDataset(Dataset):
                     rag_results = self.rag_db.search_similar(query_features=feature, query_signal=signal, k=self.args.rag_k, mode=self.args.retrieval_base)
                     filtered_rag_results = self.rag_db.format_search(rag_results,self.args.retrieved_information)
                     if self.args.retrieved_information == 'combined':
-                        message_value = f"<signal>\nFeature Information:\n{self.rag_db.convert_features_to_structured(original_feature)}\n\n{filtered_rag_results}\n{message_value}"
+                        message_value = f"<signal>\nFeature Information:\n{self.rag_db.convert_features_to_structured(original_feature)}\n\n{filtered_rag_results}Question:\n{message_value}"
                     elif self.args.retrieved_information == 'report':
-                        message_value = f"<signal>\n{filtered_rag_results}\n{message_value}"
+                        message_value = f"<signal>\n{filtered_rag_results}Question:\n{message_value}"
                 else:
-                    message_value = f"<signal>\n{message_value}"
+                    message_value = f"<signal>Question:\n{message_value}"
                 count += 1
             conv.append_message(role, message_value)
         return conv

@@ -228,7 +228,7 @@ class RAGECGDatabase:
         print('Adding vectors to feature index...')
         self.feature_index.add(feature_array)
         self.feature_index.make_direct_map()
-        feature_path = f"./data/{self.args.base_data}/feature_{'normalized' if self.args.normalized_rag_feature else ''}.index"
+        feature_path = f"./data/{self.args.base_data}/feature_{'normalized' if self.args.normalized_rag_feature else 'unnormalized'}.index"
         print(f'Saving feature index to {feature_path}...')
         faiss.write_index(self.feature_index, feature_path)
         print('Feature index saved successfully!')
@@ -328,14 +328,14 @@ class RAGECGDatabase:
     def format_search(self, results, retrieved_information='combined'):
         if retrieved_information not in ['feature', 'report', 'combined']:
             raise ValueError("retrieved_information must be 'feature', 'report', or 'combined'")
-        results = self.filter_results(results)
+        # results = self.filter_results(results)
         output = f"The following is the top {len(results)} retrieved ECGs and their corresponding "
         
         # Adjust the description based on retrieved_information
         if retrieved_information == 'feature':
-            output += "features. Utilize this information to further enhance your response.\n\n"
+            output += "features. Utilize this information to further enhance your response.\n\nThe lead order is I, II, III, aVL, aVR, aVF, V1, V2, V3, V4, V5, V6.\n\n"
         elif retrieved_information == 'report':
-            output += "diagnosis. Utilize this information to further enhance your response. The lead order is I, II, III, aVL, aVR, aVF, V1, V2, V3, V4, V5, V6.\n\n"
+            output += "diagnosis. Utilize this information to further enhance your response. \n\n"
         else:  # combined
             output += "features and diagnosis. Utilize this information to further enhance your response. The lead order is I, II, III, aVL, aVR, aVF, V1, V2, V3, V4, V5, V6.\n\n"
         
@@ -395,13 +395,11 @@ class RAGECGDatabase:
         filtered_results = {}
         count = 0
         for idx, res in results.items():
-            # Check if more than x% of values are exactly zero or if the sum is too small
             feature_array = np.array(res['feature'])
             zero_percentage = np.sum(np.abs(feature_array) < 1e-3) / len(feature_array)
-            total_magnitude = np.sum(np.abs(feature_array))
-            
-            # Filter out entries that are mostly zeros or have very low total magnitude
-            if zero_percentage > 0.5 or total_magnitude < 0.5:
+            # total_magnitude = np.sum(np.abs(feature_array))
+
+            if zero_percentage > 0.6:
                 continue
             
             filtered_results[count] = res
