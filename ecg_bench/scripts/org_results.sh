@@ -9,7 +9,10 @@ data=("ecg_instruct_45k_mapped_1250")
 # normalized_rag_features=True
 
 checkpoints=(
-    'llama-3.2-3b-instruct_2_1_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_True_combined_combined_1_system_prompt_True_False'
+    'llama-3.2-3b-instruct_2_1_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_True_feature_combined_1_system_prompt_True_False'
+    'llama-3.2-3b-instruct_2_1_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_True_feature_combined_1_system_prompt_None_False'
+    'llama-3.2-3b-instruct_2_1_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_True_signal_combined_1_system_prompt_True_False'
+    'llama-3.2-3b-instruct_2_1_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_None_None_None_True_signal_combined_1_system_prompt_None_False'
 )
 
 for d in "${data[@]}"; do

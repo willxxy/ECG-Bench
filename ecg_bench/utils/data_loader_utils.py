@@ -107,7 +107,7 @@ class BaseECGDataset(Dataset):
         elif 'gemma' in self.args.model:
             conv = get_conv_template('gemma')
         feature=None
-        if self.args.retrieval_base in ['feature', 'combined']:
+        if self.args.rag and self.args.retrieval_base in ['feature', 'combined']:
             original_feature=self.rag_db.feature_extractor.extract_rag_features(signal)
             feature=original_feature
             if self.args.normalized_rag_feature:
@@ -146,7 +146,7 @@ class BaseECGDataset(Dataset):
             message_value = message_value.replace('<image>', '')
             message_value = message_value.replace('<ecg>', '')
             message_value = message_value.replace('image', 'signal').replace('Image', 'Signal')
-            if self.args.retrieval_base in ['feature', 'combined'] or self.args.retrieved_information in ['feature','combined']:
+            if self.args.rag and (self.args.retrieval_base in ['feature', 'combined'] or self.args.retrieved_information in ['feature','combined']):
                 original_feature=self.rag_db.feature_extractor.extract_rag_features(signal)
                 feature=original_feature
                 if self.args.normalized_rag_feature:
