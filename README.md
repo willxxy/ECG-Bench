@@ -176,13 +176,13 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 14. Now `cd ../` and `uv pip install -e .`
 
-15. To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
+15. [OPTIONAL] To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
 
     `pip cache remove flash_attn`
 
     `uv pip install flash-attn==2.7.4.post1`
 
-16. To install the `llm-blender` and `trl[judges]` packages please run the following commands:
+16. [OPTIONAL] To install the `llm-blender` and `trl[judges]` packages please run the following commands:
 
     `uv pip install git+https://github.com/yuchenlin/LLM-Blender.git`
 

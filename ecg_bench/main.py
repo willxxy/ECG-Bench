@@ -16,7 +16,6 @@ from torch.utils.data.distributed import DistributedSampler
 import json
 import yaml
 import copy
-import llm_blender
 
 from ecg_bench.config import get_args
 from ecg_bench.utils.optim_utils import ScheduledOptim
@@ -381,6 +380,7 @@ def main(rank, world_size):
             
             if args.post_train != None:
                 ### FROM LLM-BLENDER
+                import llm_blender
                 judger = llm_blender.Blender()
                 judger.loadranker("llm-blender/PairRM", device = device, cache_dir = './../.huggingface')
                 dpo = DPO(beta = args.dpo_beta)
