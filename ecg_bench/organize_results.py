@@ -82,15 +82,30 @@ def collect_results(json_files):
         if info['is_seed']:
             metrics = process_seed_data(data)
             if info['rag_used']:
-                individual_seeds_rag[info['rag_k']][info['seed_num']] = metrics
-                config_info_rag[info['rag_k']] = info
+                rag_key = (
+                    info['rag_k'],
+                    info['retrieval_base'],
+                    info['retrieved_information'],
+                    info['rag_prompt_mode'],
+                    info['normalized_rag_feature']
+                )
+                individual_seeds_rag[rag_key][info['seed_num']] = metrics
+                config_info_rag[rag_key] = info
             else:
                 individual_seeds_no_rag[info['seed_num']] = metrics
                 config_info_no_rag = info
         else:
             if info['rag_used']:
-                statistical_rag[info['rag_k']] = data
-                config_info_rag[info['rag_k']] = info
+                rag_key = (
+                    info['rag_k'],
+                    info['retrieval_base'],
+                    info['retrieved_information'],
+                    info['rag_prompt_mode'],
+                    info['normalized_rag_feature']
+                )
+                statistical_rag[rag_key] = data
+                config_info_rag[rag_key] = info
+
             else:
                 statistical_no_rag = data
                 config_info_no_rag = info
@@ -147,10 +162,11 @@ def main():
     print_seed_results("Individual Seed Results without RAG:", individual_seeds_no_rag, config_info_no_rag)
     print_statistical_results("Statistical Results without RAG:", statistical_no_rag, config_info_no_rag)
     
-    for k in sorted(individual_seeds_rag.keys()):
-        config_info = config_info_rag.get(k)
-        print_seed_results(f"Individual Seed Results with RAG k={k}:", individual_seeds_rag[k], config_info)
-        print_statistical_results(f"Statistical Results with RAG k={k}:", statistical_rag.get(k, {}), config_info)
+    for rag_key in sorted(individual_seeds_rag.keys()):
+        config_info = config_info_rag.get(rag_key)
+        print_seed_results(f"Individual Seed Results with RAG config={rag_key}:", individual_seeds_rag[rag_key], config_info)
+        print_statistical_results(f"Statistical Results with RAG config={rag_key}:", statistical_rag.get(rag_key, {}), config_info)
+
 
     print('================================================')
 
