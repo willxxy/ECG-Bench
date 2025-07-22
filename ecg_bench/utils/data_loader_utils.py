@@ -234,7 +234,7 @@ class EncoderInputPreparation(BaseECGDataset):
     def __init__(self, encoder_tokenizer, train_utils):
         super().__init__(json_data_file=None, train_utils=train_utils, encoder_tokenizer=encoder_tokenizer)
 
-    def prepare_st_mem_input(self, ecg_signal):
+    def prepare_signal_input(self, ecg_signal):
         if self.args.instance_normalize:
             normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(ecg_signal)
         else:
@@ -335,7 +335,7 @@ class FirstStageECGDataset(BaseECGDataset):
             elif 'merl' in self.args.model:
                 return self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
             elif self.args.model in ['stmem', 'mtae', 'mlae']:
-                return self.encoder_prep.prepare_st_mem_input(ecg_signal)
+                return self.encoder_prep.prepare_signal_input(ecg_signal)
         except Exception as e:
             print(e)
             print(f"Skipping invalid data at index {idx}")
@@ -470,7 +470,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
         elif 'stmem' in self.args.model or 'mtae' in self.args.model or 'mlae' in self.args.model:
-            encoder_out = self.encoder_prep.prepare_st_mem_input(ecg_signal)
+            encoder_out = self.encoder_prep.prepare_signal_input(ecg_signal)
             
         if self.args.train == 'second' and self.args.inference is None:
             return self.prepare_training_second(encoder_out, altered_text)

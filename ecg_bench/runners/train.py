@@ -16,6 +16,8 @@ def trainer(model, dataloader, optimizer, args, epoch):
     len_of_batch = 0
     dev_count = 0
     
+    steps_to_save = 2500 if args.data == "ecg_instruct_45k_mapped_1250" else 50000
+    
     progress_bar = tqdm(dataloader, desc=f'Training {args.model}', disable=not show_progress)
     
     for step, batch in enumerate(progress_bar):
@@ -41,7 +43,7 @@ def trainer(model, dataloader, optimizer, args, epoch):
         if args.log:
             wandb.log({"train_step_loss": loss.item(), "epoch": epoch, "train_step": step})
 
-        if (step + 1) % 50000 == 0:
+        if (step + 1) % steps_to_save == 0:
             if args.dis:
                 dist.barrier()
                 if dist.get_rank() == 0:
@@ -68,7 +70,7 @@ def trainer(model, dataloader, optimizer, args, epoch):
 
         if args.dev:
             dev_count += 1
-            if dev_count == 100:
+            if dev_count == 10:
                 break
 
     average_loss = total_loss / len_of_batch if len_of_batch > 0 else float('inf')

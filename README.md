@@ -160,39 +160,39 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 6. Install the `uv` package manager via `pip install uv`.
 
-6. `uv pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
+7. `uv pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
 
-7. `git clone https://github.com/willxxy/ECG-Bench.git`
+8. `git clone https://github.com/willxxy/ECG-Bench.git`
 
-8. `cd ECG-Bench`
+9. `cd ECG-Bench`
 
-9. `git submodule init`
+10. `git submodule init`
 
-10. `git submodule update`
+11. `git submodule update`
 
-11. Please `cd` into the `ECG-Bench/transformers` directory and `uv pip install -e .`.
+12. Please `cd` into the `ECG-Bench/transformers` directory and `uv pip install -e .`.
 
-12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `uv pip install -e .`.
+13. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `uv pip install -e .`.
 
-13. Now `cd ../` and `uv pip install -e .`
+14. Now `cd ../` and `uv pip install -e .`
 
-14. To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
+15. To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
 
     `pip cache remove flash_attn`
 
     `uv pip install flash-attn==2.7.4.post1`
 
-15. To install the `llm-blender` and `trl[judges]` packages please run the following commands:
+16. To install the `llm-blender` and `trl[judges]` packages please run the following commands:
 
     `uv pip install git+https://github.com/yuchenlin/LLM-Blender.git`
 
     `uv pip install trl[judges]`
 
-16. `cd` into `ECG-Bench/ecg_bench/representation/bpe` and execute `maturin develop --release` to compile the tokenizer.
+17. `cd` into `ECG-Bench/ecg_bench/representation/bpe` and execute `maturin develop --release` to compile the tokenizer.
 
-17. Run all the tests by executing `python tests/run_all_tests.py`.
+18. Run all the tests by executing `python tests/run_all_tests.py`.
 
-18. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
+19. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
 
 
 **NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.**
