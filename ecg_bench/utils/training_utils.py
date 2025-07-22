@@ -61,25 +61,24 @@ class TrainingUtils:
     def get_llm_encoder(self):
         encoder_params = self.get_encoder()
         llm_params = self.get_llm()
-        from ecg_bench.models.encoder_llm.llava_style import LLaVA
-        if 'vit' in self.args.model:
+        
+        if any(key in self.args.model for key in ('vit', 'siglip', 'dinov2')):
             projection_dim = 768
+        elif any(key in self.args.model for key in ('stmem', 'mtae', 'mlae')):
+            projection_dim = 256
         elif 'clip' in self.args.model:
             projection_dim = 512
         elif 'merl' in self.args.model:
             projection_dim = 2048
-        elif 'siglip' in self.args.model:
-            projection_dim = 768
-        elif 'dinov2' in self.args.model:
-            projection_dim = 768
-        elif 'stmem' in self.args.model:
-            projection_dim = 256
-        elif 'mtae' in self.args.model:
-            projection_dim = 256
-        elif 'mlae' in self.args.model:
-            projection_dim = 256
-        llava = LLaVA(llm_params['llm'], encoder_params['encoder'], 
-                      projection_dim, llm_params['llm_tokenizer']).to(self.device)
+        elif 'encoderfree' in self.args.model:
+            projection_dim = self.args.seg_len * 12 # num leads
+        if 'encoderfree' in self.args.model:
+            from ecg_bench.models.encoder_llm.encoder_free_style import EncoderFree
+            llava = EncoderFree(llm_params['llm'], projection_dim, llm_params['llm_tokenizer']).to(self.device)
+        else:
+            from ecg_bench.models.encoder_llm.llava_style import LLaVA
+            llava = LLaVA(llm_params['llm'], encoder_params['encoder'], 
+                        projection_dim, llm_params['llm_tokenizer']).to(self.device)
         return_dict = {**encoder_params, **llm_params}
         return_dict['llava'] = llava
         return_dict['find_unused_parameters'] = False
@@ -255,6 +254,12 @@ class TrainingUtils:
             encoder = MLAE_Ours(encoder).to(self.device)
             find_unused_parameters = False # first
             model_hidden_size = 768
+            strict = False
+            encoder_tokenizer = None
+        elif 'encoderfree' in self.args.model:
+            encoder = None
+            find_unused_parameters = False # first
+            model_hidden_size = None
             strict = False
             encoder_tokenizer = None
         if self.args.encoder_checkpoint != None:

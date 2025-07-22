@@ -59,6 +59,7 @@ However, we further break down 2-Stage Training into 4 sub-methods:
 2. **2-Stage LLaVA**
 3. **2-Stage Finetune**
 4. **2-Stage End-to-End**
+5. **2-Stage EncoderFree**
 
 
 **2-Stage Scratch**
@@ -83,6 +84,11 @@ Another approach finetunes the general, pretrained image encoder `f_ECG` on eith
 **2-Stage End-to-End**
 
 In this approach, we train the LLM and `f_ECG` jointly with only an autoregressive objective. We find this approach to be not that effective, but [some previous works](https://arxiv.org/abs/2403.04945v3) have used it.
+
+**2-Stage EncoderFree**
+
+In this approach, `f_ECG` is simply a linear projection and we train both the LLM and `f_ECG` jointly with only an autoregressive objective. This is a naive approach to encoder free methods seen in [Fuyu-8B](https://www.adept.ai/blog/fuyu-8b), [Vision as LoRA](https://arxiv.org/abs/2503.20680), and [Unveiling Encoder-Free Vision-Language Models](https://arxiv.org/abs/2406.11832). The naivety comes from a simple flattening of the normalized signal `X_sig`, and feeding this flattened signal to the linear projection.
+
 
 **NOTE:** In all 2-stage approaches, the second stage trains the LLM with an autoregressive objective. The latent vector `z` from `f_ECG` is projected via `W` to `z′`, concatenated with the embedded query `Q`, and input to the LLM to generate the response `S`. Note that `W` is also trained for all 2-stage approaches.
 
@@ -806,6 +812,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [x] Make RAG searching faster.
 - [x] Make training with RAG faster.
 - [ ] Add encoder-free VLMs such as [Fuyu-8B](https://www.adept.ai/blog/fuyu-8b), [Vision as LoRA](https://arxiv.org/abs/2503.20680), and/or [Unveiling Encoder-Free Vision-Language Models](https://arxiv.org/abs/2406.11832) for ECGs. This could be extended for all training methods.
+    - [x] Naive encoder-free method supported.
 - [ ] Addition for new input representation: [ECG features](https://proceedings.mlr.press/v225/yu23b.html)
 - [ ] Reasoning ability for ELMs (akin to OpenAI o1, Deepseek R1, etc.).
 - [ ] Curate higher quality instruction tuning and reasoning datasets for ELMs.

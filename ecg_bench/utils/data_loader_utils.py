@@ -469,7 +469,7 @@ class SecondStageECGChatDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-        elif 'stmem' in self.args.model or 'mtae' in self.args.model or 'mlae' in self.args.model:
+        elif any(key in self.args.model for key in ('stmem', 'mtae', 'mlae', 'encoderfree')):
             encoder_out = self.encoder_prep.prepare_signal_input(ecg_signal)
             
         if self.args.train == 'second' and self.args.inference is None:
