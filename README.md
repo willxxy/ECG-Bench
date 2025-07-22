@@ -50,8 +50,8 @@ We use ECG-Byte’s compression schema to convert ECG signals into text. First, 
 ### ELM Training Paradigms
 We consider 2 broadly defined training paradigms for ELMs in this repository:
 
-1. **2-Stage Training** (can also be seen as Encoder methods)
-2. **End-to-End Training** (can also be seen as Encoder-Free methods)
+1. **2-Stage Training**
+2. **End-to-End Training**
 
 However, we further break down 2-Stage Training into 4 sub-methods:
 
