@@ -813,6 +813,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [x] Make training with RAG faster.
 - [ ] Add encoder-free VLMs such as [Fuyu-8B](https://www.adept.ai/blog/fuyu-8b), [Vision as LoRA](https://arxiv.org/abs/2503.20680), and/or [Unveiling Encoder-Free Vision-Language Models](https://arxiv.org/abs/2406.11832) for ECGs. This could be extended for all training methods.
     - [x] Naive encoder-free method supported.
+- Add [Sparsely-Gated Mixture-of-Experts ELM](https://arxiv.org/abs/1701.06538)
 - [ ] Addition for new input representation: [ECG features](https://proceedings.mlr.press/v225/yu23b.html)
 - [ ] Reasoning ability for ELMs (akin to OpenAI o1, Deepseek R1, etc.).
 - [ ] Curate higher quality instruction tuning and reasoning datasets for ELMs.
