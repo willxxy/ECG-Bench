@@ -72,9 +72,31 @@ class TrainingUtils:
             projection_dim = 2048
         elif 'encoderfree' in self.args.model:
             projection_dim = self.args.seg_len * 12 # num leads
+        elif 'fuyu8b' in self.args.model:
+            projection_dim = self.args.seg_len * 12
+
         if 'encoderfree' in self.args.model:
             from ecg_bench.models.encoder_llm.encoder_free_style import EncoderFree
             llava = EncoderFree(llm_params['llm'], projection_dim, llm_params['llm_tokenizer']).to(self.device)
+        elif "fuyu8b" in self.args.model:
+            from ecg_bench.models.encoder_llm.fuyu8b import Fuyu8B, FuyuECGWrapper
+            from transformers import FuyuForCausalLM, FuyuProcessor
+
+            fuyu_llm = FuyuForCausalLM.from_pretrained(
+                "adept/fuyu-8b",
+                cache_dir=self.cache_dir,
+                torch_dtype=torch.bfloat16,
+                device_map="auto"
+            ).to(self.device)
+
+            fuyu_model = Fuyu8B(
+                llm=fuyu_llm,
+                encoder=encoder_params["encoder"],  # Encoder-free
+                projection_dim=projection_dim,
+                tokenizer=llm_params['llm_tokenizer']
+            )
+
+            llava = FuyuECGWrapper(fuyu_model, self.args).to(self.device)
         else:
             from ecg_bench.models.encoder_llm.llava_style import LLaVA
             llava = LLaVA(llm_params['llm'], encoder_params['encoder'], 
@@ -110,77 +132,96 @@ class TrainingUtils:
                 raise AttributeError(f"Could not determine hidden size for model type: {type(config)}")
     
     def get_llm(self):
-        # Model configuration mapping
-        model_configs = {
-            'llama': {
-                'import_path': 'ecg_bench.models.llm.llama',
-                'class_name': 'llama',
-                'hf_path': 'meta-llama'
-            },
-            'opt': {
-                'import_path': 'ecg_bench.models.llm.opt',
-                'class_name': 'opt',
-                'hf_path': 'facebook'
-            },
-            'gpt2': {
-                'import_path': 'ecg_bench.models.llm.gpt2',
-                'class_name': 'gpt2',
-                'hf_path': 'openai-community'
-            },
-            'gemma': {
-                'import_path': 'ecg_bench.models.llm.gemma',
-                'class_name': 'gemma',
-                'hf_path': 'google'
-            },
-            'qwen': {
-                'import_path': 'ecg_bench.models.llm.qwen',
-                'class_name': 'qwen',
-                'hf_path': 'qwen'
-            }
-        }
+        if "fuyu8b" in self.args.model:
+            from transformers import FuyuProcessor, FuyuForCausalLM
 
-        model_key = next((key for key in model_configs.keys() if key.lower() in self.args.model.lower()), None)
-        if not model_key:
-            raise ValueError(f"Unsupported model: {self.args.model}")
-        
-        config = model_configs[model_key]
-        
-        module = __import__(config['import_path'], fromlist=[config['class_name']])
-        model_class = getattr(module, config['class_name'])
-        
-        if self.args.train == 'second' or self.args.inference == 'second':
-            llm_model_name = self.args.model.split('_')[1]
+            fuyu_processor = FuyuProcessor.from_pretrained("adept/fuyu-8b", cache_dir=self.cache_dir)
+            llm_tokenizer = fuyu_processor.tokenizer
+
+            hf_llm = FuyuForCausalLM.from_pretrained(
+                "adept/fuyu-8b",
+                cache_dir=self.cache_dir,
+                torch_dtype=torch.bfloat16,
+                attn_implementation=self.args.attn_implementation,
+            ).to(self.device)
+
         else:
-            llm_model_name = self.args.model
+            # Model configuration mapping
+            model_configs = {
+                'llama': {
+                    'import_path': 'ecg_bench.models.llm.llama',
+                    'class_name': 'llama',
+                    'hf_path': 'meta-llama'
+                },
+                'opt': {
+                    'import_path': 'ecg_bench.models.llm.opt',
+                    'class_name': 'opt',
+                    'hf_path': 'facebook'
+                },
+                'gpt2': {
+                    'import_path': 'ecg_bench.models.llm.gpt2',
+                    'class_name': 'gpt2',
+                    'hf_path': 'openai-community'
+                },
+                'gemma': {
+                    'import_path': 'ecg_bench.models.llm.gemma',
+                    'class_name': 'gemma',
+                    'hf_path': 'google'
+                },
+                'qwen': {
+                    'import_path': 'ecg_bench.models.llm.qwen',
+                    'class_name': 'qwen',
+                    'hf_path': 'qwen'
+                }
+            }
+
+            model_key = next((key for key in model_configs.keys() if key.lower() in self.args.model.lower()), None)
+            if not model_key:
+                raise ValueError(f"Unsupported model: {self.args.model}")
+            
+            config = model_configs[model_key]
+            
+            module = __import__(config['import_path'], fromlist=[config['class_name']])
+            model_class = getattr(module, config['class_name'])
+            
+            if self.args.train == 'second' or self.args.inference == 'second':
+                llm_model_name = self.args.model.split('_')[1]
+            else:
+                llm_model_name = self.args.model
+            
+            hf_llm = AutoModelForCausalLM.from_pretrained(
+                f"{config['hf_path']}/{llm_model_name}",
+                cache_dir=self.cache_dir,
+                torch_dtype=torch.bfloat16,
+                attn_implementation=self.args.attn_implementation,
+            ).to(self.device)
+            
+            llm_tokenizer = AutoTokenizer.from_pretrained(
+                f"{config['hf_path']}/{llm_model_name}",
+                cache_dir=self.cache_dir
+            )
         
-        hf_llm = AutoModelForCausalLM.from_pretrained(
-            f"{config['hf_path']}/{llm_model_name}",
-            cache_dir=self.cache_dir,
-            torch_dtype=torch.bfloat16,
-            attn_implementation=self.args.attn_implementation,
-        ).to(self.device)
-        
-        llm_tokenizer = AutoTokenizer.from_pretrained(
-            f"{config['hf_path']}/{llm_model_name}",
-            cache_dir=self.cache_dir
-        )
-    
         if self.args.train == 'end2end' or self.args.inference == 'end2end':
             vocab_keys = list(self.ecg_tokenizer_utils.vocab.keys())
         elif self.args.train == 'second' or self.args.inference == 'second':
             vocab_keys = None
-        
-        llm, llm_tokenizer = self.modify_llm_tokenizer(
-                hf_llm, 
-                llm_tokenizer, 
-                vocab_keys
-            )
-        
-        if self.args.peft:
+
+        if 'fuyu8b' not in self.args.model:
+            llm, llm_tokenizer = self.modify_llm_tokenizer(hf_llm, llm_tokenizer, vocab_keys)
+        else:
+            llm = hf_llm
+
+            if vocab_keys is None:
+                special_tokens = {'additional_special_tokens': ['<signal>']}
+                llm_tokenizer.add_special_tokens(special_tokens)
+                llm.resize_token_embeddings(len(llm_tokenizer))
+
+        if self.args.peft and 'fuyu8b' not in self.args.model:
             llm = get_peft_model(llm, self.get_lora_configs())
             llm.print_trainable_parameters()
-        
-        llm = model_class(llm, self.args).to(self.device)
+
+        if 'fuyu8b' not in self.args.model:
+            llm = model_class(llm, self.args).to(self.device)
         
         return {
             'llm': llm,
@@ -189,7 +230,15 @@ class TrainingUtils:
             'model_hidden_size': self.get_model_hidden_size(llm),
             'strict': True
         }
-        
+    
+    def get_model_hidden_size(self, model):
+        if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
+            return model.config.hidden_size
+        elif hasattr(model, 'config') and hasattr(model.config, 'd_model'):
+            return model.config.d_model
+        else:
+            return 4096 # typical hidden size for fuyu-8b
+
     def get_encoder(self):
         if 'clip' in self.args.model:
             from ecg_bench.models.encoder.clip import CLIP
@@ -256,7 +305,7 @@ class TrainingUtils:
             model_hidden_size = 768
             strict = False
             encoder_tokenizer = None
-        elif 'encoderfree' in self.args.model:
+        elif 'encoderfree' or 'fuyu8b' in self.args.model:
             encoder = None
             find_unused_parameters = False # first
             model_hidden_size = None

@@ -311,8 +311,18 @@ class EncoderInputPreparation(BaseECGDataset):
             'signal': normalized_signal.astype(np.float32),
             'orig_signal': ecg_signal.astype(np.float32)
         }
+    
+    def prepare_fuyu8b_input(self, ecg_signal, original_report=None):
+        if self.args.instance_normalize:
+            normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(ecg_signal)
+        else:
+            normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
 
-
+        return {
+            'signal': normalized_signal.astype(np.float32),
+            'orig_signal': ecg_signal.astype(np.float32)
+        }
+    
 class FirstStageECGDataset(BaseECGDataset):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -469,7 +479,9 @@ class SecondStageECGChatDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-        elif any(key in self.args.model for key in ('stmem', 'mtae', 'mlae', 'encoderfree')):
+        elif 'fuyu8b' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_fuyu8b_input(ecg_signal, original_report)
+        elif any(key in self.args.model for key in ('stmem', 'mtae', 'mlae', 'encoderfree', 'fuyu8b')):
             encoder_out = self.encoder_prep.prepare_signal_input(ecg_signal)
             
         if self.args.train == 'second' and self.args.inference is None:
@@ -530,3 +542,53 @@ class SecondStageECGChatDataset(BaseECGDataset):
             'encoder_out': encoder_out,
             'signal_id_index': signal_id_index
         }
+    
+class FuyuNativeECGDataset(BaseECGDataset):
+    """
+    Dataset class for Fuyu-native ECG data.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from transformers import FuyuProcessor
+        self.processor = FuyuProcessor.from_pretrained("adept/fuyu-8b")
+
+    def __getitem__(self, index):
+        try:
+            instance = self.json_data_file[index]
+            np_path = instance["ecg_path"]
+            ecg_path = self.train_utils.fm.open_npy(np_path)
+            ecg_signal = ecg_path["ecg"]
+
+            if self.args.perturb:
+                ecg_signal = self.perturb_signal(ecg_signal)
+
+            altered_text = instance["text"]
+            ecg_image = self.signal_to_image(ecg_signal)
+
+            altered_text = self.process_altered_text(altered_text)
+
+            question = altered_text[0]["value"] if altered_text else ""
+            answer = altered_text[1]["value"] if len(altered_text) > 1 else ""
+
+            text_prompt = f"{question}"
+
+            inputs = self.fuyu_processor(
+                images=[ecg_image],
+                text=[text_prompt],
+                return_tensors="pt",
+                padding=True
+            )
+
+            return {
+                'input_ids': inputs['input_ids'][0],
+                'attention_mask': inputs.get('attention_mask', torch.ones_like(inputs['input_ids']))[0],
+                'image_patches': inputs.get('image_patches', None),
+                'image_patches_indices': inputs.get('image_patches_indices', None),
+                'labels': inputs['input_ids'][0],
+                'answer': answer
+            }
+
+        except Exception as e:
+            print(f"Error processing index {index}: {e}")
+            return None
