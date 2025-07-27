@@ -38,6 +38,9 @@ def get_args():
     optim_group.add_argument('--delta', type=float, default=0.1, help='Delta for early stopping')
     optim_group.add_argument('--attn_implementation', type=str, default=None, help='Attention implementation')
     optim_group.add_argument('--dpo_beta', type=float, default=0.5, help='DPO beta')
+    optim_group.add_argument('--ref_global_bs', type=int, default=None)
+    optim_group.add_argument('--grad_accum_steps', type=int, default=1)
+    optim_group.add_argument('--scale_wd', type=str, default='none', choices=['none','inv_sqrt','inv_linear'])
     
     ### PEFT
     peft_group = parser.add_argument_group('PEFT')
