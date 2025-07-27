@@ -1,7 +1,12 @@
 import numpy as np
 
 def _effective_global_bs(args):
-    ws = dist.get_world_size() if dist.is_initialized() else (len(args.gpus.split(',')) if getattr(args,'dis',False) else 1)
+    if dist.is_initialized():
+        ws = dist.get_world_size()
+    elif args.dis:
+        ws = len(args.gpus.split(','))
+    else:
+        ws = 1
     ga = getattr(args, 'grad_accum_steps', 1)
     return int(args.batch_size) * int(ws) * int(ga)
 
