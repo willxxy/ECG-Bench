@@ -320,10 +320,12 @@ def main(rank, world_size):
         
         print(f'Total number of parameters: {train_utils.count_parameters(model)}')
         
-        optimizer = ScheduledOptim(
-            Adam(filter(lambda x: x.requires_grad, model.parameters()),
-                 betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
-            model_object['model_hidden_size'], args)
+        if args.train:
+            optimizer_class = train_utils.get_optimizer_class(args.optimizer)
+            optimizer = ScheduledOptim(
+                optimizer_class(filter(lambda x: x.requires_grad, model.parameters()),
+                    betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
+                model_object['model_hidden_size'], args)
         
         json_data_file = fm.open_json(f'./data/{args.data}.json')
         

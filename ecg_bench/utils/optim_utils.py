@@ -23,7 +23,6 @@ class ScheduledOptim():
         ref_bs = getattr(args, 'ref_global_bs', None)
         if ref_bs is None:
             ref_bs = int(getattr(args, 'batch_size', 1)) * int(getattr(args, 'grad_accum_steps', 1))
-        
         ref_bs = max(int(ref_bs), 1)
 
         scale = max(eff_bs / ref_bs, 1e-8)

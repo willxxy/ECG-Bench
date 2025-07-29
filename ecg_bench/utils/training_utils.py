@@ -14,6 +14,7 @@ from rouge import Rouge
 from evaluate import load
 import numpy as np
 from scipy import stats
+from torch.optim import Adam, AdamW
 
 
 class TrainingUtils:
@@ -49,6 +50,16 @@ class TrainingUtils:
             lora_dropout = self.args.lora_dropout,
             bias = "none")
         return lora_config
+    
+    def get_optimizer_class(self, optimizer_name):
+        """Get optimizer class by name"""
+        optimizers = {
+            'adam': Adam,
+            'adamw': AdamW,
+        }
+        if optimizer_name.lower() not in optimizers:
+            raise ValueError(f"Unsupported optimizer: {optimizer_name}. Supported: {list(optimizers.keys())}")
+        return optimizers[optimizer_name.lower()]
     
     def create_model(self):
         if self.args.train == 'end2end' or self.args.inference == 'end2end':

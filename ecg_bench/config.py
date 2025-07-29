@@ -26,6 +26,7 @@ def get_args():
     
     ### Optimizer
     optim_group = parser.add_argument_group('Optimizer')
+    optim_group.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'adamw'], help='Optimizer type')
     optim_group.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     optim_group.add_argument('--batch_size', type=int, default=128, help='Batch size')
     optim_group.add_argument('--epochs', type=int, default=150, help='Number of epochs')
