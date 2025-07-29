@@ -28,9 +28,7 @@
 10. [Citations](#citations)
 
 ## Overview <a name="overview"></a>
-This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase.
-
-Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
+This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase. Please note that as the codebase gets updated, performances may change.
 
 ### ECG Input Representations
 This current repository considers 4 input representations of ECGs as defined below:
@@ -820,6 +818,8 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Expand upon current naive distributed training setting to include more efficient and explicit distributed training strategies (i.e., data, tensor, context, pipeline, and expert parallelism as noted in [here](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=5d_parallelism_in_a_nutshell)).
 - [x] Add option for data mixing.
 - [ ] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
+- [ ] Add official splits for benchmarking.
+- [ ] Add better seedings.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital.

@@ -329,9 +329,10 @@ class TrainingUtils:
             special_tokens['additional_special_tokens'].append('<signal>')
         
         ### THIS IS FOR LLAMA
-        special_tokens['additional_special_tokens'].append('<|start_header_id|>')
-        special_tokens['additional_special_tokens'].append('<|end_header_id|>')
-        special_tokens['additional_special_tokens'].append('<|eot_id|>')
+        if 'llama' in self.args.model:
+            special_tokens['additional_special_tokens'].append('<|start_header_id|>')
+            special_tokens['additional_special_tokens'].append('<|end_header_id|>')
+            special_tokens['additional_special_tokens'].append('<|eot_id|>')
         llm_tokenizer.add_special_tokens(special_tokens)
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
