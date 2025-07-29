@@ -93,6 +93,7 @@ def create_save_path(args, fm):
             encoder_in = False
         model_params = [
             args.model,
+            args.optimizer,
             args.batch_size,
             args.epochs,
             args.pad_to_max,
