@@ -21,10 +21,6 @@ class ECGByteTokenizer:
         self.fm = fm
         self.n = 3000 if self.args.dev else None
         self.lead_order = ['I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
-        if self.args.percentiles != None:
-            self.percentiles = self.fm.open_npy(self.args.percentiles)
-            self.p1 = self.percentiles['p1']
-            self.p99 = self.percentiles['p99']
         if self.args.ecg_tokenizer != None:
             self.vocab, self.merges = self.fm.open_tokenizer(self.args.ecg_tokenizer)
         self.symbols = list('abcdefghijklmnopqrstuvwxyz')
@@ -74,8 +70,6 @@ class ECGByteTokenizer:
         if self.args.instance_normalize:
             _, _, signal_range = self.instance_normalize(original_ecg)
             decoded_signal = self.instance_denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape), signal_range)
-        else:
-            decoded_signal = self.denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape))
         
         max_diff = np.max(np.abs(original_ecg - decoded_signal))
         print(f"Maximum difference between original and decoded: {max_diff}")
@@ -92,27 +86,6 @@ class ECGByteTokenizer:
 
     def decode_token(self, encoded_ids, vocab):
         return ''.join(vocab[token_id] for token_id in encoded_ids)
-
-    def normalize(self, signal):
-        normalized = (
-            (signal - (self.p1 - self.ep2))
-            / ((self.p99 + self.ep2) - (self.p1 - self.ep2) + self.ep1)
-        )
-        clipped_normalized = np.clip(normalized, 0, 1)
-        scaled_signal = np.minimum(
-            np.floor(clipped_normalized * self.len_symbols),
-            self.len_symbols - 1
-        ).astype(np.uint8)
-
-        symbol_signal = np.vectorize(lambda x: self.symbols[x])(scaled_signal)
-        return clipped_normalized, symbol_signal
-
-    def denormalize(self, symbol_signal):
-        min_vals = self.p1 - self.ep2
-        max_vals = self.p99 + self.ep2
-        scaled_signal = np.vectorize(lambda x: self.symbols.index(x))(symbol_signal)
-        clipped_normalized = scaled_signal / (len(self.symbols) - 1)
-        return clipped_normalized * (max_vals - min_vals) + min_vals
     
     def instance_normalize(self, signal):
         min_vals = np.min(signal)
@@ -135,9 +108,6 @@ class ECGByteTokenizer:
     def _to_symbol_string(self, ecg_array):
         if self.args.instance_normalize:
             _, symbol_signal, signal_range = self.instance_normalize(ecg_array)
-            return ''.join(symbol_signal.flatten())
-        else:
-            _, symbol_signal = self.normalize(ecg_array)
             return ''.join(symbol_signal.flatten())
 
     def process_ecg(self, ecg_path):

@@ -11,7 +11,7 @@
 #     # Special case for mimic: also process with seg_len=2500
 #     if [ "$base_data" = "mimic" ]; then
 #         echo "Processing mimic with seg_len=2500"
-#         python preprocess_ecg.py --base_data=$base_data --seg_len=2500 --toy --sample_files --random_sampling --dev # or --stratified_sampling
+#         python preprocess_ecg.py --base_data=$base_data --seg_len=2500 --toy --sample_files --random_sampling --dev
 #     fi
 # done
 

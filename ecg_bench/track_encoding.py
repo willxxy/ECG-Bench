@@ -21,8 +21,6 @@ def main(args):
             single_lead = sample_signal[lead]
             if args.instance_normalize:
                 norm_single_lead, _, _ = ecg_tokenizer_utils.instance_normalize(single_lead)
-            else:
-                norm_single_lead, _ = ecg_tokenizer_utils.normalize(single_lead)
             single_lead_str = ecg_tokenizer_utils._to_symbol_string(single_lead)
             encoded_ids, segment_map = ecg_tokenizer_utils.track_encoding(single_lead_str)
             
