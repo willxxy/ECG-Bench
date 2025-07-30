@@ -150,6 +150,7 @@ class PrepareDF:
         for part in range(18):  
             file_path = f'./data/code15/exams_part{part}.hdf5'
             with h5py.File(file_path, 'r') as f:
+                # Need to add patient id for stratification.
                 exam_ids = f['exam_id'][:]
                 for idx, eid in enumerate(exam_ids):
                     if isinstance(eid, bytes):

@@ -331,13 +331,14 @@ def main(rank, world_size):
         json_data_file = fm.open_json(f'./data/{args.data}.json')
         
         train_data, test_data = train_utils.split_dataset(json_data_file)
+        print(f'Length of Train Data: {len(train_data)}, Length of Test Data: {len(test_data)}')
         if args.train == 'first':
             data = train_data[:800000]
         elif args.train in ['second', 'end2end']:
             data = train_data[:400000]
         elif args.inference in ['second', 'end2end']:
             data = test_data[:20000]
-        print('Length of Dataset:', len(data))
+        print('Length of Dataset Considered:', len(data))
         
         if args.train == 'first':
             dataset = FirstStageECGDataset(

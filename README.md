@@ -817,7 +817,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Curate higher quality instruction tuning and reasoning datasets for ELMs.
 - [ ] Expand upon current naive distributed training setting to include more efficient and explicit distributed training strategies (i.e., data, tensor, context, pipeline, and expert parallelism as noted in [here](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=5d_parallelism_in_a_nutshell)).
 - [x] Add option for data mixing.
-- [ ] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
+- [x] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
 - [ ] Add official splits for benchmarking.
 - [ ] Add better seedings.
 

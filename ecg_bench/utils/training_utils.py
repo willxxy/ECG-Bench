@@ -15,27 +15,84 @@ from evaluate import load
 import numpy as np
 from scipy import stats
 from torch.optim import Adam, AdamW
-
+import random, re, pathlib
+from typing import List, Dict, Tuple, Callable, Optional
+from collections import defaultdict
 
 class TrainingUtils:
-    def __init__(self, args, fm, viz, device, ecg_tokenizer_utils = None):
-        self.args = args
-        self.fm = fm
-        self.viz = viz
-        self.device = device
+    def __init__(self, args, fm, viz, device, ecg_tokenizer_utils=None):
+        self.args, self.fm, self.viz, self.device = args, fm, viz, device
         self.ecg_tokenizer_utils = ecg_tokenizer_utils
-        self.cache_dir = '../.huggingface'
-    
-    def split_dataset(self, data, train_ratio=0.7):
-        data = np.array(data)
-        n_samples = len(data)
-        indices = np.random.permutation(n_samples)
-        n_train = int(n_samples * train_ratio)
-        train_indices = indices[:n_train]
-        test_indices = indices[n_train:]
-        train_data = [data[i] for i in train_indices]
-        test_data = [data[i] for i in test_indices]
-        return train_data, test_data
+        self.cache_dir = "../.huggingface"
+
+        # dataset‑specific “patient id” extractors
+        self._PATIENT_EXTRACTORS: Dict[str, Callable[[str], Optional[str]]] = {
+            "mimic": lambda p: max(re.findall(r"p\d+", p), key=len, default=None),
+            "ptb": lambda p: (m := re.search(r"_([0-9]+)_hr", p)) and m.group(1),
+            # add more here
+        }
+
+    @staticmethod
+    def _dataset_from_path(path: str) -> str:
+        parts = pathlib.Path(path).parts
+        try:
+            return parts[parts.index("data") + 1].lower()
+        except (ValueError, IndexError):
+            return ""
+
+    def _patient_id(self, ecg_path: str) -> Optional[str]:
+        ds = self._dataset_from_path(ecg_path)
+        extractor = self._PATIENT_EXTRACTORS.get(ds)
+        return extractor(ecg_path) if extractor else None
+
+    def split_dataset(self, data: List[dict], train_ratio: float = 0.7):
+        rng = np.random.default_rng(self.args.seed)
+
+        n_total        = len(data)
+        n_train_target = int(round(n_total * train_ratio))
+
+        patients: Dict[str, List[int]] = defaultdict(list)
+        loose: List[int] = []
+
+        for idx, item in enumerate(data):
+            pid = self._patient_id(item["ecg_path"])
+            (patients[pid] if pid else loose).append(idx)
+
+        if not patients:
+            rng.shuffle(loose)
+            train_idx = loose[:n_train_target]
+            test_idx  = loose[n_train_target:]
+            return [data[i] for i in train_idx], [data[i] for i in test_idx]
+
+        groups = list(patients.values())
+        rng.shuffle(groups)
+
+        train_idx, test_idx, overflow = [], [], []
+
+        for grp in groups:
+            if len(grp) >= n_train_target:
+                train_idx = grp
+                test_idx  = [i for g in groups if g is not grp for i in g] + loose
+                return [data[i] for i in train_idx], [data[i] for i in test_idx]
+
+            if len(train_idx) + len(grp) <= n_train_target:
+                train_idx.extend(grp)
+            else:
+                overflow.append(grp)
+                test_idx.extend(grp)
+
+        rng.shuffle(loose)
+        remaining_slots = n_train_target - len(train_idx)
+        train_idx.extend(loose[:remaining_slots])
+        test_idx.extend(loose[remaining_slots:])
+
+        overflow.sort(key=len, reverse=True)
+        for grp in overflow:
+            if abs((len(train_idx) + len(grp)) - n_train_target) < abs(len(train_idx) - n_train_target):
+                train_idx.extend(grp)
+                test_idx = [i for i in test_idx if i not in grp]
+
+        return [data[i] for i in train_idx], [data[i] for i in test_idx]
 
     def get_lora_configs(self):
         if 'gpt2' in self.args.model:
