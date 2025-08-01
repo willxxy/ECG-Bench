@@ -125,6 +125,15 @@ def main():
         print("fold1_test example text (restored):", fold1_test[0]["text"])
         print("fold1_test keys:", fold1_test[0].keys())
         print("len fold1_test:", len(fold1_test))
+        
+        print("type", type(fold1_train))
+        fold1_train_small = fold1_train.select(range(10))
+        fold1_test_small  = fold1_test.select(range(10))
+
+        print(len(fold1_train_small))   # → 10
+        print(fold1_train_small[0])     # row 0 still decodes through your transform
+        print(len(fold1_test_small))   # → 10
+        print(fold1_test_small[0])     # row 0 still decodes through your transform
     else:
         with open(args.input) as f:
             data = json.load(f)

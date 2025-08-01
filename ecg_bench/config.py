@@ -6,6 +6,7 @@ def get_args():
     ### Data
     data_group = parser.add_argument_group('Data')
     data_group.add_argument('--data', type=str, default=None, help='Dataset name')
+    data_group.add_argument('--fold', type=str, default="1", help='Data fold number')
     data_group.add_argument('--seg_len', type=int, default=None, help='Segment length')
     data_group.add_argument('--num_merges', type=int, default=3500, help='Vocab size')
     data_group.add_argument('--target_sf', type=int, default=250, help='Target sampling frequency')

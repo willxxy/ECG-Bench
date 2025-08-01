@@ -24,11 +24,11 @@ models=("vit" "clip" "siglip" )
 
 for model in "${models[@]}"; do
     python main.py \
-    --data=ecg-qa_ptbxl_mapped_1250 \
+    --data=test-ecg \
     --model=$model \
     --device=cuda:6 \
     --train=first \
-    --batch_size=1 \
+    --batch_size=64 \
     --seg_len=1250 \
     --epochs=50 \
     --instance_normalize \

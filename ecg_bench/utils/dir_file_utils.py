@@ -13,6 +13,19 @@ class FileManager:
     """A class for managing file operations and directory handling."""
     
     @staticmethod
+    def decode_batch(batch: dict) -> dict:
+        # Restore original Python object at read time
+        if "text" in batch:
+            out = []
+            for t in batch["text"]:
+                try:
+                    out.append(json.loads(t))
+                except Exception:
+                    out.append(t)
+            batch["text"] = out
+        return batch
+    
+    @staticmethod
     def open_json(path: Union[str, Path]) -> dict:
         """Load and parse a JSON file."""
         with open(path) as f:

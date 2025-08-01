@@ -820,6 +820,7 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [x] Add option for data mixing.
 - [x] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
 - [ ] Add official splits for benchmarking.
+    - [ ] Upload to huggingface datasets and use huggingface datasets data loading in main.
 - [ ] Add better seedings.
 
 ## Acknowledgements <a name="ack"></a>
