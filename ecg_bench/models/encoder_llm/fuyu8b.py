@@ -42,13 +42,11 @@ class Fuyu8B(nn.Module):
         # From [batch_size, seq_len, num_leads] to [batch_size, seq_len * num_leads]
         flattened_signal = ecg_signal.view(batch_size, -1)
         
-        # Project ECG signal to LLM hidden dimension
-        signal_embeddings = self.signal_projection(flattened_signal)  # [batch_size, hidden_size]
+        signal_embeddings = self.signal_projection(flattened_signal)
         
         # Get token embeddings from LLM
         token_embeddings = self.llm.get_input_embeddings()(input_ids)  # [batch_size, seq_len, hidden_size]
         
-        # Replace <signal> token embedding with projected ECG signal
         for batch_idx in range(batch_size):
             if isinstance(signal_id_index, list):
                 sig_idx = signal_id_index[batch_idx]
@@ -56,7 +54,6 @@ class Fuyu8B(nn.Module):
                 sig_idx = signal_id_index
             token_embeddings[batch_idx, sig_idx] = signal_embeddings[batch_idx]
         
-        # Forward through LLM with modified embeddings
         outputs = self.llm(
             inputs_embeds=token_embeddings,
             attention_mask=attn_mask,
@@ -67,17 +64,12 @@ class Fuyu8B(nn.Module):
         return outputs
     
     def generate(self, input_ids, attn_mask, encoder_out, signal_id_index, **generation_kwargs):
-        """
-        Generation method for inference.
-        """
         batch_size = input_ids.size(0)
         
-        # Get ECG signal embeddings
         ecg_signal = encoder_out['signal']
         flattened_signal = ecg_signal.view(batch_size, -1)
         signal_embeddings = self.signal_projection(flattened_signal)
         
-        # Get token embeddings
         token_embeddings = self.llm.get_input_embeddings()(input_ids)
         
         # Replace <signal> token embedding
@@ -88,7 +80,6 @@ class Fuyu8B(nn.Module):
                 sig_idx = signal_id_index
             token_embeddings[batch_idx, sig_idx] = signal_embeddings[batch_idx]
         
-        # Generate using the LLM
         with torch.no_grad():
             generated_ids = self.llm.generate(
                 inputs_embeds=token_embeddings,
@@ -99,15 +90,8 @@ class Fuyu8B(nn.Module):
         return generated_ids
     
     def signal_to_image_for_fuyu(self, ecg_signal):
-        """
-        Convert ECG signal to image format that Fuyu can process.
-        This is mainly for compatibility with Fuyu's native image processing capabilities.
-        """
-        # Normalize signal for visualization
         normalized_signal = (ecg_signal - ecg_signal.min()) / (ecg_signal.max() - ecg_signal.min())
         
-        # Create RGB image representation
-        # Shape: [num_leads, seq_len] -> [height, width, 3]
         height, width = normalized_signal.shape
         rgb_signal = np.stack([normalized_signal * 255] * 3, axis=-1).astype(np.uint8)
         
@@ -178,61 +162,3 @@ class FuyuECGWrapper(nn.Module):
             signal_id_index=signal_id_index,
             **generation_kwargs
         )
-
-
-# Integration with the existing training utilities
-def create_fuyu8b_model(args, device, cache_dir='../.huggingface'):
-    """
-    Factory function to create Fuyu-8B model following the existing pattern.
-    This should be integrated into the TrainingUtils.get_llm_encoder() method.
-    """
-    # Load Fuyu-8B model and processor
-    model_id = "adept/fuyu-8b"
-    hf_fuyu = FuyuForCausalLM.from_pretrained(
-        model_id,
-        cache_dir=cache_dir,
-        torch_dtype=torch.bfloat16,
-        device_map="auto"
-    ).to(device)
-    
-    # Calculate projection dimension for encoder-free approach
-    projection_dim = args.seg_len * 12  # seq_len * num_leads
-    
-    # Create Fuyu8B instance
-    fuyu_model = Fuyu8B(
-        llm=hf_fuyu,
-        encoder=None,  # Encoder-free
-        projection_dim=projection_dim,
-        tokenizer=None  # Will be set by training utils
-    )
-    
-    # Wrap for compatibility with training pipeline
-    wrapped_model = FuyuECGWrapper(fuyu_model, args)
-    
-    return wrapped_model
-
-
-# Example usage in training loop
-def example_training_integration():
-    """
-    Example of how this would integrate with the existing training pipeline.
-    """
-    # This would go in your main training script
-    
-    # Assuming you have args, device, and other setup from existing code
-    # model = create_fuyu8b_model(args, device)
-    
-    # The model can then be used with existing SecondStageECGChatDataset
-    # dataset = SecondStageECGChatDataset(json_data_file, train_utils, encoder_tokenizer, llm_tokenizer)
-    # dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
-    
-    # Training loop (similar to existing pattern)
-    # for epoch in range(args.epochs):
-    #     for batch in dataloader:
-    #         outputs = model(batch)
-    #         loss = outputs.loss
-    #         loss.backward()
-    #         optimizer.step()
-    #         optimizer.zero_grad()
-    
-    pass
