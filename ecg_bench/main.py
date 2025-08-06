@@ -341,11 +341,9 @@ def main(rank, world_size):
             print(f"Length of Test Data: {len(test_data)}")
         
         if args.train == 'first':
-            # data = train_data.select(range(800000))
-            data = train_data.select(range(20))
+            data = train_data.select(range(800000))
         elif args.train in ['second', 'end2end']:
-            # data = train_data.select(range(400000))
-            data = train_data.select(range(20))
+            data = train_data.select(range(400000))
         elif args.inference in ['second', 'end2end']:
             data = test_data.select(range(20000))
         print('Length of Dataset Considered:', len(data))

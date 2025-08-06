@@ -34,14 +34,12 @@ class Splitter:
 
     # ---------------------------------------------------------------------
     def split_dataset(self, data, train_ratio: float = 0.7):
-        """Group-aware train/test split with exact size balance."""
         rng            = np.random.default_rng(self.args.seed)
         n_total        = len(data)
         n_train_target = int(round(n_total * train_ratio))
 
-        # 1) Build groups: each patient-ID (or lone sample) → list[idx]
-        groups = []                       # list[list[int]]
-        loose  = []                       # indices w/o patient ID
+        groups = []
+        loose  = []
         pid2idx = defaultdict(list)
 
         for idx, item in enumerate(data):
@@ -49,39 +47,67 @@ class Splitter:
             if pid:
                 pid2idx[pid].append(idx)
             else:
-                loose.append([idx])       # wrap to look like a group
+                loose.append([idx])
 
         groups.extend(pid2idx.values())
         groups.extend(loose)
 
-        # 2) Shuffle groups for randomness, then greedy fill train
         rng.shuffle(groups)
-        train_idx, test_idx = [], []
-
-        for grp in groups:
-            if len(train_idx) + len(grp) <= n_train_target:
-                train_idx.extend(grp)
+        
+        group_sizes = [len(g) for g in groups]
+        
+        train_groups_idx = []
+        test_groups_idx = []
+        current_train_size = 0
+        
+        sorted_indices = sorted(range(len(groups)), key=lambda i: -group_sizes[i])
+        
+        for idx in sorted_indices:
+            if current_train_size + group_sizes[idx] <= n_train_target:
+                train_groups_idx.append(idx)
+                current_train_size += group_sizes[idx]
             else:
-                test_idx.extend(grp)
-
-        # 3) Balance |train| to hit the target exactly
-        diff = n_train_target - len(train_idx)
-        if diff > 0:
-            move = rng.choice(test_idx, size=diff, replace=False).tolist()
-            for i in move:
-                test_idx.remove(i); train_idx.append(i)
-        elif diff < 0:
-            move = rng.choice(train_idx, size=-diff, replace=False).tolist()
-            for i in move:
-                train_idx.remove(i); test_idx.append(i)
-
-        assert len(train_idx) == n_train_target, "balancing failed"
+                test_groups_idx.append(idx)
+        
+        best_diff = abs(current_train_size - n_train_target)
+        improved = True
+        max_iterations = 100
+        iteration = 0
+        
+        while improved and iteration < max_iterations:
+            improved = False
+            iteration += 1
+            
+            for i, train_idx in enumerate(train_groups_idx):
+                for j, test_idx in enumerate(test_groups_idx):
+                    new_train_size = current_train_size - group_sizes[train_idx] + group_sizes[test_idx]
+                    new_diff = abs(new_train_size - n_train_target)
+                    
+                    if new_diff < best_diff:
+                        train_groups_idx[i] = test_idx
+                        test_groups_idx[j] = train_idx
+                        current_train_size = new_train_size
+                        best_diff = new_diff
+                        improved = True
+                        break
+                if improved:
+                    break
+        
+        train_idx = []
+        test_idx = []
+        
+        for idx in train_groups_idx:
+            train_idx.extend(groups[idx])
+        
+        for idx in test_groups_idx:
+            test_idx.extend(groups[idx])
+        
+        print(f"  Target train size: {n_train_target}, Actual: {len(train_idx)} (diff: {abs(len(train_idx) - n_train_target)})")
+        
         return [data[i] for i in train_idx], [data[i] for i in test_idx]
 
 
-# ---- encoding/decoding helpers for the heterogeneous `text` field ----
 def encode_row(item: dict) -> dict:
-    # Store complex Python object as JSON string for Arrow homogeneity
     if "text" in item:
         item = dict(item)  # shallow copy
         item["text"] = json.dumps(item["text"], ensure_ascii=False, separators=(",", ":"))
@@ -108,7 +134,7 @@ def main():
     ap.add_argument("--train_ratio", type=float, default=0.7)
     ap.add_argument("--seed",  type=int, default=42)
     ap.add_argument("--repo_id", type=str, default="willxxy/test-ecg")
-    ap.add_argument("--load", action="store_true", help="load back the dataset after pushing to HF")
+    ap.add_argument("--load", action="store_true", default = None, help="load back the dataset after pushing to HF")
     args = ap.parse_args()
     
     if args.load:

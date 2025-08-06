@@ -12,6 +12,7 @@
 
 ## News
 
+- **[August 5, 2025] We released official splits of ELM datasets on Hugging Face. Feel free to check them out [here](https://huggingface.co/willxxy)!**
 - **[May 24, 2025] We release our paper ["Signal, Image, or Symbolic: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework"](https://arxiv.org/abs/2505.18847) with some interesting results when comparing input representations and training paradigms for ELMs! Check it out.**
 - **[April 5, 2025] We open source ECG-Bench for training and evaluating ELMs!**
 
@@ -203,6 +204,16 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 ## ECG Datasets <a name="data"></a>
 
+### Hugging Face Dataset 5-Fold Stratified Splits
+
+On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and test.
+We have release the following so far:
+
+1. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
+
+We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
+We adapted the main training and inference pipeline to utilize this dataset, thus if the dataset you want is already provided by us through Hugging Face, feel free to skip to the [Main Methods section](#methods). If not, please prepare the datasets following the directions in the next sections.
+
 ### Base Datasets
 
 We regard base datasets as datasets that are solely used for later mapping of external datasets.
@@ -322,7 +333,6 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 #### ECG Grounding Datasets curated by [GEM, Lan et al.](https://github.com/lanxiang1017/GEM)
 
 1. Create a `data/ecg_grounding` directory and download the `ECG_Grounding_30k.json`, `ecg-grounding-test.json` and `grounding_train_30k.json` from this [link](https://huggingface.co/datasets/LANSG/ECG-Grounding/tree/main/ecg_jsons). A quick note is that `grounding_train_30k.json` is a subset of `ECG_Grounding_30k.json`, where `ECG_Grounding_30k.json` contains all 30k ECG grounding samples found in `grounding_train_30k.json`, with additional ECG conversational data from the ECG Instruct PULSE dataset.
-
 
 ### Preprocessing
 
@@ -805,7 +815,8 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Add [GEM model](https://www.arxiv.org/abs/2503.06073)
 - [ ] Add [ECG-Expert-QA dataset](https://arxiv.org/abs/2502.17475)
 - [x] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
-- [ ] Provide HuggingFace dataset and model card push ability.
+- [ ] Provide HuggingFace model card push ability.
+- [ ] Provide HuggingFace dataset card push ability.
 - [ ] Create an offline demo for ELMs with unified preference collection.
 - [x] [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
 - [x] Make RAG searching faster.
@@ -819,8 +830,8 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Expand upon current naive distributed training setting to include more efficient and explicit distributed training strategies (i.e., data, tensor, context, pipeline, and expert parallelism as noted in [here](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=5d_parallelism_in_a_nutshell)).
 - [x] Add option for data mixing.
 - [x] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
-- [ ] Add official splits for benchmarking.
-    - [ ] Upload to huggingface datasets and use huggingface datasets data loading in main.
+- [x] Add official splits for benchmarking.
+    - [x] Upload to huggingface datasets and use huggingface datasets data loading in main.
 - [ ] Add better seedings.
 
 ## Acknowledgements <a name="ack"></a>

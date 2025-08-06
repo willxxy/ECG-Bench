@@ -16,7 +16,7 @@ def trainer(model, dataloader, optimizer, args, epoch):
     len_of_batch = 0
     dev_count = 0
     
-    steps_to_save = 2500 if args.data == "ecg_instruct_45k_mapped_1250" else 50000
+    steps_to_save = 2500 if args.data == f"ecg-instruct-45k-{args.target_sf}-1250" else 50000
     
     progress_bar = tqdm(dataloader, desc=f'Training {args.model}', disable=not show_progress)
     
