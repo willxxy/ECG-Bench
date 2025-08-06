@@ -209,7 +209,9 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and test.
 We have release the following so far:
 
-1. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
+1. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 2 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500)
+2. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
+3. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500)
 
 We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
 We adapted the main training and inference pipeline to utilize this dataset, thus if the dataset you want is already provided by us through Hugging Face, feel free to skip to the [Main Methods section](#methods). If not, please prepare the datasets following the directions in the next sections.
