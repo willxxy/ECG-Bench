@@ -204,18 +204,6 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 ## ECG Datasets <a name="data"></a>
 
-### Hugging Face Dataset 5-Fold Stratified Splits
-
-On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and test.
-We have release the following so far:
-
-1. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 2 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500)
-2. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
-3. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500)
-
-We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
-We adapted the main training and inference pipeline to utilize this dataset, thus if the dataset you want is already provided by us through Hugging Face, feel free to skip to the [Main Methods section](#methods). If not, please prepare the datasets following the directions in the next sections.
-
 ### Base Datasets
 
 We regard base datasets as datasets that are solely used for later mapping of external datasets.
@@ -288,6 +276,18 @@ wget https://physionet.org/static/published-projects/challenge-2020/classificati
 ```
 
 3. Unzip the file and inside of `data/cpsc/classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2/training` move the `cpsc_2018` and `cpsc_2018_extra` folders into the `data/cpsc` directory. Then delete the `classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2` folder.
+
+### Hugging Face Dataset 5-Fold Stratified Splits
+
+On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and test.
+We have release the following so far:
+
+1. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 2 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500)
+2. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
+3. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500)
+
+We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
+We adapted the main training and inference pipeline to utilize this dataset, thus if the dataset you want is already provided by us through Hugging Face, feel free to skip to the [Main Methods section](#methods). If not, please map the datasets following the directions in the next sections.
 
 ### Mapping Datasets
 
