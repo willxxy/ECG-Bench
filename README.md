@@ -404,8 +404,11 @@ We have release the following so far:
 2. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
 3. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500)
 4. [Pretrain MIMIC downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-1250)
-5. [ECG-QA MIMIC-IV-ECG downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-1250)
-6. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250)
+5. [Pretrain MIMIC downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-2500)
+6. [ECG-QA MIMIC-IV-ECG downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-1250)
+7. [ECG-QA MIMIC-IV-ECG downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-2500)
+8. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250)
+9. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500)
 
 We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
 We adapted the main training and inference pipeline to utilize this dataset.

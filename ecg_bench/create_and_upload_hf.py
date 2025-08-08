@@ -34,8 +34,8 @@ class Splitter:
 
     # ---------------------------------------------------------------------
     def split_dataset(self, data, train_ratio: float = 0.7):
-        rng            = np.random.default_rng(self.args.seed)
-        n_total        = len(data)
+        rng = np.random.default_rng(self.args.seed)
+        n_total = len(data)
         n_train_target = int(round(n_total * train_ratio))
 
         groups = []
@@ -71,7 +71,7 @@ class Splitter:
         
         best_diff = abs(current_train_size - n_train_target)
         improved = True
-        max_iterations = 100
+        max_iterations = 0
         iteration = 0
         
         while improved and iteration < max_iterations:
