@@ -407,7 +407,7 @@ We have release the following so far:
 | ECG-QA PTB-XL | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500) |
 | Pretrain MIMIC | - | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-1250) | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-2500) |
 | ECG-QA MIMIC-IV-ECG | - | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-2500) |
-| ECG Instruct 45K MIMIC | - | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500) |
+| ECG Instruct 45K | - | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500) |
 | ECG Bench Pulse | - | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-2500) |
 | ECG Instruct Pulse | - | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-2500) |
 
