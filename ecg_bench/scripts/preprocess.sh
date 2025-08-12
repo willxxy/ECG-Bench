@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # BASE_DATA_VALUES=("ptb" "mimic" "code15" "cpsc" "csn")
-BASE_DATA_VALUES=("code15" "cpsc" "csn")
-SEG_LENS=(1250 2500 500)
+BASE_DATA_VALUES=("mimic")
+# SEG_LENS=(1250 2500 500)
+SEG_LENS=(500)
 
 for base_data in "${BASE_DATA_VALUES[@]}"; do
   for seg_len in "${SEG_LENS[@]}"; do
