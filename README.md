@@ -400,19 +400,17 @@ After preprocessing, you can test out whether the folder of `*.npy` has valid EC
 On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and test.
 We have release the following so far:
 
-1. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 2 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500)
-2. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250)
-3. [ECG-QA PTB-XL downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500)
-4. [Pretrain MIMIC downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-1250)
-5. [Pretrain MIMIC downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-2500)
-6. [ECG-QA MIMIC-IV-ECG downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-1250)
-7. [ECG-QA MIMIC-IV-ECG downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-2500)
-8. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250)
-9. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500)
-10. [ECG Bench Pulse downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-1250)
-11. [ECG Bench Pulse downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-2500)
-12. [ECG Instruct Pulse downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-1250)
-13. [ECG Instruct Pulse downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-2500)
+**250 Hz Sampling Rate**
+
+| Dataset | 2s | 5s | 10s |
+|---------|----|----|-----|
+| ECG-QA PTB-XL | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500) |
+| Pretrain MIMIC | - | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-1250) | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-2500) |
+| ECG-QA MIMIC-IV-ECG | - | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-2500) |
+| ECG Instruct 45K MIMIC | - | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500) |
+| ECG Bench Pulse | - | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-2500) |
+| ECG Instruct Pulse | - | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-2500) |
+
 
 We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
 We adapted the main training and inference pipeline to utilize this dataset.
