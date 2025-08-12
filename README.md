@@ -409,6 +409,10 @@ We have release the following so far:
 7. [ECG-QA MIMIC-IV-ECG downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-2500)
 8. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250)
 9. [ECG Insutrct 45K MIMIC downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500)
+10. [ECG Bench Pulse downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-1250)
+11. [ECG Bench Pulse downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-2500)
+12. [ECG Instruct Pulse downsampled to 250 Hz, recorded for 5 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-1250)
+13. [ECG Instruct Pulse downsampled to 250 Hz, recorded for 10 seconds](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-2500)
 
 We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
 We adapted the main training and inference pipeline to utilize this dataset.
