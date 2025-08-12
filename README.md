@@ -397,7 +397,7 @@ After preprocessing, you can test out whether the folder of `*.npy` has valid EC
 
 ### Hugging Face Dataset 5-Fold Stratified Splits
 
-On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and test.
+On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and testing splits.
 We have released the following so far:
 
 **250 Hz Sampling Rate**
