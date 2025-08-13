@@ -24,7 +24,7 @@ for base_data in "${BASE_DATA_VALUES[@]}"; do
 done
 
 ### MAPPING DATA
-# MAP_DATA_VALUES=("ecg_bench_pulse" "ecg_instruct_pulse" "pretrain_mimic" "ecg_instruct_45k" "ecg-qa_ptbxl" "ecg-qa_mimic-iv-ecg")
+MAP_DATA_VALUES=("ecg_bench_pulse" "ecg_instruct_pulse" "pretrain_mimic" "ecg_instruct_45k" "ecg-qa_ptbxl" "ecg-qa_mimic-iv-ecg")
 
 # for map_data in "${MAP_DATA_VALUES[@]}"; do
 #     echo "Processing map_data: $map_data"

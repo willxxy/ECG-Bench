@@ -116,7 +116,6 @@ class BaseECGDataset(Dataset):
                 conv.set_system_message(modified_system_prompt)
             else:
                 conv.set_system_message(self.system_prompt)
-            
         return conv
         
     def process_altered_text(self, altered_text):
