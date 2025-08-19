@@ -1,16 +1,4 @@
 #!/bin/bash
-
-# data=("ecg-qa_ptbxl_mapped_1250" "pretrain_mimic_mapped_1250" "ecg_instruct_45k_mapped_1250" "ecg_instruct_pulse_mapped_1250" "ecg-qa_mimic-iv-ecg_mapped_1250")
-# data=("ecg_instruct_45k_mapped_1250")
-
-
-retrieval_base="signal"
-for d in "${data[@]}"; do
-    if [ "$d" = "ecg_instruct_pulse_mapped_1250" ]; then
-        data_arg="ecg_bench_pulse_mapped_1250"
-    else
-        data_arg="$d"
-    fi
     
 python main.py \
 --data=ecg_instruct_45k_mapped_1250 \
