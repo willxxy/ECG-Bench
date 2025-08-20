@@ -304,8 +304,18 @@ class EncoderInputPreparation(BaseECGDataset):
             'signal': normalized_signal.astype(np.float32),
             'orig_signal': ecg_signal.astype(np.float32)
         }
+    
+    def prepare_fuyu8b_input(self, ecg_signal, original_report=None):
+        if self.args.instance_normalize:
+            normalized_signal, _, _ = self.train_utils.ecg_tokenizer_utils.instance_normalize(ecg_signal)
+        else:
+            normalized_signal, _ = self.train_utils.ecg_tokenizer_utils.normalize(ecg_signal)
 
-
+        return {
+            'signal': normalized_signal.astype(np.float32),
+            'orig_signal': ecg_signal.astype(np.float32)
+        }
+    
 class FirstStageECGDataset(BaseECGDataset):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -462,7 +472,9 @@ class SecondStageECGChatDataset(BaseECGDataset):
             encoder_out = self.encoder_prep.prepare_siglip_input(ecg_signal, original_report)
         elif 'merl' in self.args.model:
             encoder_out = self.encoder_prep.prepare_merl_input(ecg_signal, original_report)
-        elif any(key in self.args.model for key in ('stmem', 'mtae', 'mlae', 'encoderfree')):
+        elif 'fuyu8b' in self.args.model:
+            encoder_out = self.encoder_prep.prepare_fuyu8b_input(ecg_signal, original_report)
+        elif any(key in self.args.model for key in ('stmem', 'mtae', 'mlae', 'encoderfree', 'fuyu8b')):
             encoder_out = self.encoder_prep.prepare_signal_input(ecg_signal)
             
         if self.args.train == 'second' and self.args.inference is None:
