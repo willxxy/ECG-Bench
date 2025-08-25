@@ -56,6 +56,9 @@ class BaseECGDataset(Dataset):
             return perturbed_signal
         return signal
     
+    def blackout_signal(self, signal):
+        return np.zeros_like(signal)
+    
     def augment_image(self, image):
         seq = iaa.Sequential([
         iaa.Sometimes(0.5, iaa.Multiply((0.8, 1.2))),    # 50% chance to change brightness
@@ -344,6 +347,8 @@ class End2EndECGChatDataset(BaseECGDataset):
             ecg_signal = ecg_path['ecg']
             if self.args.perturb:
                 ecg_signal = self.perturb_signal(ecg_signal)
+            if self.args.blackout:
+                ecg_signal = self.blackout_signal(ecg_signal)
             altered_text = instance['text']
             return self.prepare_end2end_input(ecg_signal, altered_text)
         except Exception as e:
@@ -444,6 +449,8 @@ class SecondStageECGChatDataset(BaseECGDataset):
             ecg_signal = ecg_path['ecg']
             if self.args.perturb:
                 ecg_signal = self.perturb_signal(ecg_signal)
+            if self.args.blackout:
+                ecg_signal = self.blackout_signal(ecg_signal)
             altered_text = instance['text']
             original_report = ecg_path['report']
             

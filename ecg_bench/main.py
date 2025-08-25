@@ -113,7 +113,9 @@ def create_save_path(args, fm):
             args.augment_image,
             args.train_encoder,
             args.rag,
-            args.fold
+            args.fold,
+            args.blackout,
+            args.no_signal
         ]
         
         if args.rag:
@@ -243,7 +245,6 @@ def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, 
 
 def run_inference(model, test_loader, tokenizer, args, train_utils):
     print(f'Inferencing on {args.model} for checkpoint {args.checkpoint}')
-    # seeds = [0, 1, 2, 3, 4]
     seeds = [0, 1]
     all_seed_results = []
     
@@ -261,10 +262,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
         all_seed_results.append(seed_results)
         
         # Construct filename based on args.rag
-        if args.rag:
-            filename = f"seed_{seed}_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}.json"
-        else:
-            filename = f"seed_{seed}_{args.perturb}_{args.rag}.json"
+        filename = f"seed_{seed}_{args.perturb}_{args.rag}_{args.blackout}_{args.no_signal}.json"
             
         with open(f"{args.checkpoint}/{filename}", 'w') as f:
             json.dump({
@@ -277,10 +275,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     print(f'Statistical results: {statistical_results}')
     
     # Update statistical results filename similarly
-    if args.rag:
-        stat_filename = f"statistical_results_{args.perturb}_{args.rag}_{args.retrieval_base}_{args.retrieved_information}_{args.rag_k}_{args.rag_prompt_mode}.json"
-    else:
-        stat_filename = f"statistical_results_{args.perturb}_{args.rag}.json"
+    stat_filename = f"statistical_results_{args.perturb}_{args.rag}_{args.blackout}_{args.no_signal}.json"
         
     with open(f"{args.checkpoint}/{stat_filename}", 'w') as f:
         json.dump(statistical_results, f)
