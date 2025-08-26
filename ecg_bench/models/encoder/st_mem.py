@@ -12,22 +12,23 @@
 # --------------------------------------------------------
 ### VIT ###
 
+from collections import namedtuple
 from typing import Optional
 
 import torch
-import torch.nn as nn
-from einops import rearrange, repeat, pack, unpack
+from einops import pack, rearrange, repeat, unpack
 from einops.layers.torch import Rearrange
-from collections import namedtuple
-CombinedOutput = namedtuple('CombinedOutput', ['loss', 'out'])
+from torch import nn
 
-__all__ = ['ViT', 'vit_small', 'vit_base']
+CombinedOutput = namedtuple("CombinedOutput", ["loss", "out"])
+
+__all__ = ["ViT", "vit_base", "vit_small"]
 
 
 class DropPath(nn.Module):
-    '''
-    Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-    '''
+    """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
+    """
+
     def __init__(self, drop_prob: float, scale_by_keep: bool = True):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
@@ -57,9 +58,9 @@ class PreNorm(nn.Module):
 
 
 class FeedForward(nn.Module):
+    """MLP Module with GELU activation fn + dropout.
     """
-    MLP Module with GELU activation fn + dropout.
-    """
+
     def __init__(self,
                  input_dim: int,
                  output_dim: int,
@@ -104,14 +105,14 @@ class Attention(nn.Module):
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
+        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
         attn = self.attend(dots)
         attn = self.dropout(attn)
         out = torch.matmul(attn, v)
 
-        out = rearrange(out, 'b h n d -> b n (h d)')
+        out = rearrange(out, "b h n d -> b n (h d)")
         out = self.to_out(out)
         return out
 
@@ -169,27 +170,27 @@ class ViT(nn.Module):
                  attn_drop_out_rate: float = 0.,
                  drop_path_rate: float = 0.):
         super().__init__()
-        assert seq_len % patch_size == 0, 'The sequence length must be divisible by the patch size.'
-        self._repr_dict = {'seq_len': seq_len,
-                           'patch_size': patch_size,
-                           'num_leads': num_leads,
-                           'num_classes': num_classes if num_classes is not None else 'None',
-                           'width': width,
-                           'depth': depth,
-                           'mlp_dim': mlp_dim,
-                           'heads': heads,
-                           'dim_head': dim_head,
-                           'qkv_bias': qkv_bias,
-                           'drop_out_rate': drop_out_rate,
-                           'attn_drop_out_rate': attn_drop_out_rate,
-                           'drop_path_rate': drop_path_rate}
+        assert seq_len % patch_size == 0, "The sequence length must be divisible by the patch size."
+        self._repr_dict = {"seq_len": seq_len,
+                           "patch_size": patch_size,
+                           "num_leads": num_leads,
+                           "num_classes": num_classes if num_classes is not None else "None",
+                           "width": width,
+                           "depth": depth,
+                           "mlp_dim": mlp_dim,
+                           "heads": heads,
+                           "dim_head": dim_head,
+                           "qkv_bias": qkv_bias,
+                           "drop_out_rate": drop_out_rate,
+                           "attn_drop_out_rate": attn_drop_out_rate,
+                           "drop_path_rate": drop_path_rate}
         self.width = width
         self.depth = depth
 
         # embedding layers
         num_patches = seq_len // patch_size
         patch_dim = num_leads * patch_size
-        self.to_patch_embedding = nn.Sequential(Rearrange('b c (n p) -> b n (p c)', p=patch_size),
+        self.to_patch_embedding = nn.Sequential(Rearrange("b c (n p) -> b n (p c)", p=patch_size),
                                                 nn.LayerNorm(patch_dim),
                                                 nn.Linear(patch_dim, width),
                                                 nn.LayerNorm(width))
@@ -209,7 +210,7 @@ class ViT(nn.Module):
                                      drop_out_rate=drop_out_rate,
                                      attn_drop_out_rate=attn_drop_out_rate,
                                      drop_path_rate=drop_path_rate_list[i])
-            self.add_module(f'block{i}', block)
+            self.add_module(f"block{i}", block)
         self.dropout = nn.Dropout(drop_out_rate)
         self.norm = nn.LayerNorm(width)
 
@@ -223,15 +224,15 @@ class ViT(nn.Module):
     def forward_encoding(self, series):
         x = self.to_patch_embedding(series)
         b, n, _ = x.shape
-        cls_embeddings = repeat(self.cls_embedding, 'd -> b d', b=b)
-        x, ps = pack([cls_embeddings, x], 'b * d')
+        cls_embeddings = repeat(self.cls_embedding, "d -> b d", b=b)
+        x, ps = pack([cls_embeddings, x], "b * d")
         x = x + self.pos_embedding[:, :n + 1]
 
         x = self.dropout(x)
         for i in range(self.depth):
-            x = getattr(self, f'block{i}')(x)
+            x = getattr(self, f"block{i}")(x)
 
-        cls_embeddings, _ = unpack(x, ps, 'b * d')
+        cls_embeddings, _ = unpack(x, ps, "b * d")
 
         return self.norm(cls_embeddings)
 
@@ -242,8 +243,8 @@ class ViT(nn.Module):
     def __repr__(self):
         print_str = f"{self.__class__.__name__}(\n"
         for k, v in self._repr_dict.items():
-            print_str += f'    {k}={v},\n'
-        print_str += ')'
+            print_str += f"    {k}={v},\n"
+        print_str += ")"
         return print_str
 
 
@@ -274,10 +275,9 @@ def vit_base(num_leads, num_classes=None, seq_len=2250, patch_size=75, **kwargs)
 
 
 ### ENCODER / STE_MEM_VIT ###
-import torch.nn as nn
+from torch import nn
 
-
-__all__ = ['ST_MEM_ViT', 'st_mem_vit_small', 'st_mem_vit_base']
+__all__ = ["ST_MEM_ViT", "st_mem_vit_base", "st_mem_vit_small"]
 
 
 class ST_MEM_ViT(nn.Module):
@@ -296,27 +296,27 @@ class ST_MEM_ViT(nn.Module):
                  attn_drop_out_rate: float = 0.,
                  drop_path_rate: float = 0.):
         super().__init__()
-        assert seq_len % patch_size == 0, 'The sequence length must be divisible by the patch size.'
-        self._repr_dict = {'seq_len': seq_len,
-                           'patch_size': patch_size,
-                           'num_leads': num_leads,
-                           'num_classes': num_classes if num_classes is not None else 'None',
-                           'width': width,
-                           'depth': depth,
-                           'mlp_dim': mlp_dim,
-                           'heads': heads,
-                           'dim_head': dim_head,
-                           'qkv_bias': qkv_bias,
-                           'drop_out_rate': drop_out_rate,
-                           'attn_drop_out_rate': attn_drop_out_rate,
-                           'drop_path_rate': drop_path_rate}
+        assert seq_len % patch_size == 0, "The sequence length must be divisible by the patch size."
+        self._repr_dict = {"seq_len": seq_len,
+                           "patch_size": patch_size,
+                           "num_leads": num_leads,
+                           "num_classes": num_classes if num_classes is not None else "None",
+                           "width": width,
+                           "depth": depth,
+                           "mlp_dim": mlp_dim,
+                           "heads": heads,
+                           "dim_head": dim_head,
+                           "qkv_bias": qkv_bias,
+                           "drop_out_rate": drop_out_rate,
+                           "attn_drop_out_rate": attn_drop_out_rate,
+                           "drop_path_rate": drop_path_rate}
         self.width = width
         self.depth = depth
 
         # embedding layers
         num_patches = seq_len // patch_size
         patch_dim = patch_size
-        self.to_patch_embedding = nn.Sequential(Rearrange('b c (n p) -> b c n p', p=patch_size),
+        self.to_patch_embedding = nn.Sequential(Rearrange("b c (n p) -> b c n p", p=patch_size),
                                                 nn.LayerNorm(patch_dim),
                                                 nn.Linear(patch_dim, width),
                                                 nn.LayerNorm(width))
@@ -338,7 +338,7 @@ class ST_MEM_ViT(nn.Module):
                                      drop_out_rate=drop_out_rate,
                                      attn_drop_out_rate=attn_drop_out_rate,
                                      drop_path_rate=drop_path_rate_list[i])
-            self.add_module(f'block{i}', block)
+            self.add_module(f"block{i}", block)
         self.dropout = nn.Dropout(drop_out_rate)
         self.norm = nn.LayerNorm(width)
 
@@ -352,7 +352,7 @@ class ST_MEM_ViT(nn.Module):
     def forward_encoding(self, series):
         num_leads = series.shape[1]
         if num_leads > len(self.lead_embeddings):
-            raise ValueError(f'Number of leads ({num_leads}) exceeds the number of lead embeddings')
+            raise ValueError(f"Number of leads ({num_leads}) exceeds the number of lead embeddings")
 
         x = self.to_patch_embedding(series)
         b, _, n, _ = x.shape
@@ -366,14 +366,14 @@ class ST_MEM_ViT(nn.Module):
         lead_embeddings = torch.stack([lead_embedding for lead_embedding in self.lead_embeddings]).unsqueeze(0)
         lead_embeddings = lead_embeddings.unsqueeze(2).expand(b, -1, n + 2, -1)
         x = x + lead_embeddings
-        x = rearrange(x, 'b c n p -> b (c n) p')
+        x = rearrange(x, "b c n p -> b (c n) p")
 
         x = self.dropout(x)
         for i in range(self.depth):
-            x = getattr(self, f'block{i}')(x)
+            x = getattr(self, f"block{i}")(x)
 
         # remove SEP embeddings
-        x = rearrange(x, 'b (c n) p -> b c n p', c=num_leads)
+        x = rearrange(x, "b (c n) p -> b c n p", c=num_leads)
         x = x[:, :, 1:-1, :]
 
         x = torch.mean(x, dim=(1, 2))
@@ -386,8 +386,8 @@ class ST_MEM_ViT(nn.Module):
     def __repr__(self):
         print_str = f"{self.__class__.__name__}(\n"
         for k, v in self._repr_dict.items():
-            print_str += f'    {k}={v},\n'
-        print_str += ')'
+            print_str += f"    {k}={v},\n"
+        print_str += ")"
         return print_str
 
 
@@ -421,11 +421,11 @@ def st_mem_vit_base(num_leads, num_classes=None, seq_len=2250, patch_size=75, **
 
 #### ST_MEM ###
 from functools import partial
-
-import torch.nn as nn
 from typing import Optional
 
-__all__ = ['ST_MEM', 'st_mem_vit_small_dec256d4b', 'st_mem_vit_base_dec256d4b']
+from torch import nn
+
+__all__ = ["ST_MEM", "st_mem_vit_base_dec256d4b", "st_mem_vit_small_dec256d4b"]
 
 
 def get_1d_sincos_pos_embed(embed_dim: int,
@@ -435,7 +435,7 @@ def get_1d_sincos_pos_embed(embed_dim: int,
     """Positional embedding for 1D patches.
     """
     assert (embed_dim % 2) == 0, \
-        'feature dimension must be multiple of 2 for sincos emb.'
+        "feature dimension must be multiple of 2 for sincos emb."
     grid = torch.arange(grid_size, dtype=torch.float32)
 
     omega = torch.arange(embed_dim // 2, dtype=torch.float32)
@@ -465,22 +465,22 @@ class ST_MEM(nn.Module):
                  qkv_bias: bool = True,
                  norm_layer: nn.Module = nn.LayerNorm,
                  norm_pix_loss: bool = False,
-                 device: str = 'cuda'):
+                 device: str = "cuda"):
         super().__init__()
         self.device = device
-        self._repr_dict = {'seq_len': seq_len,
-                           'patch_size': patch_size,
-                           'num_leads': num_leads,
-                           'embed_dim': embed_dim,
-                           'depth': depth,
-                           'num_heads': num_heads,
-                           'decoder_embed_dim': decoder_embed_dim,
-                           'decoder_depth': decoder_depth,
-                           'decoder_num_heads': decoder_num_heads,
-                           'mlp_ratio': mlp_ratio,
-                           'qkv_bias': qkv_bias,
-                           'norm_layer': str(norm_layer),
-                           'norm_pix_loss': norm_pix_loss}
+        self._repr_dict = {"seq_len": seq_len,
+                           "patch_size": patch_size,
+                           "num_leads": num_leads,
+                           "embed_dim": embed_dim,
+                           "depth": depth,
+                           "num_heads": num_heads,
+                           "decoder_embed_dim": decoder_embed_dim,
+                           "decoder_depth": decoder_depth,
+                           "decoder_num_heads": decoder_num_heads,
+                           "mlp_ratio": mlp_ratio,
+                           "qkv_bias": qkv_bias,
+                           "norm_layer": str(norm_layer),
+                           "norm_pix_loss": norm_pix_loss}
         self.patch_size = patch_size
         self.num_patches = seq_len // patch_size
         self.num_leads = num_leads
@@ -504,7 +504,7 @@ class ST_MEM(nn.Module):
         self.mask_embedding = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
         self.decoder_pos_embed = nn.Parameter(
             torch.zeros(1, self.num_patches + 2, decoder_embed_dim),
-            requires_grad=False
+            requires_grad=False,
         )
 
         self.decoder_blocks = nn.ModuleList([TransformerBlock(input_dim=decoder_embed_dim,
@@ -555,26 +555,23 @@ class ST_MEM(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def patchify(self, series):
-        """
-        series: (batch_size, num_leads, seq_len)
+        """series: (batch_size, num_leads, seq_len)
         x: (batch_size, num_leads, n, patch_size)
         """
         p = self.patch_size
         assert series.shape[2] % p == 0
-        x = rearrange(series, 'b c (n p) -> b c n p', p=p)
+        x = rearrange(series, "b c (n p) -> b c n p", p=p)
         return x
 
     def unpatchify(self, x):
-        """
-        x: (batch_size, num_leads, n, patch_size)
+        """x: (batch_size, num_leads, n, patch_size)
         series: (batch_size, num_leads, seq_len)
         """
-        series = rearrange(x, 'b c n p -> b c (n p)')
+        series = rearrange(x, "b c n p -> b c (n p)")
         return series
 
     def random_masking(self, x, mask_ratio):
-        """
-        Perform per-sample random masking by per-sample shuffling.
+        """Perform per-sample random masking by per-sample shuffling.
         Per-sample shuffling is done by argsort random noise.
         x: (batch_size, num_leads, n, embed_dim)
         """
@@ -600,8 +597,7 @@ class ST_MEM(nn.Module):
         return x_masked, mask, ids_restore
 
     def forward_encoder(self, x, mask_ratio):
-        """
-        x: (batch_size, num_leads, seq_len)
+        """x: (batch_size, num_leads, seq_len)
         """
         # embed patches
         x = self.to_patch_embedding(x)
@@ -629,9 +625,9 @@ class ST_MEM(nn.Module):
         lead_embeddings = lead_embeddings.unsqueeze(2).expand(b, -1, n_masked_with_sep, -1)
         x = x + lead_embeddings
 
-        x = rearrange(x, 'b c n p -> b (c n) p')
+        x = rearrange(x, "b c n p -> b (c n) p")
         for i in range(self.encoder.depth):
-            x = getattr(self.encoder, f'block{i}')(x)
+            x = getattr(self.encoder, f"block{i}")(x)
         x = self.encoder.norm(x)
 
         return x, mask, ids_restore
@@ -640,7 +636,7 @@ class ST_MEM(nn.Module):
         x = self.to_decoder_embedding(x)
 
         # append mask embeddings to sequence
-        x = rearrange(x, 'b (c n) p -> b c n p', c=self.num_leads)
+        x = rearrange(x, "b (c n) p -> b c n p", c=self.num_leads)
         b, _, n_masked_with_sep, d = x.shape
         n = ids_restore.shape[2]
         mask_embeddings = self.mask_embedding.unsqueeze(1)
@@ -672,8 +668,7 @@ class ST_MEM(nn.Module):
         return x, x_latents
 
     def forward_loss(self, series, pred, mask):
-        """
-        series: (batch_size, num_leads, seq_len)
+        """series: (batch_size, num_leads, seq_len)
         pred: (batch_size, num_leads, n, patch_size)
         mask: (batch_size, num_leads, n), 0 is keep, 1 is remove,
         """
@@ -700,14 +695,14 @@ class ST_MEM(nn.Module):
         recon_loss = self.forward_loss(series, pred, mask)
         return CombinedOutput(
             loss=recon_loss,
-            out = x_latents
+            out = x_latents,
         )
 
     def __repr__(self):
         print_str = f"{self.__class__.__name__}(\n"
         for k, v in self._repr_dict.items():
-            print_str += f'    {k}={v},\n'
-        print_str += ')'
+            print_str += f"    {k}={v},\n"
+        print_str += ")"
         return print_str
 
 
@@ -742,14 +737,14 @@ class ST_MEM_Ours(nn.Module):
     def __init__(self, st_mem):
         super(ST_MEM_Ours, self).__init__()
         self.st_mem = st_mem
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1)) 
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
     def forward(self, batch):
-        return self.st_mem(batch['signal'].to(self.st_mem.device))
-    
+        return self.st_mem(batch["signal"].to(self.st_mem.device))
+
     @torch.no_grad()
     def get_embeddings(self, batch):
         self.st_mem.eval()
-        out = self.st_mem(batch['signal'].to(self.st_mem.device))
+        out = self.st_mem(batch["signal"].to(self.st_mem.device))
         out = out.out.permute(0, 3, 1, 2)
         out = self.avgpool(out)
         out = out.squeeze(-1).squeeze(-1)

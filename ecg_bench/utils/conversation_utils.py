@@ -1,14 +1,13 @@
-"""
-From https://github.com/lm-sys/FastChat/blob/main/fastchat/conversation.py
+"""From https://github.com/lm-sys/FastChat/blob/main/fastchat/conversation.py
 Modified by @willxxy
 """
 
 import base64
 import dataclasses
-from enum import auto, IntEnum
-from io import BytesIO
 import os
-from typing import List, Dict, Union, Tuple
+from enum import IntEnum, auto
+from io import BytesIO
+from typing import Dict, List, Tuple, Union
 
 
 class SeparatorStyle(IntEnum):
@@ -95,7 +94,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.ADD_COLON_TWO:
+        if self.sep_style == SeparatorStyle.ADD_COLON_TWO:
             seps = [self.sep, self.sep2]
             ret = system_prompt + seps[0]
             for i, (role, message) in enumerate(self.messages):
@@ -107,7 +106,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.ADD_COLON_SPACE_SINGLE:
+        if self.sep_style == SeparatorStyle.ADD_COLON_SPACE_SINGLE:
             ret = system_prompt + self.sep
             for role, message in self.messages:
                 if message:
@@ -115,7 +114,7 @@ class Conversation:
                 else:
                     ret += role + ": "  # must be end with a space
             return ret
-        elif self.sep_style == SeparatorStyle.ADD_NEW_LINE_SINGLE:
+        if self.sep_style == SeparatorStyle.ADD_NEW_LINE_SINGLE:
             ret = "" if system_prompt == "" else system_prompt + self.sep
             for role, message in self.messages:
                 if message:
@@ -123,7 +122,7 @@ class Conversation:
                 else:
                     ret += role + "\n"
             return ret
-        elif self.sep_style == SeparatorStyle.NO_COLON_SINGLE:
+        if self.sep_style == SeparatorStyle.NO_COLON_SINGLE:
             ret = system_prompt
             for role, message in self.messages:
                 if message:
@@ -131,7 +130,7 @@ class Conversation:
                 else:
                     ret += role
             return ret
-        elif self.sep_style == SeparatorStyle.NO_COLON_TWO:
+        if self.sep_style == SeparatorStyle.NO_COLON_TWO:
             seps = [self.sep, self.sep2]
             ret = system_prompt
             for i, (role, message) in enumerate(self.messages):
@@ -140,7 +139,7 @@ class Conversation:
                 else:
                     ret += role
             return ret
-        elif self.sep_style == SeparatorStyle.RWKV:
+        if self.sep_style == SeparatorStyle.RWKV:
             ret = system_prompt
             for i, (role, message) in enumerate(self.messages):
                 if message:
@@ -153,7 +152,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.LLAMA2:
+        if self.sep_style == SeparatorStyle.LLAMA2:
             seps = [self.sep, self.sep2]
             if self.system_message:
                 ret = system_prompt
@@ -169,7 +168,7 @@ class Conversation:
                 else:
                     ret += tag
             return ret
-        elif self.sep_style == SeparatorStyle.LLAMA3:
+        if self.sep_style == SeparatorStyle.LLAMA3:
             ret = "<|begin_of_text|>"
             if self.system_message:
                 ret += system_prompt
@@ -182,7 +181,7 @@ class Conversation:
                 else:
                     ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
             return ret
-        elif self.sep_style == SeparatorStyle.CHATGLM:
+        if self.sep_style == SeparatorStyle.CHATGLM:
             # source: https://huggingface.co/THUDM/chatglm-6b/blob/1d240ba371910e9282298d4592532d7f0f3e9f3e/modeling_chatglm.py#L1302-L1308
             # source2: https://huggingface.co/THUDM/chatglm2-6b/blob/e186c891cf64310ac66ef10a87e6635fa6c2a579/modeling_chatglm.py#L926
             round_add_n = 1 if self.name == "chatglm2" else 0
@@ -200,7 +199,7 @@ class Conversation:
                 else:
                     ret += f"{role}："
             return ret
-        elif self.sep_style == SeparatorStyle.CHATML:
+        if self.sep_style == SeparatorStyle.CHATML:
             ret = "" if system_prompt == "" else system_prompt + self.sep + "\n"
             for role, message in self.messages:
                 if message:
@@ -211,7 +210,7 @@ class Conversation:
                 else:
                     ret += role + "\n"
             return ret
-        elif self.sep_style == SeparatorStyle.CHATGLM3:
+        if self.sep_style == SeparatorStyle.CHATGLM3:
             ret = ""
             if self.system_message:
                 ret += system_prompt
@@ -221,7 +220,7 @@ class Conversation:
                 else:
                     ret += role
             return ret
-        elif self.sep_style == SeparatorStyle.CHATINTERN:
+        if self.sep_style == SeparatorStyle.CHATINTERN:
             # source: https://huggingface.co/internlm/internlm-chat-7b-8k/blob/bd546fa984b4b0b86958f56bf37f94aa75ab8831/modeling_internlm.py#L771
             seps = [self.sep, self.sep2]
             ret = system_prompt
@@ -233,7 +232,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.DOLLY:
+        if self.sep_style == SeparatorStyle.DOLLY:
             seps = [self.sep, self.sep2]
             ret = system_prompt
             for i, (role, message) in enumerate(self.messages):
@@ -244,7 +243,7 @@ class Conversation:
                 else:
                     ret += role + ":\n"
             return ret
-        elif self.sep_style == SeparatorStyle.PHOENIX:
+        if self.sep_style == SeparatorStyle.PHOENIX:
             ret = system_prompt
             for role, message in self.messages:
                 if message:
@@ -252,7 +251,7 @@ class Conversation:
                 else:
                     ret += role + ": " + "<s>"
             return ret
-        elif self.sep_style == SeparatorStyle.ROBIN:
+        if self.sep_style == SeparatorStyle.ROBIN:
             ret = system_prompt + self.sep
             for role, message in self.messages:
                 if message:
@@ -260,7 +259,7 @@ class Conversation:
                 else:
                     ret += role + ":\n"
             return ret
-        elif self.sep_style == SeparatorStyle.FALCON_CHAT:
+        if self.sep_style == SeparatorStyle.FALCON_CHAT:
             ret = ""
             if self.system_message:
                 ret += system_prompt + self.sep
@@ -270,7 +269,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.METAMATH:
+        if self.sep_style == SeparatorStyle.METAMATH:
             ret = "" if system_prompt == "" else system_prompt + self.sep
             for i, (role, message) in enumerate(self.messages):
                 # For MetaMath, sep2 is used to prefix the message.
@@ -281,7 +280,7 @@ class Conversation:
                 else:
                     ret += role + starting_sep
             return ret
-        elif self.sep_style == SeparatorStyle.DEEPSEEK_CHAT:
+        if self.sep_style == SeparatorStyle.DEEPSEEK_CHAT:
             seps = [self.sep, self.sep2]
             ret = system_prompt
             for i, (role, message) in enumerate(self.messages):
@@ -290,7 +289,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.YUAN2:
+        if self.sep_style == SeparatorStyle.YUAN2:
             seps = [self.sep, self.sep2]
             ret = ""
             if self.system_message:
@@ -302,7 +301,7 @@ class Conversation:
                     ret += ""
             ret = ret.rstrip("<n>") + seps[0]
             return ret
-        elif self.sep_style == SeparatorStyle.GEMMA:
+        if self.sep_style == SeparatorStyle.GEMMA:
             ret = "<bos>"
             for role, message in self.messages:
                 if message:
@@ -310,7 +309,7 @@ class Conversation:
                 else:
                     ret += "<start_of_turn>" + role + "\n"
             return ret
-        elif self.sep_style == SeparatorStyle.CLLM:
+        if self.sep_style == SeparatorStyle.CLLM:
             seps = [self.sep, self.sep2]
             ret = system_prompt + seps[0]
             for i, (role, message) in enumerate(self.messages[-2:]):
@@ -322,7 +321,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        elif self.sep_style == SeparatorStyle.DEFAULT:
+        if self.sep_style == SeparatorStyle.DEFAULT:
             ret = system_prompt + "\n"
             for role, message in self.messages:
                 if message:
@@ -332,8 +331,7 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
-        else:
-            raise ValueError(f"Invalid style: {self.sep_style}")
+        raise ValueError(f"Invalid style: {self.sep_style}")
 
     def get_images(self):
         images = []
@@ -350,7 +348,7 @@ class Conversation:
         self.system_message = system_message
 
     def get_system_message(self, is_vision=False):
-        """return the system message."""
+        """Return the system message."""
         if is_vision and self.system_message_vision:
             return self.system_message_vision
         return self.system_message
@@ -414,7 +412,7 @@ class Conversation:
                 messages.append((role, message))
 
         return messages
-    
+
     def copy(self):
         return Conversation(
             name=self.name,
@@ -431,10 +429,10 @@ class Conversation:
             stop_token_ids=self.stop_token_ids,
             max_image_size_mb=self.max_image_size_mb,
         )
-    
+
     def load_image(self, image_file):
-        from PIL import Image
         import requests
+        from PIL import Image
 
         image = None
 
@@ -489,7 +487,7 @@ register_conv_template(
         roles=("", ""),
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="",
-    )
+    ),
 )
 
 # A template with a one-shot conversation example
@@ -522,7 +520,7 @@ Remember to tailor the activities to the birthday child's interests and preferen
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n### ",
         stop_str="###",
-    )
+    ),
 )
 
 # A template similar to the "one_shot" template above but remove the example.
@@ -535,7 +533,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n### ",
         stop_str="###",
-    )
+    ),
 )
 
 # Vicuna v1.1 template
@@ -548,7 +546,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep=" ",
         sep2="</s>",
-    )
+    ),
 )
 
 # api-based default template
@@ -559,7 +557,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 register_conv_template(
@@ -572,7 +570,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep=" ",
         sep2="</s>",
-    )
+    ),
 )
 
 register_conv_template(
@@ -583,7 +581,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep="\n",
         sep2="</s>",
-    )
+    ),
 )
 
 register_conv_template(
@@ -595,7 +593,7 @@ register_conv_template(
         sep_style=SeparatorStyle.LLAMA2,
         sep=" ",
         sep2=" </s><s>",
-    )
+    ),
 )
 
 # Koala default template
@@ -607,7 +605,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep=" ",
         sep2="</s>",
-    )
+    ),
 )
 
 # Alpaca default template
@@ -619,7 +617,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep="\n\n",
         sep2="</s>",
-    )
+    ),
 )
 
 # ChatGLM default template
@@ -629,7 +627,7 @@ register_conv_template(
         roles=("问", "答"),
         sep_style=SeparatorStyle.CHATGLM,
         sep="\n",
-    )
+    ),
 )
 
 # ChatGLM2 default template
@@ -639,7 +637,7 @@ register_conv_template(
         roles=("问", "答"),
         sep_style=SeparatorStyle.CHATGLM,
         sep="\n\n",
-    )
+    ),
 )
 
 # ChatGLM3 default template
@@ -654,7 +652,7 @@ register_conv_template(
             64797,
             2,
         ],  # "<|user|>", "<|observation|>", "</s>"
-    )
+    ),
 )
 
 # CodeGeex(2) Template
@@ -665,7 +663,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="\n\n",
         stop_token_ids=[0, 2],
-    )
+    ),
 )
 
 # Dolly V2 default template
@@ -677,7 +675,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DOLLY,
         sep="\n\n",
         sep2="### End",
-    )
+    ),
 )
 
 # OpenAssistant Pythia default template
@@ -687,7 +685,7 @@ register_conv_template(
         roles=("<|prompter|>", "<|assistant|>"),
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="<|endoftext|>",
-    )
+    ),
 )
 
 # OpenAssistant default template
@@ -697,7 +695,7 @@ register_conv_template(
         roles=("<|prompter|>", "<|assistant|>"),
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="</s>",
-    )
+    ),
 )
 
 # OpenChat 3.5 default template
@@ -707,7 +705,7 @@ register_conv_template(
         roles=("GPT4 Correct User", "GPT4 Correct Assistant"),
         sep_style=SeparatorStyle.FALCON_CHAT,
         sep="<|end_of_turn|>",
-    )
+    ),
 )
 
 # TenyxChat default template
@@ -717,7 +715,7 @@ register_conv_template(
         roles=("User", "Assistant"),
         sep_style=SeparatorStyle.FALCON_CHAT,
         sep="<|end_of_turn|>",
-    )
+    ),
 )
 
 # Deepseek code default template
@@ -729,7 +727,7 @@ register_conv_template(
         sep="\n",
         stop_str="<|EOT|>",
         sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
-    )
+    ),
 )
 
 
@@ -740,7 +738,7 @@ register_conv_template(
         roles=("<|user|>", "<|assistant|>"),
         sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
         sep="\n",
-    )
+    ),
 )
 
 # StableLM Alpha default template
@@ -758,7 +756,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="",
         stop_token_ids=[50278, 50279, 50277, 1, 0],
-    )
+    ),
 )
 
 # Baize default template
@@ -775,7 +773,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="\n",
         stop_str="[|Human|]",
-    )
+    ),
 )
 
 # RWKV-4-Raven default template
@@ -794,7 +792,7 @@ register_conv_template(
         sep_style=SeparatorStyle.RWKV,
         sep="",
         stop_str="\n\n",
-    )
+    ),
 )
 
 # Buddy default template
@@ -815,7 +813,7 @@ Assistant: Hi, I'm Buddy, your AI assistant. How can I help you today?""",
         roles=("User", "Assistant"),
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n",
-    )
+    ),
 )
 
 # Phoenix default template
@@ -826,7 +824,7 @@ register_conv_template(
         roles=("Human", "Assistant"),
         sep_style=SeparatorStyle.PHOENIX,
         sep="</s>",
-    )
+    ),
 )
 
 # ReaLM default template
@@ -837,7 +835,7 @@ register_conv_template(
         roles=("Human", "Assistant"),
         sep_style=SeparatorStyle.PHOENIX,
         sep="</s>",
-    )
+    ),
 )
 
 # ChatGPT default template
@@ -849,7 +847,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=None,  # OpenAI does auto-resizing
-    )
+    ),
 )
 
 register_conv_template(
@@ -865,7 +863,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 register_conv_template(
@@ -880,7 +878,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 # Perplexity AI template
@@ -891,7 +889,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 # Claude default template
@@ -902,7 +900,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n\n",
         max_image_size_mb=5 / 1.5,
-    )
+    ),
 )
 
 register_conv_template(
@@ -926,7 +924,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=5 / 1.5,
-    )
+    ),
 )
 
 register_conv_template(
@@ -950,7 +948,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=5 / 1.5,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1027,7 +1025,7 @@ Claude follows this information in all languages, and always responds to the use
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=5 / 1.5,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1104,7 +1102,7 @@ Claude follows this information in all languages, and always responds to the use
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=5 / 1.5,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1137,7 +1135,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=5 / 1.5,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1150,7 +1148,7 @@ Today Date: {{currentDateTimev2}}"""
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1172,7 +1170,7 @@ Remember your instructions."""
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 # MetaMath default template
@@ -1186,7 +1184,7 @@ register_conv_template(
         sep_style=SeparatorStyle.METAMATH,
         sep="\n\n",
         sep2="Let's think step by step.",
-    )
+    ),
 )
 
 # MPT default template
@@ -1203,7 +1201,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[50278, 0],
-    )
+    ),
 )
 
 # MPT-30b-chat default template
@@ -1217,7 +1215,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[50278, 0],
-    )
+    ),
 )
 
 # Lemur-70b-chat default template
@@ -1232,7 +1230,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[32002, 0],
-    )
+    ),
 )
 
 # MPT-30b-instruct default template
@@ -1246,7 +1244,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
         sep="\n\n",
         stop_token_ids=[50278, 0],
-    )
+    ),
 )
 
 # Bard default template
@@ -1258,7 +1256,7 @@ register_conv_template(
         roles=("0", "1"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1268,7 +1266,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
         max_image_size_mb=20,
-    )
+    ),
 )
 
 register_conv_template(
@@ -1285,7 +1283,7 @@ register_conv_template(
             "For any non-english queries, respond in the same language as the prompt unless otherwise specified by the user.\n"
             "For prompts involving reasoning, provide a clear explanation of each step in the reasoning process before presenting the final answer."
         ),
-    )
+    ),
 )
 
 register_conv_template(
@@ -1299,7 +1297,7 @@ register_conv_template(
             "unless the user requests a concise response specifically. "
             "Respond in the same language as the query."
         ),
-    )
+    ),
 )
 
 # BiLLa default template
@@ -1310,7 +1308,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_SPACE_SINGLE,
         sep="\n",
         stop_str="Human:",
-    )
+    ),
 )
 
 # RedPajama INCITE default template
@@ -1321,7 +1319,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n",
         stop_str="<human>",
-    )
+    ),
 )
 
 # h2oGPT default template
@@ -1331,7 +1329,7 @@ register_conv_template(
         roles=("<|prompt|>", "<|answer|>"),
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="</s>",
-    )
+    ),
 )
 
 # Robin default template
@@ -1344,7 +1342,7 @@ register_conv_template(
         sep="\n",
         stop_token_ids=[2, 396],
         stop_str="###",
-    )
+    ),
 )
 
 # Snoozy default template
@@ -1358,7 +1356,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n",
         stop_str="###",
-    )
+    ),
 )
 
 # manticore default template
@@ -1369,7 +1367,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep="\n",
         sep2="</s>",
-    )
+    ),
 )
 
 # Falcon default template
@@ -1396,7 +1394,7 @@ register_conv_template(
             10,
             11,
         ],  # it better only put special tokens here, because tokenizer only remove special tokens
-    )
+    ),
 )
 
 # ChangGPT default template
@@ -1406,7 +1404,7 @@ register_conv_template(
         roles=("B", "A"),
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n",
-    )
+    ),
 )
 
 # tigerbot template
@@ -1419,7 +1417,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ROBIN,
         sep="\n\n",
         stop_str="###",
-    )
+    ),
 )
 
 # ref: https://huggingface.co/Salesforce/xgen-7b-8k-inst
@@ -1431,7 +1429,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n",
         stop_token_ids=[50256],
-    )
+    ),
 )
 
 # Internlm-chat template
@@ -1445,7 +1443,7 @@ register_conv_template(
         sep2="<eoa>",
         stop_token_ids=[1, 103028],
         stop_str="<|User|>",
-    )
+    ),
 )
 
 # StarChat template
@@ -1459,7 +1457,7 @@ register_conv_template(
         sep="<|end|>",
         stop_token_ids=[0, 49155],
         stop_str="<|end|>",
-    )
+    ),
 )
 
 # Baichuan-13B-Chat template
@@ -1473,7 +1471,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="",
         stop_token_ids=[],
-    )
+    ),
 )
 
 # Baichuan2-13B-Chat template
@@ -1487,7 +1485,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="",
         stop_token_ids=[],
-    )
+    ),
 )
 
 # Mistral template
@@ -1500,7 +1498,7 @@ register_conv_template(
         sep_style=SeparatorStyle.LLAMA2,
         sep=" ",
         sep2="</s>",
-    )
+    ),
 )
 
 # llama2 template
@@ -1514,7 +1512,7 @@ register_conv_template(
         sep_style=SeparatorStyle.LLAMA2,
         sep=" ",
         sep2=" </s><s>",
-    )
+    ),
 )
 
 # llama3 template
@@ -1529,7 +1527,7 @@ register_conv_template(
         sep="",
         stop_str="<|eot_id|>",
         stop_token_ids=[128001, 128009],
-    )
+    ),
 )
 
 register_conv_template(
@@ -1541,7 +1539,7 @@ register_conv_template(
         sep_style=SeparatorStyle.LLAMA2,
         sep=" ",
         sep2=" </s><s>",
-    )
+    ),
 )
 
 register_conv_template(
@@ -1552,7 +1550,7 @@ register_conv_template(
         sep="\n",
         sep2="\n",
         stop_str="<end>",
-    )
+    ),
 )
 
 # OpenOrcaxOpenChat-Preview2-13B template
@@ -1573,7 +1571,7 @@ register_conv_template(
         sep="<|end_of_turn|>\n",
         stop_token_ids=[32000, 32001],  # "<|end_of_turn|>"
         stop_str="User",
-    )
+    ),
 )
 
 # Open-Orca/Mistral-7B-OpenOrca template
@@ -1588,7 +1586,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[32000, 32001],
-    )
+    ),
 )
 
 
@@ -1603,7 +1601,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[32000, 32001],
-    )
+    ),
 )
 
 
@@ -1619,7 +1617,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[32000, 32001],
-    )
+    ),
 )
 
 
@@ -1634,7 +1632,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_token_ids=[32000, 32001],
-    )
+    ),
 )
 
 
@@ -1654,7 +1652,7 @@ register_conv_template(
             151645,
         ],  # "<|endoftext|>", "<|im_start|>", "<|im_end|>"
         stop_str="<|endoftext|>",
-    )
+    ),
 )
 
 # source: https://huggingface.co/01-ai/Yi-34B-Chat/blob/main/tokenizer_config.json#L60
@@ -1671,7 +1669,7 @@ register_conv_template(
             8,
         ],  # "<|endoftext|>", "<|im_start|>", "<|im_end|>", "<|im_sep|>"
         stop_str="<|endoftext|>",
-    )
+    ),
 )
 
 
@@ -1687,7 +1685,7 @@ register_conv_template(
         sep="###",
         sep2="",
         stop_str=["###", "</s>", "[UNK]"],
-    )
+    ),
 )
 # AquilaChat2-34B default template
 # source: https://huggingface.co/BAAI/AquilaChat2-34B/blob/4608b75855334b93329a771aee03869dbf7d88cc/predict.py#L212
@@ -1702,7 +1700,7 @@ register_conv_template(
         sep="\n",
         sep2="</s>",
         stop_str=["</s>", "[UNK]"],
-    )
+    ),
 )
 # AquilaChat2-7B-16K and AquilaChat2-34B-16K default template
 # source: https://huggingface.co/BAAI/AquilaChat2-34B/blob/4608b75855334b93329a771aee03869dbf7d88cc/predict.py#L227
@@ -1717,7 +1715,7 @@ register_conv_template(
         sep="###",
         sep2="</s>",
         stop_str=["</s>", "[UNK]"],
-    )
+    ),
 )
 
 # AquilaChat2-7B default template
@@ -1731,7 +1729,7 @@ register_conv_template(
         sep="",
         sep2="</s>",
         stop_str=["</s>", "<|endoftext|>"],
-    )
+    ),
 )
 
 # Llama2-Chinese default template
@@ -1745,7 +1743,7 @@ register_conv_template(
         sep="\n",
         sep2="\n</s><s>",
         stop_str="</s>",
-    )
+    ),
 )
 
 # Vigogne Instruct default template
@@ -1762,7 +1760,7 @@ register_conv_template(
         sep_style=SeparatorStyle.DOLLY,
         sep="\n\n",
         sep2="</s>",
-    )
+    ),
 )
 
 # Vigogne Chat default template
@@ -1779,7 +1777,7 @@ register_conv_template(
         sep="\n",
         sep2="</s>\n",
         stop_str="<|user|>",
-    )
+    ),
 )
 
 # Stable Vicuna default template
@@ -1793,7 +1791,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_COLON_TWO,
         sep="\n",
         sep2="\n\n",
-    )
+    ),
 )
 
 register_conv_template(
@@ -1808,7 +1806,7 @@ register_conv_template(
         sep_style=SeparatorStyle.LLAMA2,
         sep=" ",
         sep2=" </s>",
-    )
+    ),
 )
 
 # Falcon 180B chat template
@@ -1823,7 +1821,7 @@ register_conv_template(
         sep="\n",
         sep2="<|endoftext|>",
         stop_str="\nUser:",  # use stop_str to stop generation after stop_token_ids, it will also remove stop_str from the generated text
-    )
+    ),
 )
 
 # Phind template
@@ -1837,7 +1835,7 @@ register_conv_template(
         offset=0,
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n\n",
-    )
+    ),
 )
 
 # Metharme formatting for Pygmalion models
@@ -1853,7 +1851,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="",
         stop_str="<|user|>",
-    )
+    ),
 )
 # xDAN default template
 # source: https://huggingface.co/xDAN-AI/xDAN-L1-Chat-RL-v1
@@ -1865,7 +1863,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="\n",
         stop_str="</s>",
-    )
+    ),
 )
 
 # Zephyr template
@@ -1879,7 +1877,7 @@ register_conv_template(
         sep="</s>",
         stop_token_ids=[2],
         stop_str="</s>",
-    )
+    ),
 )
 
 # CatPPT template
@@ -1893,7 +1891,7 @@ register_conv_template(
         sep="</s>",
         stop_token_ids=[2],
         stop_str="</s>",
-    )
+    ),
 )
 
 # TinyLlama template
@@ -1907,7 +1905,7 @@ register_conv_template(
         sep="</s>",
         stop_token_ids=[2],
         stop_str="</s>",
-    )
+    ),
 )
 
 # Orca-2 template
@@ -1921,7 +1919,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_str="<|im_end|>",
-    )
+    ),
 )
 
 # Deepseek-chat template
@@ -1935,7 +1933,7 @@ register_conv_template(
         sep="\n\n",
         sep2="<｜end▁of▁sentence｜>",
         stop_str="<｜end▁of▁sentence｜>",
-    )
+    ),
 )
 
 # Yuan2.0 chat template
@@ -1951,7 +1949,7 @@ register_conv_template(
             77185,
         ],  # "<eod>"
         stop_str="<eod>",
-    )
+    ),
 )
 
 # Solar-10.7B Chat Template
@@ -1964,7 +1962,7 @@ register_conv_template(
         sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
         sep="\n\n",
         stop_str="</s>",
-    )
+    ),
 )
 
 # nvidia/Llama2-70B-SteerLM-Chat
@@ -1975,7 +1973,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 # yuan 2.0 template
@@ -1989,7 +1987,7 @@ register_conv_template(
         sep_style=SeparatorStyle.NO_COLON_SINGLE,
         sep="<sep>",
         stop_str="<eod>",
-    )
+    ),
 )
 
 # Cllm chat template
@@ -2003,7 +2001,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CLLM,
         sep=" ",
         sep2="</s>",
-    )
+    ),
 )
 
 
@@ -2018,7 +2016,7 @@ register_conv_template(
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_str="<|im_end|>",
-    )
+    ),
 )
 
 # Gemma
@@ -2030,7 +2028,7 @@ register_conv_template(
         sep_style=SeparatorStyle.GEMMA,
         sep="<end_of_turn>\n",
         stop_str="<end_of_turn>",
-    )
+    ),
 )
 
 register_conv_template(
@@ -2040,7 +2038,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=None,
         sep=None,
-    )
+    ),
 )
 
 register_conv_template(
@@ -2053,7 +2051,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 register_conv_template(
@@ -2066,7 +2064,7 @@ register_conv_template(
         roles=("user", "assistant"),
         sep_style=SeparatorStyle.DEFAULT,
         sep=None,
-    )
+    ),
 )
 
 
@@ -2076,17 +2074,17 @@ if __name__ == "__main__":
     # llama_model = "meta-llama/llama-3.2-1b"
     models = ["meta-llama/llama-3.2-1b-instruct","google/gemma-2-2b-it", "qwen/qwen2.5-1.5b-instruct"]
     for checkpoint in models:
-        tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir='../.huggingface')
-        model = AutoModelForCausalLM.from_pretrained(checkpoint, cache_dir='../.huggingface')
-        
+        tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir="../.huggingface")
+        model = AutoModelForCausalLM.from_pretrained(checkpoint, cache_dir="../.huggingface")
+
         print("\n")
         print(f"-- {checkpoint} template --")
         # conv = get_conv_template("llama-3")
-        if 'gemma' in checkpoint:
+        if "gemma" in checkpoint:
             conv = get_conv_template("gemma")
-        elif 'qwen' in checkpoint:
+        elif "qwen" in checkpoint:
             conv = get_conv_template("qwen-7b-chat")
-        elif 'llama' in checkpoint:
+        elif "llama" in checkpoint:
             conv = get_conv_template("llama-3")
         conv.set_system_message("You are a helpful assistant that can see and understand images. Please provide detailed and accurate responses.")
         conv.append_message(conv.roles[0], "Hello!")
@@ -2099,13 +2097,13 @@ if __name__ == "__main__":
         tokens = tokenizer.convert_ids_to_tokens(token_ids)
 
         print(tokenizer.decode(token_ids))
-        
+
         print("\nTokenized prompt with corresponding token IDs:")
         for idx, (token, token_id) in enumerate(zip(tokens, token_ids)):
             print(f"{idx}: {token} -> {token_id}")
-            
-        print('--' * 100)
 
-        
+        print("--" * 100)
+
+
         ### ALL THE SPECIAL TOKENS IN TERMS OF HEADER AND START END TURN TOKENS ARE ALREADY DEFINED IN TOKENIZER
         ### SO DO WE NEED TO ADD THEM AGAIN?

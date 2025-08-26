@@ -2,9 +2,10 @@
 # validate_ecg_npy.py
 
 import argparse
+import re
 import sys
 from pathlib import Path
-import re
+
 import numpy as np
 from tqdm import tqdm
 

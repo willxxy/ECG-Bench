@@ -11,16 +11,17 @@
 # DeiT: https://github.com/facebookresearch/deit
 # MAE: https://github.com/facebookresearch/mae
 # --------------------------------------------------------
+from collections import namedtuple
 from functools import partial
 
 import torch
-import torch.nn as nn
 from einops import rearrange
-from collections import namedtuple
-CombinedOutput = namedtuple('CombinedOutput', ['loss', 'out'])
-from ecg_bench.models.encoder.st_mem import ViT, TransformerBlock
+from torch import nn
 
-__all__ = ['MTAE', 'mtae_vit_small_dec256d4b', 'mtae_vit_base_dec256d4b']
+CombinedOutput = namedtuple("CombinedOutput", ["loss", "out"])
+from ecg_bench.models.encoder.st_mem import TransformerBlock, ViT
+
+__all__ = ["MTAE", "mtae_vit_base_dec256d4b", "mtae_vit_small_dec256d4b"]
 
 
 def get_1d_sincos_pos_embed(embed_dim: int,
@@ -30,7 +31,7 @@ def get_1d_sincos_pos_embed(embed_dim: int,
     """Positional embedding for 1D patches.
     """
     assert (embed_dim % 2) == 0, \
-        'feature dimension must be multiple of 2 for sincos emb.'
+        "feature dimension must be multiple of 2 for sincos emb."
     grid = torch.arange(grid_size, dtype=torch.float32)
 
     omega = torch.arange(embed_dim // 2, dtype=torch.float32)
@@ -59,22 +60,22 @@ class MTAE(nn.Module):
                  qkv_bias: bool = True,
                  norm_layer: nn.Module = nn.LayerNorm,
                  norm_pix_loss: bool = False,
-                 device: str = 'cuda'):
+                 device: str = "cuda"):
         super().__init__()
         self.device = device
-        self._repr_dict = {'seq_len': seq_len,
-                           'patch_size': patch_size,
-                           'num_leads': num_leads,
-                           'embed_dim': embed_dim,
-                           'depth': depth,
-                           'num_heads': num_heads,
-                           'decoder_embed_dim': decoder_embed_dim,
-                           'decoder_depth': decoder_depth,
-                           'decoder_num_heads': decoder_num_heads,
-                           'mlp_ratio': mlp_ratio,
-                           'qkv_bias': qkv_bias,
-                           'norm_layer': str(norm_layer),
-                           'norm_pix_loss': norm_pix_loss}
+        self._repr_dict = {"seq_len": seq_len,
+                           "patch_size": patch_size,
+                           "num_leads": num_leads,
+                           "embed_dim": embed_dim,
+                           "depth": depth,
+                           "num_heads": num_heads,
+                           "decoder_embed_dim": decoder_embed_dim,
+                           "decoder_depth": decoder_depth,
+                           "decoder_num_heads": decoder_num_heads,
+                           "mlp_ratio": mlp_ratio,
+                           "qkv_bias": qkv_bias,
+                           "norm_layer": str(norm_layer),
+                           "norm_pix_loss": norm_pix_loss}
         self.patch_size = patch_size
         self.num_patches = seq_len // patch_size
         # --------------------------------------------------------------------
@@ -97,7 +98,7 @@ class MTAE(nn.Module):
         self.mask_embedding = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
         self.decoder_pos_embed = nn.Parameter(
             torch.zeros(1, self.num_patches + 1, decoder_embed_dim),
-            requires_grad=False
+            requires_grad=False,
         )
 
         self.decoder_blocks = nn.ModuleList([TransformerBlock(input_dim=decoder_embed_dim,
@@ -146,26 +147,23 @@ class MTAE(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def patchify(self, series):
-        """
-        series: (batch_size, num_leads, seq_len)
+        """series: (batch_size, num_leads, seq_len)
         x: (batch_size, n, patch_size * num_leads)
         """
         p = self.patch_size
         assert series.shape[2] % p == 0
-        x = rearrange(series, 'b c (n p) -> b n (p c)', p=p)
+        x = rearrange(series, "b c (n p) -> b n (p c)", p=p)
         return x
 
     def unpatchify(self, x):
-        """
-        x: (batch_size, n, patch_size * num_leads)
+        """x: (batch_size, n, patch_size * num_leads)
         series: (batch_size, num_leads, seq_len)
         """
-        series = rearrange(x, 'b n (p c) -> b c (n p)')
+        series = rearrange(x, "b n (p c) -> b c (n p)")
         return series
 
     def random_masking(self, x, mask_ratio):
-        """
-        Perform per-sample random masking by per-sample shuffling.
+        """Perform per-sample random masking by per-sample shuffling.
         Per-sample shuffling is done by argsort random noise.
         x: (batch_size, n, embed_dim)
         """
@@ -191,8 +189,7 @@ class MTAE(nn.Module):
         return x_masked, mask, ids_restore
 
     def forward_encoder(self, x, mask_ratio):
-        """
-        x: (batch_size, num_leads, seq_len)
+        """x: (batch_size, num_leads, seq_len)
         """
         # embed patches
         x = self.to_patch_embedding(x)
@@ -214,7 +211,7 @@ class MTAE(nn.Module):
         x = torch.cat([cls_embedding, x], dim=1)
 
         for i in range(self.encoder.depth):
-            x = getattr(self.encoder, f'block{i}')(x)
+            x = getattr(self.encoder, f"block{i}")(x)
         x = self.encoder.norm(x)
 
         return x, mask, ids_restore
@@ -247,8 +244,7 @@ class MTAE(nn.Module):
         return x, x_latents
 
     def forward_loss(self, series, pred, mask):
-        """
-        series: (batch_size, num_leads, seq_len)
+        """series: (batch_size, num_leads, seq_len)
         pred: (batch_size, n, patch_size * num_leads)
         mask: (batch_size, n), 0 is keep, 1 is remove,
         """
@@ -277,14 +273,14 @@ class MTAE(nn.Module):
 
         return CombinedOutput(
             loss=recon_loss,
-            out = x_latents
+            out = x_latents,
         )
 
     def __repr__(self):
         print_str = f"{self.__class__.__name__}(\n"
         for k, v in self._repr_dict.items():
-            print_str += f'    {k}={v},\n'
-        print_str += ')'
+            print_str += f"    {k}={v},\n"
+        print_str += ")"
         return print_str
 
 
@@ -320,14 +316,14 @@ class MTAE_Ours(nn.Module):
         super(MTAE_Ours, self).__init__()
         self.mtae = mtae
         self.avgpool = nn.AdaptiveAvgPool1d(1)
-    
+
     def forward(self, batch):
-        return self.mtae(batch['signal'].to(self.mtae.device))
-    
+        return self.mtae(batch["signal"].to(self.mtae.device))
+
     @torch.no_grad()
     def get_embeddings(self, batch):
         self.mtae.eval()
-        out = self.mtae(batch['signal'].to(self.mtae.device))
+        out = self.mtae(batch["signal"].to(self.mtae.device))
         out = out.out.permute(0, 2, 1)
         out = self.avgpool(out)
         out = out.squeeze(-1)

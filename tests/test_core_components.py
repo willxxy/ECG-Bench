@@ -1,10 +1,11 @@
-import pytest
 import os
-import torch
-import yaml
-import numpy as np
 import pickle
 from argparse import Namespace
+
+import numpy as np
+import pytest
+import torch
+import yaml
 
 # Track import status
 file_manager_imported = False
@@ -36,14 +37,14 @@ def test_environment_setup():
     # Check Python environment
     print("Testing Python environment...")
     assert os.path.exists("requirements.txt"), "requirements.txt file not found"
-    
+
     # Check CUDA availability if applicable
     if torch.cuda.is_available():
         print(f"✓ CUDA is available (version: {torch.version.cuda})")
         print(f"✓ Number of CUDA devices: {torch.cuda.device_count()}")
     else:
         print("✗ CUDA is not available. Running on CPU only.")
-    
+
     # Check if essential directories exist
     for dir_name in ["ecg_bench", "tests", ".github"]:
         assert os.path.isdir(dir_name), f"Essential directory {dir_name} not found"
@@ -54,24 +55,24 @@ def test_file_manager():
     # Skip test if FileManager isn't available
     if not file_manager_imported:
         pytest.skip("FileManager not imported - skipping test")
-        
+
     try:
         fm = FileManager()
         # Test directory creation using os methods directly
         temp_dir = "temp_test_dir"
-        
+
         # Create directory
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
         assert os.path.isdir(temp_dir), f"Failed to create directory {temp_dir}"
-        
+
         # Test file operations
         test_file = os.path.join(temp_dir, "test_file.txt")
         with open(test_file, "w") as f:
             f.write("test content")
-        
+
         assert os.path.isfile(test_file), f"Failed to create file {test_file}"
-        
+
         # Clean up
         os.remove(test_file)
         os.rmdir(temp_dir)
@@ -84,7 +85,7 @@ def test_viz_util():
     # Skip test if VizUtil isn't available
     if not viz_util_imported:
         pytest.skip("VizUtil not imported - skipping test")
-        
+
     try:
         viz = VizUtil()
         assert viz is not None, "Failed to initialize VizUtil"
@@ -96,24 +97,24 @@ def create_mock_tokenizer_file():
     """Create a mock tokenizer file with basic vocabulary and merges"""
     # Create a temporary directory
     os.makedirs("temp_tokenizer_dir", exist_ok=True)
-    
+
     # Create simple mock vocabulary and merges
     mock_vocab = {
         "a": 0, "b": 1, "c": 2, "ab": 3, "bc": 4, "abc": 5,
-        "<PAD>": 6, "<UNK>": 7, "<BOS>": 8, "<EOS>": 9
+        "<PAD>": 6, "<UNK>": 7, "<BOS>": 8, "<EOS>": 9,
     }
-    
+
     mock_merges = {
         ("a", "b"): "ab",
         ("b", "c"): "bc",
-        ("ab", "c"): "abc"
+        ("ab", "c"): "abc",
     }
-    
+
     # Create a tokenizer file
     tokenizer_path = "temp_tokenizer_file.pkl"
     with open(tokenizer_path, "wb") as f:
         pickle.dump((mock_vocab, mock_merges), f)
-    
+
     return tokenizer_path
 
 
@@ -122,17 +123,17 @@ def test_ecg_tokenizer_basic():
     # Skip test if ECGByteTokenizer or FileManager aren't available
     if not ecg_tokenizer_imported or not file_manager_imported:
         pytest.skip("ECGByteTokenizer or FileManager not imported - skipping test")
-        
+
     try:
         # Create a small mock ECG signal for testing
         mock_ecg = np.random.randn(12, 1000)  # 12-lead ECG with 1000 samples
-        
+
         # Create a mock tokenizer file
         tokenizer_path = create_mock_tokenizer_file()
-        
+
         # Initialize FileManager first since ECGByteTokenizer requires it
         fm = FileManager()
-        
+
         # Create a mock args object with dev=False and add all required attributes
         mock_args = Namespace(
             dev=False,
@@ -144,13 +145,13 @@ def test_ecg_tokenizer_basic():
             target_sf=250,
             seg_len=1000,
             pad_to_max=1024,
-            data="temp_data"
+            data="temp_data",
         )
-        
+
         # Check if tokenizer can be initialized
         tokenizer = ECGByteTokenizer(mock_args, fm)
         assert tokenizer is not None, "Failed to initialize ECGByteTokenizer"
-        
+
         # Clean up
         import shutil
         os.remove(tokenizer_path)
@@ -168,23 +169,23 @@ def test_config_loading():
         "data": "test-data",
         "batch_size": 32,
         "lr": 1e-4,
-        "epochs": 10
+        "epochs": 10,
     }
-    
+
     os.makedirs("temp_config", exist_ok=True)
     config_path = "temp_config/test_config.yaml"
-    
+
     try:
         # Write test config
         with open(config_path, "w") as f:
             yaml.dump(config_data, f)
-        
+
         # Read and verify config
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             loaded_config = yaml.safe_load(f)
-        
+
         assert loaded_config == config_data, "Config loading failed"
-        
+
         # Clean up
         os.remove(config_path)
         os.rmdir("temp_config")

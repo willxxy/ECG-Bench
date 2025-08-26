@@ -4,9 +4,10 @@ import pathlib
 import re
 from collections import defaultdict
 from types import SimpleNamespace
-from datasets import Dataset, DatasetDict, load_dataset, Features, Value
-from huggingface_hub import login
+
 import numpy as np
+from datasets import Dataset, DatasetDict, Features, Value, load_dataset
+from huggingface_hub import login
 
 
 # ----------  splitting helper (your original logic, un-modified) ----------
@@ -55,36 +56,36 @@ class Splitter:
         groups.extend(loose)
 
         rng.shuffle(groups)
-        
+
         group_sizes = [len(g) for g in groups]
-        
+
         train_groups_idx = []
         test_groups_idx = []
         current_train_size = 0
-        
+
         sorted_indices = sorted(range(len(groups)), key=lambda i: -group_sizes[i])
-        
+
         for idx in sorted_indices:
             if current_train_size + group_sizes[idx] <= n_train_target:
                 train_groups_idx.append(idx)
                 current_train_size += group_sizes[idx]
             else:
                 test_groups_idx.append(idx)
-        
+
         best_diff = abs(current_train_size - n_train_target)
         improved = True
         max_iterations = 0
         iteration = 0
-        
+
         while improved and iteration < max_iterations:
             improved = False
             iteration += 1
-            
+
             for i, train_idx in enumerate(train_groups_idx):
                 for j, test_idx in enumerate(test_groups_idx):
                     new_train_size = current_train_size - group_sizes[train_idx] + group_sizes[test_idx]
                     new_diff = abs(new_train_size - n_train_target)
-                    
+
                     if new_diff < best_diff:
                         train_groups_idx[i] = test_idx
                         test_groups_idx[j] = train_idx
@@ -94,18 +95,18 @@ class Splitter:
                         break
                 if improved:
                     break
-        
+
         train_idx = []
         test_idx = []
-        
+
         for idx in train_groups_idx:
             train_idx.extend(groups[idx])
-        
+
         for idx in test_groups_idx:
             test_idx.extend(groups[idx])
-        
+
         print(f"  Target train size: {n_train_target}, Actual: {len(train_idx)} (diff: {abs(len(train_idx) - n_train_target)})")
-        
+
         return [data[i] for i in train_idx], [data[i] for i in test_idx]
 
 
@@ -138,7 +139,7 @@ def main():
     ap.add_argument("--repo_id", type=str, default="willxxy/test-ecg")
     ap.add_argument("--load", action="store_true", default = None, help="load back the dataset after pushing to HF")
     args = ap.parse_args()
-    
+
     if args.load:
         # --- 3) load back and lazily decode so your dataloader sees originals -----
         ds_all = load_dataset(args.repo_id).with_transform(decode_batch)
@@ -153,7 +154,7 @@ def main():
         print("fold1_test example text (restored):", fold1_test[0]["text"])
         print("fold1_test keys:", fold1_test[0].keys())
         print("len fold1_test:", len(fold1_test))
-        
+
         print("type", type(fold1_train))
         fold1_train_small = fold1_train.select(range(10))
         fold1_test_small  = fold1_test.select(range(10))
@@ -166,13 +167,13 @@ def main():
         with open(args.input) as f:
             data = json.load(f)
 
-        print('Dataset Length:', len(data))
-        
+        print("Dataset Length:", len(data))
+
         folds_dict, summary = {}, []
         for k in range(args.folds):
             splitter = Splitter(seed=args.seed + k)
             train, test = splitter.split_dataset(data, train_ratio=args.train_ratio)
-            
+
             train_pids = {
                 splitter._patient_id(d["ecg_path"])
                 for d in train
@@ -187,7 +188,7 @@ def main():
             assert not overlap, (
                 f"Fold {k+1}: patient-ID overlap between train & test → {sorted(overlap)}"
             )
-            
+
             folds_dict[f"fold{k+1}"] = {"train": train, "test": test}
 
             print(f"Fold {k+1}: train={len(train):>5}, test={len(test):>5}")
@@ -202,7 +203,7 @@ def main():
         for i, (tr, te) in enumerate(summary, 1):
             print(f"  Fold {i}: {tr} / {te}")
         print(f"\n✓ Saved {args.folds} folds to {args.output}")
-        
+
 
         # --- 0) authenticate -------------------------------------------------------
         import os

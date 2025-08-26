@@ -12,18 +12,18 @@
 # --------------------------------------------------------
 
 ### ENCODER / MLAE_VIT ###
+from collections import namedtuple
 from typing import Optional
 
 import torch
-import torch.nn as nn
 from einops.layers.torch import Rearrange
-from collections import namedtuple
-CombinedOutput = namedtuple('CombinedOutput', ['loss', 'out'])
-from ecg_bench.models.encoder.st_mem import ViT, TransformerBlock
+from torch import nn
+
+CombinedOutput = namedtuple("CombinedOutput", ["loss", "out"])
 from ecg_bench.models.encoder.mtae import MTAE
+from ecg_bench.models.encoder.st_mem import TransformerBlock, ViT
 
-
-__all__ = ['MLAE_ViT', 'mlae_vit_small', 'mlae_vit_base']
+__all__ = ["MLAE_ViT", "mlae_vit_base", "mlae_vit_small"]
 
 
 class MLAE_ViT(ViT):
@@ -42,27 +42,27 @@ class MLAE_ViT(ViT):
                  attn_drop_out_rate: float = 0.,
                  drop_path_rate: float = 0.):
         super(ViT, self).__init__()
-        assert num_leads % patch_size == 0, 'The number of leads must be divisible by the patch size.'
-        self._repr_dict = {'seq_len': seq_len,
-                           'patch_size': patch_size,
-                           'num_leads': num_leads,
-                           'num_classes': num_classes if num_classes is not None else 'None',
-                           'width': width,
-                           'depth': depth,
-                           'mlp_dim': mlp_dim,
-                           'heads': heads,
-                           'dim_head': dim_head,
-                           'qkv_bias': qkv_bias,
-                           'drop_out_rate': drop_out_rate,
-                           'attn_drop_out_rate': attn_drop_out_rate,
-                           'drop_path_rate': drop_path_rate}
+        assert num_leads % patch_size == 0, "The number of leads must be divisible by the patch size."
+        self._repr_dict = {"seq_len": seq_len,
+                           "patch_size": patch_size,
+                           "num_leads": num_leads,
+                           "num_classes": num_classes if num_classes is not None else "None",
+                           "width": width,
+                           "depth": depth,
+                           "mlp_dim": mlp_dim,
+                           "heads": heads,
+                           "dim_head": dim_head,
+                           "qkv_bias": qkv_bias,
+                           "drop_out_rate": drop_out_rate,
+                           "attn_drop_out_rate": attn_drop_out_rate,
+                           "drop_path_rate": drop_path_rate}
         self.width = width
         self.depth = depth
 
         # embedding layers
         num_patches = num_leads // patch_size
         patch_dim = seq_len * patch_size
-        self.to_patch_embedding = nn.Sequential(Rearrange('b (n p) t -> b n (p t)', p=patch_size),
+        self.to_patch_embedding = nn.Sequential(Rearrange("b (n p) t -> b n (p t)", p=patch_size),
                                                 nn.LayerNorm(patch_dim),
                                                 nn.Linear(patch_dim, width),
                                                 nn.LayerNorm(width))
@@ -82,7 +82,7 @@ class MLAE_ViT(ViT):
                                      drop_out_rate=drop_out_rate,
                                      attn_drop_out_rate=attn_drop_out_rate,
                                      drop_path_rate=drop_path_rate_list[i])
-            self.add_module(f'block{i}', block)
+            self.add_module(f"block{i}", block)
         self.dropout = nn.Dropout(drop_out_rate)
         self.norm = nn.LayerNorm(width)
 
@@ -120,7 +120,7 @@ from functools import partial
 
 from einops import rearrange
 
-__all__ = ['MLAE', 'mlae_vit_small_dec256d4b', 'mlae_vit_base_dec256d4b']
+__all__ = ["MLAE", "mlae_vit_base_dec256d4b", "mlae_vit_small_dec256d4b"]
 
 
 class MLAE(MTAE):
@@ -138,22 +138,22 @@ class MLAE(MTAE):
                  qkv_bias: bool = True,
                  norm_layer: nn.Module = nn.LayerNorm,
                  norm_pix_loss: bool = False,
-                 device: str = 'cuda'):
+                 device: str = "cuda"):
         super(MTAE, self).__init__()
         self.device = device
-        self._repr_dict = {'seq_len': seq_len,
-                           'patch_size': patch_size,
-                           'num_leads': num_leads,
-                           'embed_dim': embed_dim,
-                           'depth': depth,
-                           'num_heads': num_heads,
-                           'decoder_embed_dim': decoder_embed_dim,
-                           'decoder_depth': decoder_depth,
-                           'decoder_num_heads': decoder_num_heads,
-                           'mlp_ratio': mlp_ratio,
-                           'qkv_bias': qkv_bias,
-                           'norm_layer': str(norm_layer),
-                           'norm_pix_loss': norm_pix_loss}
+        self._repr_dict = {"seq_len": seq_len,
+                           "patch_size": patch_size,
+                           "num_leads": num_leads,
+                           "embed_dim": embed_dim,
+                           "depth": depth,
+                           "num_heads": num_heads,
+                           "decoder_embed_dim": decoder_embed_dim,
+                           "decoder_depth": decoder_depth,
+                           "decoder_num_heads": decoder_num_heads,
+                           "mlp_ratio": mlp_ratio,
+                           "qkv_bias": qkv_bias,
+                           "norm_layer": str(norm_layer),
+                           "norm_pix_loss": norm_pix_loss}
         self.patch_size = patch_size
         self.num_patches = num_leads // patch_size
         # --------------------------------------------------------------------
@@ -176,7 +176,7 @@ class MLAE(MTAE):
         self.mask_embedding = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
         self.decoder_pos_embed = nn.Parameter(
             torch.zeros(1, self.num_patches + 1, decoder_embed_dim),
-            requires_grad=False
+            requires_grad=False,
         )
 
         self.decoder_blocks = nn.ModuleList([TransformerBlock(input_dim=decoder_embed_dim,
@@ -194,21 +194,19 @@ class MLAE(MTAE):
         self.initialize_weights()
 
     def patchify(self, series):
-        """
-        series: (batch_size, num_leads, seq_len)
+        """series: (batch_size, num_leads, seq_len)
         x: (batch_size, n, patch_size * seq_len)
         """
         p = self.patch_size
         assert series.shape[2] % p == 0
-        x = rearrange(series, 'b (n p) t -> b n (p t)', p=p)
+        x = rearrange(series, "b (n p) t -> b n (p t)", p=p)
         return x
 
     def unpatchify(self, x):
-        """
-        x: (batch_size, n, patch_size * seq_len)
+        """x: (batch_size, n, patch_size * seq_len)
         series: (batch_size, num_leads, seq_len)
         """
-        series = rearrange(x, 'b n (p t) -> b (n p) t')
+        series = rearrange(x, "b n (p t) -> b (n p) t")
         return series
 
 
@@ -244,14 +242,14 @@ class MLAE_Ours(nn.Module):
         super(MLAE_Ours, self).__init__()
         self.mlae = mlae
         self.avgpool = nn.AdaptiveAvgPool1d(1)
-    
+
     def forward(self, batch):
-        return self.mlae(batch['signal'].to(self.mlae.device))
-    
+        return self.mlae(batch["signal"].to(self.mlae.device))
+
     @torch.no_grad()
     def get_embeddings(self, batch):
         self.mlae.eval()
-        out = self.mlae(batch['signal'].to(self.mlae.device))
+        out = self.mlae(batch["signal"].to(self.mlae.device))
         out = out.out.permute(0, 2, 1)
         out = self.avgpool(out)
         out = out.squeeze(-1)
