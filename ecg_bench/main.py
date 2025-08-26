@@ -13,7 +13,6 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 import json
-import yaml
 import copy
 from datasets import load_dataset
 
@@ -122,10 +121,6 @@ def create_save_path(args, fm):
     else:
         return args.checkpoint
 
-def save_config(args):    
-    args_dict = {k: v for k, v in vars(args).items() if not k.startswith('_')}
-    with open(f"{args.save_path}/config.yaml", 'w') as f:
-        yaml.dump(args_dict, f, default_flow_style=False)
 
 def save_checkpoint(model, epoch, args, is_best=False):
     # Only save the model on the main process to avoid corruption from race conditions
@@ -279,7 +274,7 @@ def main(rank, world_size):
     args.save_path = create_save_path(args, fm)
     if args.log:
         train_utils.setup_wandb()
-    save_config(args)
+    train_utils.save_config()
     
     try:
         print(f'Creating Model: {args.model}')
@@ -366,7 +361,7 @@ def main(rank, world_size):
                 ### FROM LLM-BLENDER
                 import llm_blender
                 judger = llm_blender.Blender()
-                judger.loadranker("llm-blender/PairRM", device = device, cache_dir = './../.huggingface')
+                judger.loadranker("llm-blender/PairRM", device = device, cache_dir = train_utils.cache_dir)
                 
                 from ecg_bench.utils.post_train_utils import DPO
                 dpo = DPO(beta = args.dpo_beta)

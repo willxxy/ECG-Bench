@@ -14,6 +14,7 @@ from nltk.translate.meteor_score import meteor_score
 from rouge import Rouge
 from evaluate import load
 import numpy as np
+import yaml
 from scipy import stats
 from torch.optim import Adam, AdamW
 import random, re, pathlib
@@ -26,6 +27,12 @@ class TrainingUtils:
         self.ecg_tokenizer_utils = ecg_tokenizer_utils
         self.cache_dir = "../.huggingface"
 
+    
+    def save_config(self):    
+        args_dict = {k: v for k, v in vars(self.args).items() if not k.startswith('_')}
+        with open(f"{self.args.save_path}/config.yaml", 'w') as f:
+            yaml.dump(args_dict, f, default_flow_style=False)
+            
     def setup_wandb(self):
         """Initialize Weights & Biases logging if enabled"""
         print('Initializing Wandb')
