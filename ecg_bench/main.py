@@ -2,10 +2,8 @@ import torch
 torch.set_num_threads(6)
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.optim import Adam
 import torch.multiprocessing as mp
 import os
-import argparse
 from huggingface_hub import HfFolder, login
 import gc
 import random
@@ -253,7 +251,7 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
                 'qa_results': seed_results['qa_results']
             }, f)
     
-    print(f'Running statistical analysis')
+    print('Running statistical analysis')
     statistical_results = train_utils.run_statistical_analysis(all_seed_results)
     print(f'Statistical results: {statistical_results}')
     
@@ -367,7 +365,6 @@ def main(rank, world_size):
                 dpo = DPO(beta = args.dpo_beta)
                 ref_model = copy.deepcopy(model)
                 
-                from ecg_bench.runners.post_train import post_trainer_dpo
                 run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)
             else:
                 run_inference(model, data_loader, tokenizer, args, train_utils)

@@ -5,7 +5,6 @@ import gc
 import torch
 torch.set_num_threads(6)
 import random
-import os
 from huggingface_hub import login
 from functools import partial
 import PIL.Image

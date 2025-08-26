@@ -118,8 +118,6 @@ def mlae_vit_base(num_leads, num_classes=None, seq_len=2250, patch_size=1, **kwa
 
 from functools import partial
 
-import torch
-import torch.nn as nn
 from einops import rearrange
 
 __all__ = ['MLAE', 'mlae_vit_small_dec256d4b', 'mlae_vit_base_dec256d4b']

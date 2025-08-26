@@ -1,10 +1,12 @@
-import argparse, json, pathlib, re
+import argparse
+import json
+import pathlib
+import re
 from collections import defaultdict
 from types import SimpleNamespace
 from datasets import Dataset, DatasetDict, load_dataset, Features, Value
 from huggingface_hub import login
 import numpy as np
-from tqdm import tqdm
 
 
 # ----------  splitting helper (your original logic, un-modified) ----------

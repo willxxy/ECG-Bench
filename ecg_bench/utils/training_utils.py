@@ -1,4 +1,3 @@
-import random
 import torch
 import torch.nn as nn
 import wandb
@@ -17,9 +16,6 @@ import numpy as np
 import yaml
 from scipy import stats
 from torch.optim import Adam, AdamW
-import random, re, pathlib
-from typing import List, Dict, Tuple, Callable, Optional
-from collections import defaultdict
 
 class TrainingUtils:
     def __init__(self, args, fm, viz, device, ecg_tokenizer_utils=None):

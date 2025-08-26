@@ -1,4 +1,3 @@
-import argparse
 import glob
 
 from ecg_bench.utils.ecg_tokenizer_utils import ECGByteTokenizer

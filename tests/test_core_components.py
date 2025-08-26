@@ -4,7 +4,6 @@ import torch
 import yaml
 import numpy as np
 import pickle
-from pathlib import Path
 from argparse import Namespace
 
 # Track import status

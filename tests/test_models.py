@@ -2,8 +2,6 @@ import pytest
 import os
 import torch
 import torch.nn as nn
-import numpy as np
-from argparse import Namespace
 
 # Import ECG tokenizer if needed for model tests
 try:
@@ -51,7 +49,7 @@ def test_simple_model():
     try:
         with torch.no_grad():
             output = model(x)
-        print(f"✓ Forward pass successful")
+        print("✓ Forward pass successful")
         print(f"  Input shape: {x.shape}")
         print(f"  Output shape: {output.shape}")
         assert output.shape == (batch_size, 128), f"Expected output shape (2, 128), got {output.shape}"

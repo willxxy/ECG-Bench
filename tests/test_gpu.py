@@ -1,7 +1,6 @@
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-import sys
 import os
 import pytest
 
@@ -112,7 +111,7 @@ def test_flash_attention():
                     
                     torch.cuda.synchronize()
                     flash_attn_time = start_time.elapsed_time(end_time)
-                    print(f"✓ Flash Attention with long sequence successful")
+                    print("✓ Flash Attention with long sequence successful")
                     print(f"  Time taken: {flash_attn_time:.2f} ms")
                     
                     print("\n✓ Flash Attention test completed successfully")

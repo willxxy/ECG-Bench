@@ -48,10 +48,10 @@ class ECGByteTokenizer:
         print(f"Vocabulary size: {len(vocab)}")
         num_sample_files = self.args.sampled_files.split('/')[-1].split('_')[1]
         self.fm.save_tokenizer(vocab, merges, f'./data/tokenizer_{self.args.num_merges}_{num_sample_files}_{self.args.instance_normalize}_{self.args.dev}.pkl')
-        print(f"Vocabulary and merges saved")
+        print("Vocabulary and merges saved")
         
     def verify_tokenizer(self):
-        path_to_ecg = f"./data/ptb/preprocessed_1250_250/{os.listdir(f'./data/ptb/preprocessed_1250_250')[0]}"
+        path_to_ecg = f"./data/ptb/preprocessed_1250_250/{os.listdir('./data/ptb/preprocessed_1250_250')[0]}"
         original_ecg = self.fm.open_npy(path_to_ecg)['ecg']
         symbol_signal = self.process_ecg(path_to_ecg)
         print(f"Processed ECG signal to text (first 100 characters): {symbol_signal[:100]}...")

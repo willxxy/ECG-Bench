@@ -274,10 +274,7 @@ def vit_base(num_leads, num_classes=None, seq_len=2250, patch_size=75, **kwargs)
 
 
 ### ENCODER / STE_MEM_VIT ###
-import torch
 import torch.nn as nn
-from einops import rearrange
-from einops.layers.torch import Rearrange
 
 
 __all__ = ['ST_MEM_ViT', 'st_mem_vit_small', 'st_mem_vit_base']
@@ -425,9 +422,7 @@ def st_mem_vit_base(num_leads, num_classes=None, seq_len=2250, patch_size=75, **
 #### ST_MEM ###
 from functools import partial
 
-import torch
 import torch.nn as nn
-from einops import rearrange
 from typing import Optional
 
 __all__ = ['ST_MEM', 'st_mem_vit_small_dec256d4b', 'st_mem_vit_base_dec256d4b']

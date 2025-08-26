@@ -12,7 +12,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(dataloader, desc=f'Testing {args.model}', position=0, leave=True)):
             if batch is None:
-                print(f"Skipping invalid batch")
+                print("Skipping invalid batch")
                 continue
             
             try:

@@ -12,12 +12,7 @@ from scipy import interpolate
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
 from datasets import load_dataset
-from sklearn.cluster import KMeans, DBSCAN
-from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
 import random
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
 
 SUPPORTED_BASE_DATASETS = ['ptb', 'mimic', 'code15', 'cpsc', 'csn']
 SUPPORTED_MAPPED_DATASETS = ['ecg_bench_pulse', 'ecg_instruct_pulse', 'pretrain_mimic',
@@ -589,11 +584,11 @@ class PreprocessMapECG:
         if self.args.map_data == 'ecg_grounding_pulse':
             base_datasets.append('ptb')
             base_datasets.append('code15')
-            data = self.fm.open_json(f'./data/ecg_grounding/ECG_Grounding_30k.json')
+            data = self.fm.open_json('./data/ecg_grounding/ECG_Grounding_30k.json')
         elif self.args.map_data == 'ecg_grounding':
-            data = self.fm.open_json(f'./data/ecg_grounding/grounding_train_30k.json')
+            data = self.fm.open_json('./data/ecg_grounding/grounding_train_30k.json')
         elif self.args.map_data == 'ecg_grounding_test':
-            data = self.fm.open_json(f'./data/ecg_grounding/ecg-grounding-test.json')
+            data = self.fm.open_json('./data/ecg_grounding/ecg-grounding-test.json')
         for dataset in base_datasets:
             preprocessed_dir = f"./data/{dataset}/preprocessed_{self.args.seg_len}_{self.args.target_sf}"
             self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob('*'))

@@ -20,7 +20,7 @@ def post_trainer_dpo(model, dataloader, tokenizer, args, optimizer, epoch, judge
     
     for step, batch in enumerate(progress_bar):
         if batch is None:
-            print(f"Skipping invalid batch")
+            print("Skipping invalid batch")
             continue
         
         try:
