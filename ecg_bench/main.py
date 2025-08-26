@@ -268,16 +268,6 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
     with open(f"{args.checkpoint}/{stat_filename}", 'w') as f:
         json.dump(statistical_results, f)
 
-def collate_fn(batch):
-    batch = [item for item in batch if item is not None]
-    if len(batch) == 0:
-        return {
-            'input_ids': torch.tensor([], dtype=torch.int64),
-            'attn_mask': torch.tensor([], dtype=torch.float32),
-            'assistant_ranges': []
-        }
-    return torch.utils.data.dataloader.default_collate(batch)
-
 def main(rank, world_size):
     args = get_args()
     device = setup_environment(rank, world_size, args)
@@ -360,7 +350,7 @@ def main(rank, world_size):
                 num_workers=0,
                 sampler=sampler,
                 pin_memory=True,
-                collate_fn=collate_fn)
+                collate_fn=train_utils.collate_fn)
             
             run_train(model, data_loader, optimizer, args, viz)
         
@@ -370,7 +360,7 @@ def main(rank, world_size):
                 batch_size=args.batch_size,
                 shuffle=False,
                 pin_memory=True,
-                collate_fn=collate_fn)
+                collate_fn=train_utils.collate_fn)
             
             if args.post_train != None:
                 ### FROM LLM-BLENDER

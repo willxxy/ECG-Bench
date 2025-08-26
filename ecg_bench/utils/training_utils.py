@@ -35,6 +35,17 @@ class TrainingUtils:
             config=self.args
         )
     
+    def collate_fn(self, batch):
+        batch = [item for item in batch if item is not None]
+        if len(batch) == 0:
+            return {
+                'input_ids': torch.tensor([], dtype=torch.int64),
+                'attn_mask': torch.tensor([], dtype=torch.float32),
+                'assistant_ranges': []
+            }
+        return torch.utils.data.dataloader.default_collate(batch)
+
+    
     def get_lora_configs(self):
         if 'gpt2' in self.args.model:
             target_modules = None # This automatically selects default modules
