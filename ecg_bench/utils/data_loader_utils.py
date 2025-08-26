@@ -373,7 +373,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         encoded_signal = self.train_utils.ecg_tokenizer_utils.encode_symbol(symbol_signal, 
                                                                           self.train_utils.ecg_tokenizer_utils.merges)
         tokenized_signal = self.llm_tokenizer.convert_tokens_to_ids([f'signal_{ids}' for ids in encoded_signal])
-        signal_tokens = tokenized_signal[:min(500, len(tokenized_signal))]
+        signal_tokens = tokenized_signal[:min(500, len(tokenized_signal))] # keep at least 500, unless tokenized signal is shorter
         max_conv_tokens = self.args.pad_to_max - len(signal_tokens)
 
         if len(tokens_before) + len(tokens_after) > max_conv_tokens:

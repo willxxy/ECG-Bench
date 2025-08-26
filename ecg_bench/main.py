@@ -379,7 +379,7 @@ def main(rank, world_size):
         elif args.inference != None:
             data_loader = DataLoader(
                 dataset,
-                batch_size=1,
+                batch_size=args.batch_size,
                 shuffle=False,
                 pin_memory=True,
                 collate_fn=collate_fn)
