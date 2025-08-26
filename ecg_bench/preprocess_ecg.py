@@ -33,15 +33,15 @@ def main(args):
         if args.random_sampling:
             sample_base_ecg.random_sampling()
 
-    if args.create_rag_db != None or args.load_rag_db != None or args.load_rag_db_idx != None:
+    if args.create_rag_db is not None or args.load_rag_db is not None:
         rag_db = RAGECGDatabase(args, fm)
         rag_db.test_search()
 
-    if args.map_data != None:
+    if args.map_data is not None:
         preprocess_map_ecg = PreprocessMapECG(args, fm)
         preprocess_map_ecg.map_data()
 
-    if args.mix_data != None:
+    if args.mix_data is not None:
         preprocess_mix_ecg = PreprocessMixECG(args, fm)
         preprocess_mix_ecg.mix_data()
 
