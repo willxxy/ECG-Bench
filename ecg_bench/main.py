@@ -328,8 +328,6 @@ def main(rank, world_size):
                 optimizer_class(filter(lambda x: x.requires_grad, model.parameters()),
                     betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
                 model_object['model_hidden_size'], args)
-        
-        if args.train:
             train_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_train").with_transform(fm.decode_batch)
             print(f"Length of Train Data: {len(train_data)}")
         elif args.inference:
