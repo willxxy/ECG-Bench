@@ -27,8 +27,6 @@ from ecg_bench.utils.data_loader_utils import FirstStageECGDataset, End2EndECGCh
 from ecg_bench.utils.training_utils import TrainingUtils
 from ecg_bench.runners.train import trainer
 from ecg_bench.runners.inference import tester_chat
-from ecg_bench.runners.post_train import post_trainer_dpo
-from ecg_bench.utils.post_train_utils import DPO
 
 def setup_environment(rank, world_size, args):
     if args.dis:
@@ -77,15 +75,6 @@ def initialize_system(args):
         # args.batch_size = 1  # Changed from 2 to 1
     
     return FileManager(), VizUtil()
-
-def setup_wandb(args):
-    """Initialize Weights & Biases logging if enabled"""
-    print('Initializing Wandb')
-    wandb.init(
-        project='ecg-bench',
-        name=f"{'_'.join(args.save_path.split('/')[2:])}",
-        config=args
-    )
 
 def create_save_path(args, fm):
     if args.train != None or args.post_train != None:
@@ -300,7 +289,7 @@ def main(rank, world_size):
     
     args.save_path = create_save_path(args, fm)
     if args.log:
-        setup_wandb(args)
+        train_utils.setup_wandb()
     save_config(args)
     
     try:
@@ -389,8 +378,12 @@ def main(rank, world_size):
                 import llm_blender
                 judger = llm_blender.Blender()
                 judger.loadranker("llm-blender/PairRM", device = device, cache_dir = './../.huggingface')
+                
+                from ecg_bench.utils.post_train_utils import DPO
                 dpo = DPO(beta = args.dpo_beta)
                 ref_model = copy.deepcopy(model)
+                
+                from ecg_bench.runners.post_train import post_trainer_dpo
                 run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)
             else:
                 run_inference(model, data_loader, tokenizer, args, train_utils)

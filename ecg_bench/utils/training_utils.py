@@ -1,6 +1,7 @@
 import random
 import torch
 import torch.nn as nn
+import wandb
 from transformers import AutoProcessor, CLIPModel, AutoImageProcessor, AutoModel, \
                             ViTForMaskedImageModeling, AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, TaskType, get_peft_model
@@ -25,6 +26,15 @@ class TrainingUtils:
         self.ecg_tokenizer_utils = ecg_tokenizer_utils
         self.cache_dir = "../.huggingface"
 
+    def setup_wandb(self):
+        """Initialize Weights & Biases logging if enabled"""
+        print('Initializing Wandb')
+        wandb.init(
+            project='ecg-bench',
+            name=f"{'_'.join(self.args.save_path.split('/')[2:])}",
+            config=self.args
+        )
+    
     def get_lora_configs(self):
         if 'gpt2' in self.args.model:
             target_modules = None # This automatically selects default modules
