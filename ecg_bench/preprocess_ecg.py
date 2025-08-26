@@ -31,8 +31,7 @@ def main(args):
     if args.sample_files:
         sample_base_ecg = SampleBaseECG(args, fm)
         if args.random_sampling:
-            if not fm.ensure_directory_exists(file = f"./data/sampled_{args.num_tok_samples}_random.txt"):
-                sample_base_ecg.random_sampling()
+            sample_base_ecg.random_sampling()
 
     if args.create_rag_db != None or args.load_rag_db != None or args.load_rag_db_idx != None:
         rag_db = RAGECGDatabase(args, fm)
