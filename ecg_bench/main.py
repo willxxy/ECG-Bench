@@ -80,11 +80,11 @@ def initialize_system(args):
     return FileManager(), VizUtil()
 
 def create_save_path(args, fm):
-    if args.train != None or args.post_train != None:
+    if args.train is not None or args.post_train is not None:
         base_dir = "./runs"
         dataset_config = f"{args.data}"
         seed_dir = str(args.seed)
-        if args.encoder_checkpoint != None:
+        if args.encoder_checkpoint is not None:
             encoder_in = True
         else:
             encoder_in = False
@@ -160,7 +160,7 @@ def run_train(model, train_loader, optimizer, args, viz):
     train_losses = []
     best_loss = float("inf")
 
-    if args.checkpoint != None:
+    if args.checkpoint is not None:
         checkpoint = torch.load(f"{args.checkpoint}/best_model.pth", map_location=args.device)
         model.load_state_dict(checkpoint["model"])
         print("Model loaded and training resumed")
@@ -336,7 +336,7 @@ def main(rank, world_size):
                 train_utils=train_utils,
                 llm_tokenizer=tokenizer)
 
-        if args.train != None:
+        if args.train is not None:
             if args.dis:
                 sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, seed=args.seed, shuffle=True)
             else:
@@ -353,7 +353,7 @@ def main(rank, world_size):
 
             run_train(model, data_loader, optimizer, args, viz)
 
-        elif args.inference != None:
+        elif args.inference is not None:
             data_loader = DataLoader(
                 dataset,
                 batch_size=args.batch_size,
@@ -361,7 +361,7 @@ def main(rank, world_size):
                 pin_memory=True,
                 collate_fn=train_utils.collate_fn)
 
-            if args.post_train != None:
+            if args.post_train is not None:
                 ### FROM LLM-BLENDER
                 import llm_blender
                 judger = llm_blender.Blender()
