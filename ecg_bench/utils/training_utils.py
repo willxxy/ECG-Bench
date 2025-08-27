@@ -12,6 +12,7 @@ from transformers import (
     CLIPModel,
     ViTForMaskedImageModeling,
     logging,
+    Dinov2Model,
 )
 
 logging.set_verbosity_error()
@@ -248,13 +249,6 @@ class TrainingUtils:
             model_hidden_size = encoder.vit.config.hidden_size
             self.args.num_patches = (encoder.vit.config.image_size // encoder.vit.config.patch_size) ** 2
             strict = True
-        elif "dinov2" in self.args.model:
-            from ecg_bench.models.encoder.dinov2 import DINOv2
-            hf_encoder = Dinov2Model.from_pretrained("facebook/dinov2-base", cache_dir = self.cache_dir).to(self.device)
-            encoder = DINOv2(hf_encoder).to(self.device)
-            encoder_tokenizer = AutoImageProcessor.from_pretrained("facebook/dinov2-base", cache_dir = self.cache_dir)
-            find_unused_parameters = False
-            model_hidden_size = encoder.dinov2.config.hidden_size
         elif "merl" in self.args.model:
             from ecg_bench.models.encoder.merl import MERL, MERLPretrain
             lm, encoder_tokenizer = self.get_lm("ncbi/MedCPT-Query-Encoder")

@@ -19,6 +19,7 @@ from torch.utils.data.distributed import DistributedSampler
 from ecg_bench.config import get_args
 from ecg_bench.runners.inference import tester_chat
 from ecg_bench.runners.train import trainer
+from ecg_bench.runners.post_train import post_trainer_dpo
 from ecg_bench.utils.data_loader_utils import (
     End2EndECGChatDataset,
     FirstStageECGDataset,
@@ -75,7 +76,7 @@ def initialize_system(args):
         print("Running in Development Mode")
         args.epochs = 1
         args.log = False
-        # args.batch_size = 1  # Changed from 2 to 1
+        args.batch_size = 2
 
     return FileManager(), VizUtil()
 
@@ -84,10 +85,7 @@ def create_save_path(args, fm):
         base_dir = "./runs"
         dataset_config = f"{args.data}"
         seed_dir = str(args.seed)
-        if args.encoder_checkpoint is not None:
-            encoder_in = True
-        else:
-            encoder_in = False
+        encoder_in = True if args.encoder_checkpoint is not None else False
         model_params = [
             args.model,
             args.optimizer,
