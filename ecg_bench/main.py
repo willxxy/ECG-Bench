@@ -55,11 +55,11 @@ def cleanup():
 
 def initialize_system(args):
     print("Loading API key")
-    if HfFolder.get_token() is None:                 # not logged in on this machine
+    if HfFolder.get_token() is None:
         print("Loading API key and logging in …")
         with open("./../.huggingface/api_keys.txt") as f:
             api_key = f.readline().strip()
-        login(token=api_key)                         # caches token in ~/.huggingface/token
+        login(token=api_key)
     else:
         print("Hugging Face token already present skipping login.")
 

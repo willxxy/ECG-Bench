@@ -195,27 +195,42 @@ class BaseECGDataset(Dataset):
         labels = [-100] * len(input_ids)
         _, _, eot_id = self.get_special_token_ids()
 
-        for message in altered_text:
-            if message["from"].lower() in ["assistant", "model", "gpt"]:
-                response = message["value"]
-                response_tokens = self.llm_tokenizer.encode(response, add_special_tokens=False)
+        assistant_roles = {"assistant", "model", "gpt"}
+        responses = []
+        for m in altered_text:
+            if m["from"].lower() in assistant_roles:
+                toks = self.llm_tokenizer.encode(m["value"], add_special_tokens=False)
+                if toks:
+                    responses.append(toks)
+        if not responses:
+            for i, t in enumerate(input_ids):
+                if t == eot_id:
+                    labels[i] = eot_id
+            return labels
 
-                if len(response_tokens) > 0:
-                    first_token = response_tokens[0]
+        start_tokens = {t[0] for t in responses}
+        positions = {st: [] for st in start_tokens}
+        eot_positions = []
+        for i, t in enumerate(input_ids):
+            if t in positions:
+                positions[t].append(i)
+            if t == eot_id:
+                eot_positions.append(i)
 
-                    possible_starts = [i for i, token in enumerate(input_ids) if token == first_token]
+        n = len(input_ids)
+        for toks in responses:
+            first = toks[0]
+            for s in positions.get(first, []):
+                e = s + len(toks)
+                if e <= n and input_ids[s:e] == toks:
+                    labels[s:e] = toks
+                    break
 
-                    for start in possible_starts:
-                        if start + len(response_tokens) <= len(input_ids):
-                            if input_ids[start:start+len(response_tokens)] == response_tokens:
-                                labels[start:start+len(response_tokens)] = response_tokens
-                                break
-
-        for i, token_id in enumerate(input_ids):
-            if token_id == eot_id:
-                labels[i] = eot_id
+        for i in eot_positions:
+            labels[i] = eot_id
 
         return labels
+
 
     def token_to_ids(self, labels):
         labels_np = np.array(labels)
