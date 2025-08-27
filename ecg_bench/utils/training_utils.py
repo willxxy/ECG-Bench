@@ -47,6 +47,8 @@ class TrainingUtils:
             name=f"{'_'.join(self.args.save_path.split('/')[2:])}",
             config=self.args,
         )
+        
+    def cleanup_wandb(self): wandb.finish()
 
     def collate_fn(self, batch):
         batch = [item for item in batch if item is not None]

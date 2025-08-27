@@ -74,7 +74,7 @@ def initialize_system(args):
     if args.dev:
         print("Running in Development Mode")
         args.epochs = 1
-        args.log = False
+        args.log = True
         # args.batch_size = 1  # Changed from 2 to 1
 
     return FileManager(), VizUtil()
@@ -171,12 +171,6 @@ def run_train(model, train_loader, optimizer, args, viz):
         current_loss = train_dic["average_loss"]
         train_losses.append(current_loss)
 
-        if args.log:
-            wandb.log({
-                "train_epoch_loss": current_loss,
-                "epoch": epoch,
-            })
-
         # Only save model if the loss is finite and better than previous best
         if current_loss < best_loss and current_loss != float("inf"):
             best_loss = current_loss
@@ -209,12 +203,6 @@ def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, 
         train_dic = post_trainer_dpo(model, test_loader, tokenizer, args, optimizer, epoch, judger, dpo, ref_model)
         current_loss = train_dic["average_loss"]
         train_losses.append(current_loss)
-
-        if args.log:
-            wandb.log({
-                "train_epoch_loss": current_loss,
-                "epoch": epoch,
-            })
 
         # Only save model if the loss is finite and better than previous best
         if current_loss < best_loss and current_loss != float("inf"):
@@ -376,8 +364,6 @@ def main(rank, world_size):
                 run_inference(model, data_loader, tokenizer, args, train_utils)
 
     finally:
-        if args.log:
-            wandb.finish()
         if args.dis:
             cleanup()
 
