@@ -150,8 +150,7 @@ class BaseECGDataset(Dataset):
 
     def get_input_tokens(self, conv):
         prompt = conv.get_prompt()
-        if self.args.dev:
-            print("prompt", prompt)
+        if self.args.dev: print("prompt\n", prompt)
         ecg_position = prompt.find(self.ecg_placeholder)
         prompt_before_ecg = prompt[:ecg_position]
         prompt_after_ecg = prompt[ecg_position + len(self.ecg_placeholder):]
