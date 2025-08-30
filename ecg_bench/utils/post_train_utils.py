@@ -1,13 +1,14 @@
 import torch
 import torch.nn.functional as F
 
+
 class DPO:
     def __init__(self, beta=0.5):
         self.beta = beta
-    
+
     def calculate_DPO_loss(self, model_prefered_logprob, model_disprefered_logprob,
                           ref_prefered_logprob, ref_disprefered_logprob):
-        
+
         prefered_relative_logprob = model_prefered_logprob - ref_prefered_logprob
         disprefered_relative_logprob = model_disprefered_logprob - ref_disprefered_logprob
 

@@ -2,18 +2,18 @@
 
 # models=("stmem" "merl" "mlae" "mtae" "siglip" "clip" "vit")
 models=("merl")
+data=("ecg-qa-mimic-iv-ecg-250-1250")
+# data=("ecg_instruct_45k_mapped_1250") 
 
-# ### MULTI GPU
+### MULTI GPU
 for model in "${models[@]}"; do
     python main.py \
-    --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
+    --data=$data \
     --model=$model \
-    --device=cuda:4 \
+    --device=cuda:0 \
     --train=first \
-    --batch_size=256 \
+    --batch_size=64 \
     --seg_len=1250 \
-    --lr=8e-5 \
-    --weight_decay=1e-4 \
     --epochs=50 \
     --instance_normalize \
     --attn_implementation=flash_attention_2 \
@@ -21,19 +21,20 @@ for model in "${models[@]}"; do
 done
 
 
-# models=("vit" "clip" "siglip" )
+
+# models=("vit" "clip" "siglip")
 
 # for model in "${models[@]}"; do
 #     python main.py \
-#     --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
+#     --data=test-ecg \
 #     --model=$model \
 #     --device=cuda:6 \
 #     --train=first \
-#     --batch_size=256 \
+#     --batch_size=64 \
 #     --seg_len=1250 \
 #     --epochs=50 \
 #     --instance_normalize \
 #     --attn_implementation=flash_attention_2 \
 #     --image \
-#     --log
+#     --dev
 # done

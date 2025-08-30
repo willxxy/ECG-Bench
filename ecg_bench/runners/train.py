@@ -1,8 +1,10 @@
-from tqdm import tqdm
-import torch
-import wandb
-import torch.distributed as dist
 import gc
+
+import torch
+import torch.distributed as dist
+import wandb
+from tqdm import tqdm
+
 
 def trainer(model, dataloader, optimizer, args, epoch):
     model.train()
@@ -15,21 +17,23 @@ def trainer(model, dataloader, optimizer, args, epoch):
     total_loss = 0.0
     len_of_batch = 0
     dev_count = 0
-    
-    progress_bar = tqdm(dataloader, desc=f'Training {args.model}', disable=not show_progress)
-    
+
+    steps_to_save = 2500 if args.data == f"ecg-instruct-45k-{args.target_sf}-1250" else 50000
+
+    progress_bar = tqdm(dataloader, desc=f"Training {args.model}", disable=not show_progress)
+
     for step, batch in enumerate(progress_bar):
         if batch is None:
             if show_progress:
                 print(f"Skipping invalid batch at step {step}")
             continue
-        
+
         optimizer.zero_grad()
         outputs = model(batch)
         loss = outputs.loss
         loss.backward()
 
-        if args.model in ['clip', 'vit', 'merl', 'stmem', 'siglip', 'mtae', 'mlae']:
+        if args.model in ["clip", "vit", "merl", "stmem", "siglip", "mtae", "mlae"]:
             pass
         else:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -41,14 +45,14 @@ def trainer(model, dataloader, optimizer, args, epoch):
         if args.log:
             wandb.log({"train_step_loss": loss.item(), "epoch": epoch, "train_step": step})
 
-        if (step + 1) % 50000 == 0:
+        if (step + 1) % steps_to_save == 0:
             if args.dis:
                 dist.barrier()
                 if dist.get_rank() == 0:
                     model_state_dict = model.module.state_dict()
                     train_checkpoint = {
-                        'model': model_state_dict,
-                        'epoch': epoch
+                        "model": model_state_dict,
+                        "epoch": epoch,
                     }
                     torch.cuda.empty_cache()
                     gc.collect()
@@ -59,8 +63,8 @@ def trainer(model, dataloader, optimizer, args, epoch):
             else:
                 model_state_dict = model.state_dict()
                 train_checkpoint = {
-                    'model': model_state_dict,
-                    'epoch': epoch
+                    "model": model_state_dict,
+                    "epoch": epoch,
                 }
                 checkpoint_path = f"{args.save_path}/model_{epoch}_{step}.pth"
                 torch.save(train_checkpoint, checkpoint_path)
@@ -68,8 +72,8 @@ def trainer(model, dataloader, optimizer, args, epoch):
 
         if args.dev:
             dev_count += 1
-            if dev_count == 100:
+            if dev_count == 10:
                 break
 
-    average_loss = total_loss / len_of_batch if len_of_batch > 0 else float('inf')
-    return {'average_loss': average_loss}
+    average_loss = total_loss / len_of_batch if len_of_batch > 0 else float("inf")
+    return {"average_loss": average_loss}

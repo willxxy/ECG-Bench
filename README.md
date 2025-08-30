@@ -12,6 +12,7 @@
 
 ## News
 
+- **[August 5, 2025] We released official splits of ELM datasets on Hugging Face. Feel free to check them out [here](#hugging-face-dataset-5-fold-stratified-splits)!**
 - **[May 24, 2025] We release our paper ["Signal, Image, or Symbolic: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework"](https://arxiv.org/abs/2505.18847) with some interesting results when comparing input representations and training paradigms for ELMs! Check it out.**
 - **[April 5, 2025] We open source ECG-Bench for training and evaluating ELMs!**
 
@@ -28,9 +29,7 @@
 10. [Citations](#citations)
 
 ## Overview <a name="overview"></a>
-This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase.
-
-Currently, we are working on a benchmarking paper for ELMs and different ECG input representations / training paradigms. We will update the repository with the results and more information soon!
+This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase. Please note that as the codebase gets updated, performances may change.
 
 ### ECG Input Representations
 This current repository considers 4 input representations of ECGs as defined below:
@@ -45,13 +44,13 @@ An ECG image is derived from `X_sig` via plotting and is represented as a tensor
 We also create a synthetic three-channel version of `X_sig`, denoted `X_sig*` $\in$ `R^(C x L x 3)`, by stacking `X_sig` three times along the color dimension (as seen in ECG Image).
 
 **ECG Text:**  
-We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols `A = {a, b, …, z}`. This sequence is then flattened into a one-dimensional array `X_symb` $\in$ `A^(C * L)`. Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary V, resulting in the final textual representation `X_ID` $\in$ V^(m), where `m` is the length of the token sequence.
+We use ECG-Byte’s compression schema to convert ECG signals into text. First, a normalized and discretized ECG signal `X_sig` is mapped to a symbolic sequence using a set of symbols `A = {a, b, …, z}`. This sequence is then flattened into a one-dimensional array `X_symb` $\in$ `A^(C * L)`. Finally, a byte-pair encoding (BPE) process compresses `X_symb` into a sequence of tokens from an extended vocabulary `V`, resulting in the final textual representation `X_ID` $\in$ `V^(m)`, where `m` is the length of the token sequence.
 
 ### ELM Training Paradigms
 We consider 2 broadly defined training paradigms for ELMs in this repository:
 
-1. **2-Stage Training** (can also be seen as Encoder methods)
-2. **End-to-End Training** (can also be seen as Encoder-Free methods)
+1. **2-Stage Training**
+2. **End-to-End Training**
 
 However, we further break down 2-Stage Training into 4 sub-methods:
 
@@ -59,6 +58,7 @@ However, we further break down 2-Stage Training into 4 sub-methods:
 2. **2-Stage LLaVA**
 3. **2-Stage Finetune**
 4. **2-Stage End-to-End**
+5. **2-Stage EncoderFree**
 
 
 **2-Stage Scratch**
@@ -83,6 +83,11 @@ Another approach finetunes the general, pretrained image encoder `f_ECG` on eith
 **2-Stage End-to-End**
 
 In this approach, we train the LLM and `f_ECG` jointly with only an autoregressive objective. We find this approach to be not that effective, but [some previous works](https://arxiv.org/abs/2403.04945v3) have used it.
+
+**2-Stage EncoderFree**
+
+In this approach, `f_ECG` is simply a linear projection and we train both the LLM and `f_ECG` jointly with only an autoregressive objective. This is a naive approach to encoder free methods seen in [Fuyu-8B](https://www.adept.ai/blog/fuyu-8b), [Vision as LoRA](https://arxiv.org/abs/2503.20680), and [Unveiling Encoder-Free Vision-Language Models](https://arxiv.org/abs/2406.11832). The naivety comes from a simple flattening of the normalized signal `X_sig`, and feeding this flattened signal to the linear projection.
+
 
 **NOTE:** In all 2-stage approaches, the second stage trains the LLM with an autoregressive objective. The latent vector `z` from `f_ECG` is projected via `W` to `z′`, concatenated with the embedded query `Q`, and input to the LLM to generate the response `S`. Note that `W` is also trained for all 2-stage approaches.
 
@@ -148,7 +153,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 ## Installation <a name="installation"></a>
 
-1. To install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.79.0 -y`
+1. To install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.82.0 -y`
 
 2. Open a new terminal to set PATH for Rust installation.
 
@@ -160,39 +165,39 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 6. Install the `uv` package manager via `pip install uv`.
 
-6. `uv pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
+7. `uv pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124` (make sure when executing `nvcc --version` you get version 12.1)
 
-7. `git clone https://github.com/willxxy/ECG-Bench.git`
+8. `git clone https://github.com/willxxy/ECG-Bench.git`
 
-8. `cd ECG-Bench`
+9. `cd ECG-Bench`
 
-9. `git submodule init`
+10. `git submodule init`
 
-10. `git submodule update`
+11. `git submodule update`
 
-11. Please `cd` into the `ECG-Bench/transformers` directory and `uv pip install -e .`.
+12. Please `cd` into the `ECG-Bench/transformers` directory and `uv pip install -e .`.
 
-12. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `uv pip install -e .`.
+13. Now `cd ../` and `cd` into the `ECG-Bench/ecg-plot` directory and `uv pip install -e .`.
 
-13. Now `cd ../` and `uv pip install -e .`
+14. Now `cd ../` and `uv pip install -e .`
 
-14. To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
+15. [OPTIONAL] To install [Flash Attention 2](https://arxiv.org/abs/2307.08691) please use the following command:
 
     `pip cache remove flash_attn`
 
     `uv pip install flash-attn==2.7.4.post1`
 
-15. To install the `llm-blender` and `trl[judges]` packages please run the following commands:
+16. [OPTIONAL] To install the `llm-blender` and `trl[judges]` packages please run the following commands:
 
     `uv pip install git+https://github.com/yuchenlin/LLM-Blender.git`
 
     `uv pip install trl[judges]`
 
-16. `cd` into `ECG-Bench/ecg_bench/representation/bpe` and execute `maturin develop --release` to compile the tokenizer.
+17. `cd` into `ECG-Bench/ecg_bench/representation/bpe` and execute `maturin develop --release` to compile the tokenizer.
 
-17. Run all the tests by executing `python tests/run_all_tests.py`.
+18. Run all the tests by executing `python tests/run_all_tests.py`.
 
-18. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
+19. Another consideration is that we use ***gated*** models (e.g., Llama 3.2, Gemma) from HuggingFace, therefore you will need to get an api key and log into it via `huggingface-cli login` in the terminal. We also require you to log in inside the main training *.py file via the login function `from huggingface_hub import login`.
 
 
 **NOTE: From now, all instructions will assume you are working from the `ECG-Bench/ecg_bench` directory.**
@@ -319,7 +324,6 @@ python mapping_mimic_iv_ecg_samples.py ecgqa/mimic-iv-ecg \
 
 1. Create a `data/ecg_grounding` directory and download the `ECG_Grounding_30k.json`, `ecg-grounding-test.json` and `grounding_train_30k.json` from this [link](https://huggingface.co/datasets/LANSG/ECG-Grounding/tree/main/ecg_jsons). A quick note is that `grounding_train_30k.json` is a subset of `ECG_Grounding_30k.json`, where `ECG_Grounding_30k.json` contains all 30k ECG grounding samples found in `grounding_train_30k.json`, with additional ECG conversational data from the ECG Instruct PULSE dataset.
 
-
 ### Preprocessing
 
 1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others! We provide some example configurations for Base, Mapping, and RAG dataset curation.
@@ -387,8 +391,29 @@ python preprocess_ecg.py \
 --sample_percentiles
 ```
 
-where `$sampling_method` is either `random_sampling` or `stratified_sampling`. ECG-Byte utilizes stratified sampling, however, you can use random sampling as well.
+where `$sampling_method` is either `random_sampling` or `stratified_sampling`. ECG-Byte utilizes stratified sampling, however, we found random sampling to perform just as well.
 
+After preprocessing, you can test out whether the folder of `*.npy` has valid ECGs in `../tests/test_dataset.py`.
+
+### Hugging Face Dataset 5-Fold Stratified Splits
+
+On Hugging Face, we provide 5-fold datasets stratified by patient, with zero patient overlap between training and testing splits.
+We have released the following so far:
+
+**250 Hz Sampling Rate**
+
+| Dataset | 2s | 5s | 10s |
+|---------|----|----|-----|
+| ECG-QA PTB-XL | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-ptbxl-250-2500) |
+| ECG-QA MIMIC-IV-ECG | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-qa-mimic-iv-ecg-250-2500) |
+| Pretrain MIMIC | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-500) | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-1250) | [URL](https://huggingface.co/datasets/willxxy/pretrain-mimic-250-2500) |
+| ECG Instruct 45K | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-45k-250-2500) |
+| ECG Bench Pulse | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-bench-pulse-250-2500) |
+| ECG Instruct Pulse | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-500) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-1250) | [URL](https://huggingface.co/datasets/willxxy/ecg-instruct-pulse-250-2500) |
+
+
+We encourage researchers to use these splits to ensure fair baselines. We will slowly add datasets with different configurations. 
+We adapted the main training and inference pipeline to utilize this dataset.
 
 ## Main Methods <a name="methods"></a>
 
@@ -800,19 +825,28 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [ ] Add [GEM model](https://www.arxiv.org/abs/2503.06073)
 - [ ] Add [ECG-Expert-QA dataset](https://arxiv.org/abs/2502.17475)
 - [x] Add [ECG-Grounding Dataset](https://huggingface.co/datasets/LANSG/ECG-Grounding)
-- [ ] Provide HuggingFace dataset and model card push ability.
+- [ ] Provide HuggingFace model card push ability.
+- [ ] Provide HuggingFace dataset card push ability.
 - [ ] Create an offline demo for ELMs with unified preference collection.
 - [x] [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
 - [x] Make RAG searching faster.
 - [x] Make training with RAG faster.
 - [ ] Add encoder-free VLMs such as [Fuyu-8B](https://www.adept.ai/blog/fuyu-8b), [Vision as LoRA](https://arxiv.org/abs/2503.20680), and/or [Unveiling Encoder-Free Vision-Language Models](https://arxiv.org/abs/2406.11832) for ECGs. This could be extended for all training methods.
+    - [x] Naive encoder-free method supported.
+- [ ] Add [Sparsely-Gated Mixture-of-Experts ELM](https://arxiv.org/abs/1701.06538)
 - [ ] Addition for new input representation: [ECG features](https://proceedings.mlr.press/v225/yu23b.html)
 - [ ] Reasoning ability for ELMs (akin to OpenAI o1, Deepseek R1, etc.).
 - [ ] Curate higher quality instruction tuning and reasoning datasets for ELMs.
 - [ ] Expand upon current naive distributed training setting to include more efficient and explicit distributed training strategies (i.e., data, tensor, context, pipeline, and expert parallelism as noted in [here](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=5d_parallelism_in_a_nutshell)).
 - [x] Add option for data mixing.
-- [ ] Adjust feature selection for RAG.
-- [ ] Apply normalization to RAG database.
+- [x] Adjust feature selection for RAG.
+- [x] Apply normalization to RAG database.
+- [x] Cross Dataset Ablation.
+- [x] Add "Only feature" retrieval option for RAG
+- [x] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
+- [x] Add official splits for benchmarking.
+    - [x] Upload to huggingface datasets and use huggingface datasets data loading in main.
+- [ ] Add better seedings.
 
 ## Acknowledgements <a name="ack"></a>
 This work is done in collaboration with the Mario Lemieux Center for Heart Rhythm Care at Allegheny General Hospital.

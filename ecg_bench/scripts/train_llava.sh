@@ -8,7 +8,7 @@ for d in "${data[@]}"; do
         python main.py \
         --data=$d \
         --model=$model \
-        --device=cuda:5 \
+        --device=cuda:2 \
         --seg_len=1250 \
         --peft \
         --ecg_tokenizer=./data/tokenizer_5000_300000_instance.pkl \

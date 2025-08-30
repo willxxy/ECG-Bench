@@ -184,3 +184,5 @@ ecg_bench/atharva_demo/dump/testchat
 .gradio/
 
 *.sh
+
+ecg_bench/scripts_dev
