@@ -81,9 +81,11 @@ class BaseECGDataset(Dataset):
         return position_ids
 
     def get_qa(self, altered_text):
-        if self.args.data == f"pretrain-mimic-{self.args.target_sf}-{self.args.seg_len}":
+        # if self.args.data == f"pretrain-mimic-{self.args.target_sf}-{self.args.seg_len}":
+        if self.args.data == f"pretrain_mimic_mapped_{self.args.seg_len}":
             question, answer = altered_text[0]["value"].replace("\n", "").replace("<ecg>", ""), altered_text[1]["value"]
-        elif self.args.data in [f"ecg-qa-mimic-iv-ecg-{self.args.target_sf}-{self.args.seg_len}", f"ecg-qa-ptbxl-{self.args.target_sf}-{self.args.seg_len}"]:
+        # elif self.args.data in [f"ecg-qa-mimic-iv-ecg-{self.args.target_sf}-{self.args.seg_len}", f"ecg-qa-ptbxl-{self.args.target_sf}-{self.args.seg_len}"]:
+        elif self.args.data in [f"ecg-qa_mimic-iv-ecg_mapped_{self.args.seg_len}", f"ecg-qa_ptbxl_mapped_{self.args.seg_len}"]:
             question_type, question, answer = altered_text[0], altered_text[1], altered_text[2]
             answer = " ".join(answer) if isinstance(answer, list) else answer
         return question, answer
@@ -128,7 +130,8 @@ class BaseECGDataset(Dataset):
         return conv
 
     def process_altered_text(self, altered_text):
-        if self.args.data not in [f"ecg-instruct-45k-{self.args.target_sf}-{self.args.seg_len}",
+        if self.args.data not in [#f"ecg-instruct-45k-{self.args.target_sf}-{self.args.seg_len}",
+                                  f"ecg_instruct_45k_mapped_{self.args.seg_len}",
                                   f"ecg-instruct-pulse-{self.args.target_sf}-{self.args.seg_len}",
                                   f"ecg-bench-pulse-{self.args.target_sf}-{self.args.seg_len}"]:
             question, answer = self.get_qa(altered_text)
