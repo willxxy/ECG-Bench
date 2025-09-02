@@ -34,6 +34,17 @@ class TrainingUtils:
         self.args, self.fm, self.viz, self.device = args, fm, viz, device
         self.ecg_tokenizer_utils = ecg_tokenizer_utils
         self.cache_dir = "../.huggingface"
+        
+    def split_dataset(self, data, train_ratio=0.7):
+        data = np.array(data)
+        n_samples = len(data)
+        indices = np.random.permutation(n_samples)
+        n_train = int(n_samples * train_ratio)
+        train_indices = indices[:n_train]
+        test_indices = indices[n_train:]
+        train_data = [data[i] for i in train_indices]
+        test_data = [data[i] for i in test_indices]
+        return train_data, test_data
 
     def save_config(self):
         args_dict = {k: v for k, v in vars(self.args).items() if not k.startswith("_")}

@@ -12,6 +12,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from datasets import load_dataset
 from huggingface_hub import HfFolder, login
+from torch.optim import Adam
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
@@ -295,25 +296,41 @@ def main(rank, world_size):
 
         print(f"Total number of parameters: {train_utils.count_parameters(model)}")
 
-        if args.train:
-            optimizer_class = train_utils.get_optimizer_class(args.optimizer)
-            optimizer = ScheduledOptim(
-                optimizer_class(filter(lambda x: x.requires_grad, model.parameters()),
-                    betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
-                model_object["model_hidden_size"], args)
-            train_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_train").with_transform(fm.decode_batch)
-            print(f"Length of Train Data: {len(train_data)}")
-        elif args.inference:
-            test_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_test").with_transform(fm.decode_batch)
-            print(f"Length of Test Data: {len(test_data)}")
+        # if args.train:
+        #     optimizer_class = train_utils.get_optimizer_class(args.optimizer)
+        #     optimizer = ScheduledOptim(
+        #         optimizer_class(filter(lambda x: x.requires_grad, model.parameters()),
+        #             betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
+        #         model_object["model_hidden_size"], args)
+        #     train_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_train").with_transform(fm.decode_batch)
+        #     print(f"Length of Train Data: {len(train_data)}")
+        # elif args.inference:
+        #     test_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_test").with_transform(fm.decode_batch)
+        #     print(f"Length of Test Data: {len(test_data)}")
 
-        if args.train == "first":
-            data = train_data.select(range(800000))
-        elif args.train in ["second", "end2end"]:
-            data = train_data.select(range(400000))
-        elif args.inference in ["second", "end2end"]:
-            data = test_data.select(range(20000))
-        print("Length of Dataset Considered:", len(data))
+        # if args.train == "first":
+        #     data = train_data.select(range(800000))
+        # elif args.train in ["second", "end2end"]:
+        #     data = train_data.select(range(400000))
+        # elif args.inference in ["second", "end2end"]:
+        #     data = test_data.select(range(20000))
+        # print("Length of Dataset Considered:", len(data))
+
+        optimizer = ScheduledOptim(
+            Adam(filter(lambda x: x.requires_grad, model.parameters()),
+                 betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
+            model_object['model_hidden_size'], args)
+        
+        json_data_file = fm.open_json(f'./data/{args.data}.json')
+        train_data, test_data = train_utils.split_dataset(json_data_file)
+
+        if args.train == 'first':
+            data = train_data[:800000]
+        elif args.train in ['second', 'end2end']:
+            data = train_data[:400000]
+        elif args.inference in ['second', 'end2end']:
+            data = test_data[:20000]
+        print('Length of Dataset:', len(data))
 
         if args.train == "first":
             dataset = FirstStageECGDataset(

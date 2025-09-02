@@ -2,13 +2,13 @@
 
 # models=("stmem" "merl" "mlae" "mtae" "siglip" "clip" "vit")
 models=("merl")
-data=("ecg-qa-mimic-iv-ecg-250-1250")
+# data=("ecg-qa-mimic-iv-ecg-250-1250")
 # data=("ecg_instruct_45k_mapped_1250") 
 
 ### MULTI GPU
 for model in "${models[@]}"; do
     python main.py \
-    --data=$data \
+    --data=ecg-qa_mimic-iv-ecg_mapped_1250 \
     --model=$model \
     --device=cuda:0 \
     --train=first \
