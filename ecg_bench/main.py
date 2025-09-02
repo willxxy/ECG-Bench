@@ -332,7 +332,7 @@ def main(rank, world_size):
                 dataset,
                 batch_size=args.batch_size,
                 shuffle=(sampler is None),
-                num_workers=0,
+                num_workers=2 if args.train == "first" else 0,
                 sampler=sampler,
                 pin_memory=True,
                 collate_fn=train_utils.collate_fn)

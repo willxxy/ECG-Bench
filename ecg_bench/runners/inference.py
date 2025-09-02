@@ -27,7 +27,6 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                     signal_id_index = batch["signal_id_index"].item()
                 offset = 0
                 for conv_turn in assistant_ranges:
-                    print("conv_turn", conv_turn)
                     start = conv_turn["start"] + 4 + offset
                     end = conv_turn["end"] + 1 + offset
                     curr_input_ids = chat_input_ids[:, :start]

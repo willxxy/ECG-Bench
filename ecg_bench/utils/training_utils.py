@@ -203,7 +203,7 @@ class TrainingUtils:
         elif self.args.train == "second" or self.args.inference == "second":
             vocab_keys = None
 
-        llm, llm_tokenizer = self.modify_llm_tokenizer(
+        llm, llm_tokenizer, new_ids = self.modify_llm_tokenizer(
                 hf_llm,
                 llm_tokenizer,
                 vocab_keys,
@@ -213,6 +213,12 @@ class TrainingUtils:
             llm = get_peft_model(llm, self.get_lora_configs())
             llm.print_trainable_parameters()
 
+        ### NEW UNFREEZING SIGNAL TOKENS
+        # self.init_new_rows_like_old(llm.get_input_embeddings(), new_ids)
+        # self.train_only_new_token_rows(llm, new_ids)
+        # print(self.verify_new_rows_only(llm, llm_tokenizer, new_ids))
+        ###
+        
         llm = model_class(llm, self.args).to(self.device)
 
         return {
@@ -222,7 +228,132 @@ class TrainingUtils:
             "model_hidden_size": self.get_model_hidden_size(llm),
             "strict": True,
         }
+    
+    def verify_new_rows_only(self, model, tok, new_ids, lr_embed=1e-3, lr_rest=1e-4, cap=64):
+        """
+        Sanity-check that only newly added token rows (input/output embeddings) receive non-zero grads/updates.
+        Requires you to have called `train_only_new_token_rows(...)` beforehand so the grad mask hook is active.
+        """
+        if not new_ids:
+            raise ValueError("new_ids must be a non-empty list of token ids.")
 
+        dev = next(model.parameters()).device
+        emb = model.get_input_embeddings()
+        out = model.get_output_embeddings()
+
+        if not emb.weight.requires_grad:
+            raise RuntimeError(
+                "Embeddings do not require_grad. Call train_only_new_token_rows(...) before verification."
+            )
+
+        # Build identity set for the embedding params (avoid elementwise tensor comparisons)
+        emb_params = [emb.weight]
+        if out is not None and out.weight is not emb.weight:
+            emb_params.append(out.weight)
+        emb_param_ids = {id(p) for p in emb_params}
+
+        # Other trainable params (e.g., LoRA adapters)
+        other = [p for p in model.parameters() if p.requires_grad and id(p) not in emb_param_ids]
+
+        # ---- choose a small mix of old + new ids
+        ban = set(new_ids)
+        if getattr(tok, "all_special_ids", None):
+            ban |= set(tok.all_special_ids)
+        elif getattr(tok, "pad_token_id", None) is not None:
+            ban.add(tok.pad_token_id)
+
+        vocab_size = emb.weight.size(0)
+        need = min(max(8, len(new_ids)), cap)
+
+        old_ids = [i for i in range(vocab_size) if i not in ban][:need]
+        if not old_ids:
+            raise RuntimeError("No old ids available to test (vocab too small or everything banned).")
+
+        # Tiny batch mixing old and new ids
+        mix = []
+        for i in range(need):
+            mix.append(old_ids[i % len(old_ids)])
+            mix.append(new_ids[i % len(new_ids)])
+        x = torch.tensor([mix], device=dev, dtype=torch.long)
+
+        # Construct optimizer with separate groups (no WD on embeddings)
+        opt = torch.optim.AdamW(
+            [{"params": other, "lr": lr_rest, "weight_decay": 0.01},
+            {"params": emb_params, "lr": lr_embed, "weight_decay": 0.0}]
+        )
+
+        # Snapshot before step
+        with torch.no_grad():
+            W0 = emb.weight.detach().clone()
+            Wout0 = None if out is None else out.weight.detach().clone()
+
+        # One training step
+        model.train()
+        opt.zero_grad(set_to_none=True)
+        outp = model(input_ids=x, labels=x)
+        outp.loss.backward()
+        opt.step()
+
+        # Grads & deltas (per-row)
+        g = emb.weight.grad.detach()
+        gn = g.norm(dim=1)
+        dW = (emb.weight.detach() - W0).norm(dim=1)
+
+        old_mask = torch.zeros_like(gn, dtype=torch.bool)
+        new_mask = torch.zeros_like(gn, dtype=torch.bool)
+        old_mask[old_ids] = True
+        new_mask[new_ids] = True
+
+        stats = {
+            "max_old_grad": float(gn[old_mask].max().item()),
+            "min_new_grad": float(gn[new_mask].min().item()),
+            "max_old_delta": float(dW[old_mask].max().item()),
+            "min_new_delta": float(dW[new_mask].min().item()),
+        }
+
+        if Wout0 is not None and out.weight is not emb.weight:
+            dWo = (out.weight.detach() - Wout0).norm(dim=1)
+            stats["max_old_delta_out"] = float(dWo[old_mask].max().item())
+            stats["min_new_delta_out"] = float(dWo[new_mask].min().item())
+
+        tol = 1e-12
+        stats["pass_grads_only_new"] = stats["max_old_grad"] < tol and stats["min_new_grad"] > tol
+        stats["pass_deltas_only_new"] = stats["max_old_delta"] < tol and stats["min_new_delta"] > tol
+        if "max_old_delta_out" in stats:
+            stats["pass_deltas_only_new"] &= (
+                stats["max_old_delta_out"] < tol and stats["min_new_delta_out"] > tol
+            )
+        return stats
+
+    
+    @torch.no_grad()
+    def init_new_rows_like_old(self, emb, new_token_ids):
+        W = emb.weight
+        mu, sigma = W.mean(dim=0), W.std(dim=0)
+        for i in new_token_ids:
+            W[i].copy_(mu + 0.02 * torch.randn_like(mu) * sigma.clamp_min(1e-6))
+            
+    def make_row_mask(self, vocab_size, new_token_ids, device, dtype):
+        mask = torch.zeros(vocab_size, 1, device=device, dtype=dtype)
+        for i in new_token_ids:
+            if i is not None and i >= 0:
+                mask[i, 0] = 1.0
+        return mask
+
+    def train_only_new_token_rows(self, peft_model, new_token_ids):
+        emb = peft_model.get_input_embeddings()
+        out = peft_model.get_output_embeddings()  # may be None or tied
+
+        device, dtype = emb.weight.device, emb.weight.dtype
+        mask = self.make_row_mask(emb.weight.size(0), new_token_ids, device, dtype)
+
+        emb.weight.requires_grad = True
+        emb.weight.register_hook(lambda g: g * mask)
+
+        if out is not None and out.weight is not emb.weight:
+            out.weight.requires_grad = True
+            out.weight.register_hook(lambda g: g * mask)
+            
     def get_encoder(self):
         if "clip" in self.args.model:
             from ecg_bench.models.encoder.clip import CLIP
@@ -354,7 +485,10 @@ class TrainingUtils:
         llm_tokenizer.add_special_tokens(special_tokens)
         llm.config.pad_token_id = llm_tokenizer.pad_token_id
         llm.resize_token_embeddings(len(llm_tokenizer))
-        return llm, llm_tokenizer
+        if new_ids is not None:
+            new_token_ids = llm_tokenizer.convert_tokens_to_ids(new_ids)
+            return llm, llm_tokenizer, new_token_ids
+        return llm, llm_tokenizer, None
 
     def calculate_acc(self, references, hypotheses):
         return np.mean([ref == hyp for ref, hyp in zip(references, hypotheses)])
