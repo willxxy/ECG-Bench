@@ -187,4 +187,5 @@ ecg_bench/atharva_demo/dump/testchat
 
 ecg_bench/scripts_dev
 ecg_bench/test.py
-ecg_bench/plots.py
+ecg_bench/plots_k.py
+ecg_bench/plots_train_inf.py
