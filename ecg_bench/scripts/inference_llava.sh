@@ -19,7 +19,6 @@ for c in "${checkpoint[@]}"; do
     --system_prompt=./data/system_prompt_e2e.txt \
     --batch_size=1 \
     --epochs=1 \
-    --instance_normalize \
     --image 
 done
 

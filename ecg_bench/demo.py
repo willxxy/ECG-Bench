@@ -37,7 +37,6 @@ def get_args():
     data_group.add_argument("--system_prompt", type=str, default=None, help="System prompt")
     data_group.add_argument("--image", action = "store_true", default=None, help="Turn Image Generation on")
     data_group.add_argument("--augment_image", action = "store_true", default=None, help="Turn Image Augmentation on")
-    data_group.add_argument("--instance_normalize", action = "store_true", default=True, help="Turn Instance Normalization on")
 
     ### Model
     model_group = parser.add_argument_group("Model")

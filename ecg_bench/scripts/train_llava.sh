@@ -18,7 +18,6 @@ for d in "${data[@]}"; do
         --pad_to_max=1024 \
         --epochs=1 \
         --encoder_checkpoint=./runs/ecg-qa_mimic-iv-ecg_mapped_1250/0/merl_256_50_1024_8e-05_0.9_0.99_1e-08_500_0.0001_True_None_None_None_None_False \
-        --instance_normalize \
         --attn_implementation=flash_attention_2 \
         --log
     done

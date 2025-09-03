@@ -115,7 +115,6 @@ def test_first_stage_dataset():
             dev=False,
             num_merges=3500,
             ecg_tokenizer=tokenizer_path,  # Use the file path, not directory
-            instance_normalize=True,
             percentiles=None,
             image=False,
             target_sf=250,
@@ -133,7 +132,6 @@ def test_first_stage_dataset():
             seg_len=1000,
             pad_to_max=1024,
             target_sf=250,
-            instance_normalize=True,
             image=False,
         )
 
@@ -177,7 +175,6 @@ def test_dataloader():
             dev=False,
             num_merges=3500,
             ecg_tokenizer=tokenizer_path,  # Use the file path, not directory
-            instance_normalize=True,
             percentiles=None,
             image=False,
             target_sf=250,
@@ -196,7 +193,6 @@ def test_dataloader():
             pad_to_max=1024,
             target_sf=250,
             batch_size=2,
-            instance_normalize=True,
             image=False,
         )
 

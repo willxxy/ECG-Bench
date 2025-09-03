@@ -17,7 +17,6 @@ python main.py \
     --batch_size=2 \
     --pad_to_max=1024 \
     --epochs=1 \
-    --instance_normalize \
     --attn_implementation=flash_attention_2 \
     --rag \
     --rag_k=1 \

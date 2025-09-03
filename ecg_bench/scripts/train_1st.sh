@@ -14,7 +14,6 @@ for model in "${models[@]}"; do
     --lr=8e-5 \
     --weight_decay=1e-4 \
     --epochs=50 \
-    --instance_normalize \
     --attn_implementation=flash_attention_2 \
     --log
 done
@@ -31,7 +30,6 @@ for model in "${models[@]}"; do
     --batch_size=64 \
     --seg_len=1250 \
     --epochs=50 \
-    --instance_normalize \
     --attn_implementation=flash_attention_2 \
     --image \
     --dev

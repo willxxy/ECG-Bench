@@ -19,7 +19,6 @@ for data in "${datasets[@]}"; do
       --seg_len=1250 \
       --epochs=1 \
       --peft \
-      --instance_normalize \
       --pad_to_max=1024 \
       --attn_implementation=flash_attention_2 \
       --system_prompt=./data/system_prompt_e2e.txt \
@@ -41,7 +40,6 @@ done
 #     --batch_size=8 \
 #     --seg_len=1250 \
 #     --epochs=2 \
-#     --instance_normalize \
 #     --attn_implementation=flash_attention_2 \
 #     --image \
 #     --log

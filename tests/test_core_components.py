@@ -139,7 +139,6 @@ def test_ecg_tokenizer_basic():
             dev=False,
             num_merges=3500,
             ecg_tokenizer=tokenizer_path,  # Use the file path, not directory
-            instance_normalize=True,
             percentiles=None,
             image=False,
             target_sf=250,

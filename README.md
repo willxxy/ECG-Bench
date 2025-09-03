@@ -432,7 +432,6 @@ python main.py \
 --batch_size=64 \
 --seg_len=1250 \
 --epochs=50 \
---instance_normalize \
 --attn_implementation=flash_attention_2 \
 --log
 ```
@@ -449,7 +448,6 @@ python main.py \
 --batch_size=64 \
 --seg_len=1250 \
 --epochs=50 \
---instance_normalize \
 --attn_implementation=flash_attention_2 \
 --log
 ```
@@ -466,7 +464,6 @@ python main.py \
 --batch_size=64 \
 --seg_len=1250 \
 --epochs=50 \
---instance_normalize \
 --system_prompt=$system_prompt.txt \
 --attn_implementation=flash_attention_2 \
 --encoder_checkpoint=$encoder_checkpoint \
@@ -505,7 +502,6 @@ python main.py \
 --batch_size=64 \
 --seg_len=1250 \
 --epochs=50 \
---instance_normalize \
 --system_prompt=$system_prompt.txt \
 --attn_implementation=flash_attention_2 \
 --log
@@ -696,7 +692,6 @@ python main.py \
 --system_prompt=$system_prompt.txt \
 --batch_size=1 \
 --pad_to_max=1024 \
---instance_normalize \
 --attn_implementation=flash_attention_2 \
 --rag \
 --rag_k=$k \

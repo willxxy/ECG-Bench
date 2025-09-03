@@ -24,7 +24,6 @@ for d in "${data[@]}"; do
             --system_prompt=./data/system_prompt_e2e.txt \
             --batch_size=1 \
             --pad_to_max=1024 \
-            --instance_normalize \
             --attn_implementation=flash_attention_2 \
             --checkpoint=./runs/ecg-qa-ptbxl-250-1250/0/$c \
             --fold="$fold"

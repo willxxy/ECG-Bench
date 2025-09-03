@@ -96,7 +96,6 @@ def create_save_path(args, fm):
             args.eps,
             args.warmup,
             args.weight_decay,
-            args.instance_normalize,
             args.image,
             args.augment_image,
             args.train_encoder,

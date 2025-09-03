@@ -12,7 +12,6 @@ python main.py \
 --system_prompt=./data/system_prompt_e2e.txt \
 --batch_size=1 \
 --epochs=1 \
---instance_normalize \
 --attn_implementation=flash_attention_2 \
 --rag \
 --load_rag_db=./data/mimic/rag_metadata.json \
@@ -31,5 +30,4 @@ python main.py \
 --system_prompt=./data/system_prompt_e2e.txt \
 --batch_size=1 \
 --epochs=1 \
---instance_normalize \
 --attn_implementation=flash_attention_2
