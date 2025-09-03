@@ -29,8 +29,7 @@ class BaseECGDataset(Dataset):
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
             self.ecg_placeholder = "<signal>"
 
-    def __len__(self):
-        return len(self.json_data_file)
+    def __len__(self): return len(self.json_data_file)
 
     def signal_to_image(self, signal):
         if self.args.image:
