@@ -13,6 +13,7 @@ from huggingface_hub import HfFolder, login
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
+from operator import itemgetter
 
 from ecg_bench.config import get_args
 from ecg_bench.runners.inference import tester_chat
@@ -254,14 +255,11 @@ def main(rank, world_size):
         model_object = train_utils.create_model()
 
         if args.train == "first":
-            model = model_object["encoder"]
-            tokenizer = model_object["encoder_tokenizer"]
+            model, tokenizer = itemgetter("encoder", "encoder_tokenizer")(model_object)
         elif args.train == "second" or args.inference == "second":
-            model = model_object["llava"]
-            tokenizer = model_object["llm_tokenizer"]
+            model, tokenizer = itemgetter("llava", "llm_tokenizer")(model_object)
         elif args.train == "end2end" or args.inference == "end2end":
-            model = model_object["llm"]
-            tokenizer = model_object["llm_tokenizer"]
+            model, tokenizer = itemgetter("llm", "llm_tokenizer")(model_object)
 
         if args.dis:
             model = DDP(model, device_ids=[device.index], find_unused_parameters=model_object["find_unused_parameters"])
