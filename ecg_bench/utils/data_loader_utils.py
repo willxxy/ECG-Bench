@@ -57,8 +57,7 @@ class BaseECGDataset(Dataset):
             return perturbed_signal
         return signal
 
-    def blackout_signal(self, signal):
-        return np.zeros_like(signal)
+    def blackout_signal(self, signal): return np.zeros_like(signal)
 
     def augment_image(self, image):
         seq = iaa.Sequential([
