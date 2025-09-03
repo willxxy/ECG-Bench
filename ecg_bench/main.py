@@ -122,9 +122,7 @@ def create_save_path(args, fm):
 
 
 def save_checkpoint(model, epoch, args, is_best=False):
-    # Only save the model on the main process to avoid corruption from race conditions
     if args.dis:
-        # Add barrier to synchronize all processes before saving
         dist.barrier()
         if dist.get_rank() == 0:
             model_state_dict = model.module.state_dict()
@@ -134,10 +132,7 @@ def save_checkpoint(model, epoch, args, is_best=False):
             }
             checkpoint_path = f"{args.save_path}/{'best_model' if is_best else f'epoch_{epoch}'}.pth"
             torch.save(checkpoint, checkpoint_path)
-            # Print only from main process
-            if is_best:
-                print(f"Best model saved at epoch: {epoch+1}")
-        # Add another barrier to ensure all processes wait until the save is complete
+            if is_best: print(f"Best model saved at epoch: {epoch+1}")
         dist.barrier()
     else:
         model_state_dict = model.state_dict()
@@ -166,19 +161,14 @@ def run_train(model, train_loader, optimizer, args, viz):
         current_loss = train_dic["average_loss"]
         train_losses.append(current_loss)
 
-        # Only save model if the loss is finite and better than previous best
         if current_loss < best_loss and current_loss != float("inf"):
             best_loss = current_loss
             save_checkpoint(model, epoch, args, is_best=True)
-            if (args.dis and dist.get_rank() == 0) or not args.dis:
-                print(f"New best loss: {best_loss} at epoch {epoch+1}")
+            if (args.dis and dist.get_rank() == 0) or not args.dis: print(f"New best loss: {best_loss} at epoch {epoch+1}")
 
-    # Only use finite losses for plotting
     finite_losses = [loss for loss in train_losses if loss != float("inf")]
-    if finite_losses:
-        viz.plot_train_val_loss(finite_losses, dir_path=args.save_path)
-    else:
-        print("Warning: No finite losses recorded during training")
+    if finite_losses: viz.plot_train_val_loss(finite_losses, dir_path=args.save_path)
+    else: print("Warning: No finite losses recorded during training")
 
 def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz):
     all_epochs = []
@@ -203,15 +193,12 @@ def run_post_train(model, test_loader, tokenizer, args, optimizer, judger, dpo, 
         if current_loss < best_loss and current_loss != float("inf"):
             best_loss = current_loss
             save_checkpoint(model, epoch, args, is_best=True)
-            if (args.dis and dist.get_rank() == 0) or not args.dis:
-                print(f"New best loss: {best_loss} at epoch {epoch+1}")
+            if (args.dis and dist.get_rank() == 0) or not args.dis: print(f"New best loss: {best_loss} at epoch {epoch+1}")
 
     # Only use finite losses for plotting
     finite_losses = [loss for loss in train_losses if loss != float("inf")]
-    if finite_losses:
-        viz.plot_train_val_loss(finite_losses, dir_path=args.save_path)
-    else:
-        print("Warning: No finite losses recorded during training")
+    if finite_losses: viz.plot_train_val_loss(finite_losses, dir_path=args.save_path)
+    else: print("Warning: No finite losses recorded during training")
 
 def run_inference(model, test_loader, tokenizer, args, train_utils):
     print(f"Inferencing on {args.model} for checkpoint {args.checkpoint}")
@@ -259,8 +246,7 @@ def main(rank, world_size):
     train_utils = TrainingUtils(args, fm, viz, device, ecg_tokenizer_utils)
 
     args.save_path = create_save_path(args, fm)
-    if args.log:
-        train_utils.setup_wandb()
+    if args.log: train_utils.setup_wandb()
     train_utils.save_config()
 
     try:
@@ -294,12 +280,9 @@ def main(rank, world_size):
             test_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_test").with_transform(fm.decode_batch)
             print(f"Length of Test Data: {len(test_data)}")
 
-        if args.train == "first":
-            data = train_data.select(range(800000))
-        elif args.train in ["second", "end2end"]:
-            data = train_data.select(range(400000))
-        elif args.inference in ["second", "end2end"]:
-            data = test_data.select(range(20000))
+        if args.train == "first": data = train_data.select(range(800000))
+        elif args.train in ["second", "end2end"]: data = train_data.select(range(400000))
+        elif args.inference in ["second", "end2end"]: data = test_data.select(range(20000))
         print("Length of Dataset Considered:", len(data))
 
         if args.train == "first":
@@ -320,10 +303,8 @@ def main(rank, world_size):
                 llm_tokenizer=tokenizer)
 
         if args.train is not None:
-            if args.dis:
-                sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, seed=args.seed, shuffle=True)
-            else:
-                sampler = None
+            if args.dis: sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, seed=args.seed, shuffle=True)
+            else: sampler = None
 
             data_loader = DataLoader(
                 dataset,
@@ -355,8 +336,7 @@ def main(rank, world_size):
                 ref_model = copy.deepcopy(model)
 
                 run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)
-            else:
-                run_inference(model, data_loader, tokenizer, args, train_utils)
+            else: run_inference(model, data_loader, tokenizer, args, train_utils)
 
     finally:
         if args.dis:
@@ -365,9 +345,5 @@ def main(rank, world_size):
 if __name__ == "__main__":
     args = get_args()
     world_size = len(args.gpus.split(","))
-    if args.dis:
-        mp.spawn(main, args=(world_size,), nprocs=world_size, join=True)
-    else:
-        rank = 0
-        world_size = 1
-        main(rank, world_size)
+    if args.dis: mp.spawn(main, args=(world_size,), nprocs=world_size, join=True)
+    else: main(0, 1)
