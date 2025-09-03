@@ -62,10 +62,8 @@ class TrainingUtils:
 
 
     def get_lora_configs(self):
-        if "gpt2" in self.args.model:
-            target_modules = None # This automatically selects default modules
-        else:
-            target_modules = ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
+        if "gpt2" in self.args.model: target_modules = None # This automatically selects default modules
+        else: target_modules = ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
         lora_config = LoraConfig(
             r = self.args.lora_rank,
             lora_alpha = self.args.lora_alpha,
@@ -86,27 +84,20 @@ class TrainingUtils:
         return optimizers[optimizer_name.lower()]
 
     def create_model(self):
-        if self.args.train == "end2end" or self.args.inference == "end2end":
-            return self.get_llm()
-        if self.args.train == "first" and self.args.inference == None: # since we only train, no inference
-            return self.get_encoder()
-        if self.args.train == "second" or self.args.inference == "second":
-            return self.get_llm_encoder()
+        if self.args.train == "end2end" or self.args.inference == "end2end": return self.get_llm()
+        if self.args.train == "first" and self.args.inference == None: return self.get_encoder()
+        if self.args.train == "second" or self.args.inference == "second": return self.get_llm_encoder()
 
     def get_llm_encoder(self):
         encoder_params = self.get_encoder()
         llm_params = self.get_llm()
 
-        if any(key in self.args.model for key in ("vit", "siglip", "dinov2")):
-            projection_dim = 768
-        elif any(key in self.args.model for key in ("stmem", "mtae", "mlae")):
-            projection_dim = 256
-        elif "clip" in self.args.model:
-            projection_dim = 512
-        elif "merl" in self.args.model:
-            projection_dim = 2048
-        elif "encoderfree" in self.args.model:
-            projection_dim = self.args.seg_len * 12 # num leads
+        if any(key in self.args.model for key in ("vit", "siglip")): projection_dim = 768
+        elif any(key in self.args.model for key in ("stmem", "mtae", "mlae")): projection_dim = 256
+        elif "clip" in self.args.model: projection_dim = 512
+        elif "merl" in self.args.model: projection_dim = 2048
+        elif "encoderfree" in self.args.model: projection_dim = self.args.seg_len * 12 # num leads
+        
         if "encoderfree" in self.args.model:
             from ecg_bench.models.encoder_llm.encoder_free_style import EncoderFree
             llava = EncoderFree(llm_params["llm"], projection_dim, llm_params["llm_tokenizer"]).to(self.device)
