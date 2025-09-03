@@ -5,6 +5,7 @@ import torch
 from imgaug import augmenters as iaa
 from PIL import Image
 from torch.utils.data import Dataset
+from typing import Sequence, List, Literal
 
 from ecg_bench.utils.conversation_utils import get_conv_template
 
@@ -88,13 +89,23 @@ class BaseECGDataset(Dataset):
             answer = " ".join(answer) if isinstance(answer, list) else answer
         return question, answer
 
-    def pad_to_max_chat(self, tokenized_sequence):
-        if len(tokenized_sequence) > self.args.pad_to_max:
-            truncated_token = tokenized_sequence[:self.args.pad_to_max]
-            return list(truncated_token)
-        if len(tokenized_sequence) < self.args.pad_to_max:
-            return [self.pad_id] * (self.args.pad_to_max - len(tokenized_sequence)) + list(tokenized_sequence)
-        return list(tokenized_sequence[:self.args.pad_to_max]) # explicitly return truncated sequence in the case where the sequence is exactly the max length
+    def pad_to_max_chat(
+        self,
+        tokens: Sequence[int],
+        pad_side: Literal["left", "right"] = "left",
+    ) -> List[int]:
+        """Pad to args.pad_to_max with self.pad_id. Truncates to first max_len tokens.
+        pad_side: 'left' (default) or 'right' controls where padding is added.
+        """
+        max_len = self.args.pad_to_max
+        seq = list(tokens)[:max_len]                 # truncate if longer
+        pad_len = max_len - len(seq)
+        if pad_len <= 0: return seq
+
+        pad = [self.pad_id] * pad_len
+        if pad_side not in ("left", "right"):
+            raise ValueError("pad_side must be 'left' or 'right'.")
+        return pad + seq if pad_side == "left" else seq + pad
 
     def create_special_tokens(self):
         self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
