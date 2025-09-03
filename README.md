@@ -803,6 +803,9 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
 7. **Non-determinimsm via `do_sample=True` despite seeding** - Using do_sample=True (with default sampling hyperparameters) intentionally introduces randomness at generation time.
  Sampling (do_sample=True) will still produce different outputs unless you reseed (e.g., torch.manual_seed(...)) immediately before each generation call or switch to deterministic decoding strategies such as greedy or beam search. Therefore, we have updated the generation to turn this off. 
 
+ 8. **ECG-Byte Signal Tokens: Do we train them?** - Marking the newly added ECG tokens in the LLM embedding table as trainable has harmed performance in our tests. 
+ Currently, ECG-Byte produces ECG tokens that we concatenate with text tokens; these tokens are added to the tokenizer and initialized in the LLM’s embedding table. In our default setup we apply LoRA and keep the embedding table frozen, so these new token vectors are not updated. We ran preliminary experiments in two settings: 1. full fine-tuning (including the LLM embedding layer with the added ECG tokens), 2. LoRA fine-tuning with only the newly added ECG token rows set as trainable. Both settings performed substantially worse than our baseline (LoRA with the LLM embedding table frozen, including the new ECG tokens). We did not deeply investigate the cause; exploring this is an interesting direction for future work.
+
 ## Contributions <a name="contributions"></a>
 
 We welcome contributions to the repository! Please feel free to open an issue or pull request for any bugs or features you would like to add. We are always looking for new ECG datasets to benchmark our methods on. If you have any recommendations, please let us know! Also, a good place to start is by looking at the [TODO](#todo) section.
