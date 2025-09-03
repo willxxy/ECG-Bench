@@ -132,10 +132,8 @@ class BaseECGDataset(Dataset):
                                   f"ecg-instruct-pulse-{self.args.target_sf}-{self.args.seg_len}",
                                   f"ecg-bench-pulse-{self.args.target_sf}-{self.args.seg_len}"]:
             question, answer = self.get_qa(altered_text)
-            if "gemma" in self.args.model:
-                altered_text = [{"from": "human", "value": question}, {"from": "model", "value": answer}]
-            else:
-                altered_text = [{"from": "human", "value": question}, {"from": "assistant", "value": answer}]
+            if "gemma" in self.args.model: altered_text = [{"from": "human", "value": question}, {"from": "model", "value": answer}]
+            else: altered_text = [{"from": "human", "value": question}, {"from": "assistant", "value": answer}]
         return altered_text
 
     def append_messages_to_conv(self, conv, altered_text, signal=None):
@@ -175,10 +173,8 @@ class BaseECGDataset(Dataset):
             start_header_id = self.llm_tokenizer.convert_tokens_to_ids(["<|im_start|>"])[0]
             eot_id = self.llm_tokenizer.convert_tokens_to_ids("<|im_end|>")
 
-        if "gemma" in self.args.model:
-            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(["model"])[0]
-        else:
-            assistant_token = self.llm_tokenizer.convert_tokens_to_ids(["assistant"])[0]
+        if "gemma" in self.args.model: assistant_token = self.llm_tokenizer.convert_tokens_to_ids(["model"])[0]
+        else: assistant_token = self.llm_tokenizer.convert_tokens_to_ids(["assistant"])[0]
 
         return start_header_id, assistant_token, eot_id
 
@@ -203,24 +199,20 @@ class BaseECGDataset(Dataset):
         assistant_roles = {"assistant", "model", "gpt"}
         responses = []
         for m in altered_text:
-            if m["from"].lower() in assistant_roles:
-                toks = self.llm_tokenizer.encode(m["value"], add_special_tokens=False)
-                if toks:
-                    responses.append(toks)
+            if m["from"].lower() in assistant_roles and (
+                toks := self.llm_tokenizer.encode(m["value"], add_special_tokens=False)):
+                responses.append(toks)
         if not responses:
             for i, t in enumerate(input_ids):
-                if t == eot_id:
-                    labels[i] = eot_id
+                if t == eot_id: labels[i] = eot_id
             return labels
 
         start_tokens = {t[0] for t in responses}
         positions = {st: [] for st in start_tokens}
         eot_positions = []
         for i, t in enumerate(input_ids):
-            if t in positions:
-                positions[t].append(i)
-            if t == eot_id:
-                eot_positions.append(i)
+            if t in positions: positions[t].append(i)
+            if t == eot_id: eot_positions.append(i)
 
         n = len(input_ids)
         for toks in responses:
@@ -231,11 +223,9 @@ class BaseECGDataset(Dataset):
                     labels[s:e] = toks
                     break
 
-        for i in eot_positions:
-            labels[i] = eot_id
+        for i in eot_positions: labels[i] = eot_id
 
         return labels
-
 
     def token_to_ids(self, labels):
         labels_np = np.array(labels)
@@ -243,10 +233,8 @@ class BaseECGDataset(Dataset):
         if len(non_neg_indices) > 0:
             non_neg_values = labels_np[non_neg_indices].tolist()
             tokens = self.llm_tokenizer.convert_ids_to_tokens(non_neg_values)
-            for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)):
-                print(f"{idx}: {token} -> {token_id}")
-        else:
-            print("No valid labels found (all are -100)")
+            for idx, (token, token_id) in enumerate(zip(tokens, non_neg_values)): print(f"{idx}: {token} -> {token_id}")
+        else: print("No valid labels found (all are -100)")
         print("="*100)
 
 
