@@ -49,7 +49,7 @@ class ECGByteTokenizer:
         print(f"Compression ratio: {len(all_string_signals) / len(ids):.2f}X")
         print(f"Vocabulary size: {len(vocab)}")
         num_sample_files = self.args.sampled_files.split("/")[-1].split("_")[1]
-        self.fm.save_tokenizer(vocab, merges, f"./data/tokenizer_{self.args.num_merges}_{num_sample_files}_{self.args.instance_normalize}_{self.args.dev}.pkl")
+        self.fm.save_tokenizer(vocab, merges, f"./data/tokenizer_{self.args.num_merges}_{num_sample_files}_{self.args.dev}.pkl")
         print("Vocabulary and merges saved")
 
     def verify_tokenizer(self):
@@ -68,10 +68,8 @@ class ECGByteTokenizer:
         print(f"Decoded text (first 100 characters): {decoded_text[:100]}...")
         print(decoded_text == symbol_signal)
 
-        # Store signal range during normalization for instance-based denormalization
-        if self.args.instance_normalize:
-            _, _, signal_range = self.instance_normalize(original_ecg)
-            decoded_signal = self.instance_denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape), signal_range)
+        _, _, signal_range = self.instance_normalize(original_ecg)
+        decoded_signal = self.instance_denormalize(np.array(list(decoded_text)).reshape(original_ecg.shape), signal_range)
 
         max_diff = np.max(np.abs(original_ecg - decoded_signal))
         print(f"Maximum difference between original and decoded: {max_diff}")
@@ -108,9 +106,8 @@ class ECGByteTokenizer:
         return clipped_normalized * (max_vals - min_vals) + min_vals
 
     def _to_symbol_string(self, ecg_array):
-        if self.args.instance_normalize:
-            _, symbol_signal, signal_range = self.instance_normalize(ecg_array)
-            return "".join(symbol_signal.flatten())
+        _, symbol_signal, signal_range = self.instance_normalize(ecg_array)
+        return "".join(symbol_signal.flatten())
 
     def process_ecg(self, ecg_path):
         try:
