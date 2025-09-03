@@ -84,9 +84,9 @@ class TrainingUtils:
         return optimizers[optimizer_name.lower()]
 
     def create_model(self):
-        if self.args.train == "end2end" or self.args.inference == "end2end": return self.get_llm()
-        if self.args.train == "first" and self.args.inference == None: return self.get_encoder()
-        if self.args.train == "second" or self.args.inference == "second": return self.get_llm_encoder()
+        if "end2end" in (self.args.train, self.args.inference): return self.get_llm()
+        if "first" in (self.args.train): return self.get_encoder()
+        if "second" in (self.args.train, self.args.inference): return self.get_llm_encoder()
 
     def get_llm_encoder(self):
         encoder_params = self.get_encoder()
@@ -116,20 +116,11 @@ class TrainingUtils:
         """
         config = model.llm.config
 
-        # For Gemma3 models, check text_config first
-        if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"):
-            return config.text_config.hidden_size
-        # For regular models, check hidden_size directly
-        if hasattr(config, "hidden_size"):
-            return config.hidden_size
-        # For some models, it might be in different attributes
-        if hasattr(config, "d_model"):
-            return config.d_model
-        if hasattr(config, "n_embd"):
-            return config.n_embd
-        # Fallback: try to infer from model structure
-        if hasattr(model.llm, "embed_tokens") and hasattr(model.llm.embed_tokens, "embedding_dim"):
-            return model.llm.embed_tokens.embedding_dim
+        if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"): return config.text_config.hidden_size
+        if hasattr(config, "hidden_size"): return config.hidden_size
+        if hasattr(config, "d_model"): return config.d_model
+        if hasattr(config, "n_embd"): return config.n_embd
+        if hasattr(model.llm, "embed_tokens") and hasattr(model.llm.embed_tokens, "embedding_dim"): return model.llm.embed_tokens.embedding_dim
         raise AttributeError(f"Could not determine hidden size for model type: {type(config)}")
 
     def get_llm(self):
@@ -163,18 +154,15 @@ class TrainingUtils:
         }
 
         model_key = next((key for key in model_configs if key.lower() in self.args.model.lower()), None)
-        if not model_key:
-            raise ValueError(f"Unsupported model: {self.args.model}")
+        if not model_key: raise ValueError(f"Unsupported model: {self.args.model}")
 
         config = model_configs[model_key]
 
         module = __import__(config["import_path"], fromlist=[config["class_name"]])
         model_class = getattr(module, config["class_name"])
 
-        if self.args.train == "second" or self.args.inference == "second":
-            llm_model_name = self.args.model.split("_")[1]
-        else:
-            llm_model_name = self.args.model
+        if self.args.train == "second" or self.args.inference == "second": llm_model_name = self.args.model.split("_")[1]
+        else: llm_model_name = self.args.model
 
         hf_llm = AutoModelForCausalLM.from_pretrained(
             f"{config['hf_path']}/{llm_model_name}",
@@ -188,10 +176,8 @@ class TrainingUtils:
             cache_dir=self.cache_dir,
         )
 
-        if self.args.train == "end2end" or self.args.inference == "end2end":
-            vocab_keys = list(self.ecg_tokenizer_utils.vocab.keys())
-        elif self.args.train == "second" or self.args.inference == "second":
-            vocab_keys = None
+        if "end2end" in (self.args.train, self.args.inference): vocab_keys = list(self.ecg_tokenizer_utils.vocab.keys())
+        elif "second" in (self.args.train, self.args.inference): vocab_keys = None
 
         llm, llm_tokenizer, new_ids = self.modify_llm_tokenizer(
                 hf_llm,
@@ -463,7 +449,7 @@ class TrainingUtils:
             "additional_special_tokens": [],
             "pad_token": "<pad>", # IS PAD TOKEN DIFFERENT FOR EACH LLM?
         }
-        if self.args.train == "second" or self.args.inference == "second":
+        if "second" in (self.args.train, self.args.inference):
             special_tokens["additional_special_tokens"].append("<signal>")
 
         ### THIS IS FOR LLAMA
