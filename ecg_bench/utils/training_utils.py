@@ -12,7 +12,6 @@ from transformers import (
     CLIPModel,
     ViTForMaskedImageModeling,
     logging,
-    Dinov2Model,
 )
 
 logging.set_verbosity_error()
@@ -48,7 +47,7 @@ class TrainingUtils:
             name=f"{'_'.join(self.args.save_path.split('/')[2:])}",
             config=self.args,
         )
-        
+
     def cleanup_wandb(self): wandb.finish()
 
     def collate_fn(self, batch):
@@ -218,7 +217,7 @@ class TrainingUtils:
         # self.train_only_new_token_rows(llm, new_ids)
         # print(self.verify_new_rows_only(llm, llm_tokenizer, new_ids))
         ###
-        
+
         llm = model_class(llm, self.args).to(self.device)
 
         return {
@@ -228,10 +227,9 @@ class TrainingUtils:
             "model_hidden_size": self.get_model_hidden_size(llm),
             "strict": True,
         }
-    
+
     def verify_new_rows_only(self, model, tok, new_ids, lr_embed=1e-3, lr_rest=1e-4, cap=64):
-        """
-        Sanity-check that only newly added token rows (input/output embeddings) receive non-zero grads/updates.
+        """Sanity-check that only newly added token rows (input/output embeddings) receive non-zero grads/updates.
         Requires you to have called `train_only_new_token_rows(...)` beforehand so the grad mask hook is active.
         """
         if not new_ids:
@@ -243,7 +241,7 @@ class TrainingUtils:
 
         if not emb.weight.requires_grad:
             raise RuntimeError(
-                "Embeddings do not require_grad. Call train_only_new_token_rows(...) before verification."
+                "Embeddings do not require_grad. Call train_only_new_token_rows(...) before verification.",
             )
 
         # Build identity set for the embedding params (avoid elementwise tensor comparisons)
@@ -279,7 +277,7 @@ class TrainingUtils:
         # Construct optimizer with separate groups (no WD on embeddings)
         opt = torch.optim.AdamW(
             [{"params": other, "lr": lr_rest, "weight_decay": 0.01},
-            {"params": emb_params, "lr": lr_embed, "weight_decay": 0.0}]
+            {"params": emb_params, "lr": lr_embed, "weight_decay": 0.0}],
         )
 
         # Snapshot before step
@@ -325,14 +323,14 @@ class TrainingUtils:
             )
         return stats
 
-    
+
     @torch.no_grad()
     def init_new_rows_like_old(self, emb, new_token_ids):
         W = emb.weight
         mu, sigma = W.mean(dim=0), W.std(dim=0)
         for i in new_token_ids:
             W[i].copy_(mu + 0.02 * torch.randn_like(mu) * sigma.clamp_min(1e-6))
-            
+
     def make_row_mask(self, vocab_size, new_token_ids, device, dtype):
         mask = torch.zeros(vocab_size, 1, device=device, dtype=dtype)
         for i in new_token_ids:
@@ -353,7 +351,7 @@ class TrainingUtils:
         if out is not None and out.weight is not emb.weight:
             out.weight.requires_grad = True
             out.weight.register_hook(lambda g: g * mask)
-            
+
     def get_encoder(self):
         if "clip" in self.args.model:
             from ecg_bench.models.encoder.clip import CLIP

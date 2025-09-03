@@ -1,11 +1,12 @@
 import random
+from collections.abc import Sequence
+from typing import List, Literal
 
 import numpy as np
 import torch
 from imgaug import augmenters as iaa
 from PIL import Image
 from torch.utils.data import Dataset
-from typing import Sequence, List, Literal
 
 from ecg_bench.utils.conversation_utils import get_conv_template
 

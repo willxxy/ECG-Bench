@@ -1,10 +1,13 @@
 import torch
+
 torch.set_num_threads(6)
 import copy
 import gc
 import json
 import os
 import random
+from operator import itemgetter
+
 import numpy as np
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -13,12 +16,11 @@ from huggingface_hub import HfFolder, login
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
-from operator import itemgetter
 
 from ecg_bench.config import get_args
 from ecg_bench.runners.inference import tester_chat
-from ecg_bench.runners.train import trainer
 from ecg_bench.runners.post_train import post_trainer_dpo
+from ecg_bench.runners.train import trainer
 from ecg_bench.utils.data_loader_utils import (
     End2EndECGChatDataset,
     FirstStageECGDataset,
@@ -254,15 +256,13 @@ def main(rank, world_size):
         print(f"Creating Model: {args.model}")
         model_object = train_utils.create_model()
 
-        if args.train == "first":
-            model, tokenizer = itemgetter("encoder", "encoder_tokenizer")(model_object)
-        elif args.train == "second" or args.inference == "second":
-            model, tokenizer = itemgetter("llava", "llm_tokenizer")(model_object)
-        elif args.train == "end2end" or args.inference == "end2end":
-            model, tokenizer = itemgetter("llm", "llm_tokenizer")(model_object)
+        if args.train == "first": model, tokenizer = itemgetter("encoder", "encoder_tokenizer")(model_object)
+        elif args.train == "second" or args.inference == "second": model, tokenizer = itemgetter("llava", "llm_tokenizer")(model_object)
+        elif args.train == "end2end" or args.inference == "end2end": model, tokenizer = itemgetter("llm", "llm_tokenizer")(model_object)
 
         if args.dis:
-            model = DDP(model, device_ids=[device.index], find_unused_parameters=model_object["find_unused_parameters"])
+            model = DDP(model, device_ids=[device.index],
+                        find_unused_parameters=model_object["find_unused_parameters"])
 
         print(f"Total number of parameters: {train_utils.count_parameters(model)}")
 
@@ -271,7 +271,7 @@ def main(rank, world_size):
             optimizer = ScheduledOptim(
                 optimizer_class(filter(lambda x: x.requires_grad, model.parameters()),
                     betas=(args.beta1, args.beta2), eps=args.eps, lr=args.lr, weight_decay=args.weight_decay),
-                model_object["model_hidden_size"], args)
+                    model_object["model_hidden_size"], args)
             train_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_train").with_transform(fm.decode_batch)
             print(f"Length of Train Data: {len(train_data)}")
         elif args.inference:

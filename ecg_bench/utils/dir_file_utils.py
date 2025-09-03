@@ -72,8 +72,7 @@ class FileManager:
         folder: Optional[Union[str, Path]] = None,
         file:   Optional[Union[str, Path]] = None,
     ) -> bool:
-        """
-        If `folder` is provided, ensure it exists and return True.
+        """If `folder` is provided, ensure it exists and return True.
         If `file` is provided, ensure its parent dir exists and return whether the file exists.
         Exactly one of `folder` or `file` must be provided.
         """
