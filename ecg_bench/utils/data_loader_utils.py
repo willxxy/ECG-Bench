@@ -23,7 +23,7 @@ class BaseECGDataset(Dataset):
             self.args.create_rag_db = None
             self.rag_db = RAGECGDatabase(self.args, self.train_utils.fm)
         if llm_tokenizer is not None:
-            self.create_special_tokens()
+            self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
             self.signal_id = self.llm_tokenizer.convert_tokens_to_ids(["<signal>"])
         if self.args.train == "end2end" or self.args.inference == "end2end" or self.args.train == "second" or self.args.inference == "second":
             self.system_prompt = self.train_utils.fm.get_system_prompt(self.args.system_prompt)
@@ -106,9 +106,6 @@ class BaseECGDataset(Dataset):
         if pad_side not in ("left", "right"):
             raise ValueError("pad_side must be 'left' or 'right'.")
         return pad + seq if pad_side == "left" else seq + pad
-
-    def create_special_tokens(self):
-        self.pad_id = self.llm_tokenizer.convert_tokens_to_ids(self.llm_tokenizer.pad_token)
 
     def setup_conversation_template(self, signal = None):
         if "llama" in self.args.model:
