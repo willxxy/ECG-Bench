@@ -250,7 +250,7 @@ def main(rank, world_size):
 
     args.save_path = create_save_path(args, fm)
     if args.log: train_utils.setup_wandb()
-    train_utils.save_config()
+    if args.inference == None: train_utils.save_config()
 
     try:
         print(f"Creating Model: {args.model}")
