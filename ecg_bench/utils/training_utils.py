@@ -84,9 +84,12 @@ class TrainingUtils:
         return optimizers[optimizer_name.lower()]
 
     def create_model(self):
-        if "end2end" in (self.args.train, self.args.inference): return self.get_llm()
-        if "first" in (self.args.train): return self.get_encoder()
-        if "second" in (self.args.train, self.args.inference): return self.get_llm_encoder()
+        if self.args.train == "end2end" or self.args.inference == "end2end":
+            return self.get_llm()
+        if self.args.train == "first" and self.args.inference == None: # since we only train, no inference
+            return self.get_encoder()
+        if self.args.train == "second" or self.args.inference == "second":
+            return self.get_llm_encoder()
 
     def get_llm_encoder(self):
         encoder_params = self.get_encoder()
