@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # models=("stmem" "merl" "mlae" "mtae" "siglip" "clip" "vit")
-models=("siglip")
+models=("merl")
 # data=("ecg-qa-mimic-iv-ecg-250-1250")
 # data=("ecg_instruct_45k_mapped_1250") 
 

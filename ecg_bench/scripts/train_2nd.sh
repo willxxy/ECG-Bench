@@ -6,7 +6,9 @@ encoders_checkpoints=("merl_adam_64_50_1024_0.0001_0.9_0.99_1e-08_500_0.01_True_
 # llms=("gemma-2-2b-it" "llama-3.2-1b-instruct" "qwen2.5-1.5b-instruct")
 llms=("llama-3.2-1b-instruct")
 # datasets=("ecg-qa_ptbxl-250-1250" "ecg-qa-mimic-iv-ecg-250-1250" "ecg-instruct-45k-250-1250" "ecg-instruct-pulse-250-1250" "pretrain-mimic-250-1250") # add more datasets here
-datasets=("ecg_instruct_45k_mapped_1250")
+# datasets=("ecg_instruct_45k_mapped_1250")
+datasets=("ecg-qa_mimic-iv-ecg_mapped_1250")
+# datasets=("ecg-qa_mimic-iv-ecg_mapped_1250" "ecg-qa_ptbxl_mapped_1250")
 # ----------------------------------------------------------
 
 for data in "${datasets[@]}"; do
