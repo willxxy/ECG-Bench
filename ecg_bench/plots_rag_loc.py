@@ -65,9 +65,9 @@ def grouped_bar(metric_name, filename):
     x = np.arange(len(locations)); width = 0.35
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.bar(x - width/2, means_full,   width, yerr=sds_full,   capsize=4,
-           label=methods[0])
-    ax.bar(x + width/2, means_report, width, yerr=sds_report, capsize=4,
+    # ax.bar(x - width/2, means_full,   width, yerr=sds_full,   capsize=4,
+    #        label=methods[0])
+    ax.bar(x, means_report, width, yerr=sds_report, capsize=4,
            label=methods[1])
 
     ax.set_xticks(x)

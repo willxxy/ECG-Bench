@@ -380,18 +380,17 @@ python preprocess_ecg.py \
 --load_rag_db_idx=./data/$base_data/combined.index
 ```
 
-Lastly, for sampling ECGs for training ECG-Byte and getting percentiles, an example configuration looks like so:
+Lastly, for sampling ECGs for training ECG-Byte, an example configuration looks like so:
 
 ```
 python preprocess_ecg.py \
 --base_data=$base_data \
 --seg_len=$seg_len \
 --sample_files \
---$sampling_method \
---sample_percentiles
+--$sampling_method
 ```
 
-where `$sampling_method` is either `random_sampling` or `stratified_sampling`. ECG-Byte utilizes stratified sampling, however, we found random sampling to perform just as well.
+where `$sampling_method` is `random_sampling`. ECG-Byte utilizes stratified sampling, however, we found random sampling to perform just as well.
 
 After preprocessing, you can test out whether the folder of `*.npy` has valid ECGs in `../tests/test_dataset.py`.
 
