@@ -54,8 +54,8 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
                         gt_input_ids[:, end-offset:],
                     ], dim=1)
                     chat_attention_mask = torch.ones_like(chat_input_ids)
-                    decoded_out = tokenizer.batch_decode(out[:, start:], skip_special_tokens=False)[0]
-                    gt_out = tokenizer.batch_decode(gt_input_ids[:, start-offset:end-offset], skip_special_tokens=False)[0]
+                    decoded_out = tokenizer.batch_decode(out[:, start:], skip_special_tokens=True)[0]
+                    gt_out = tokenizer.batch_decode(gt_input_ids[:, start-offset:end-offset], skip_special_tokens=True)[0]
                     gt_answers.append(gt_out)
                     gen_answers.append(decoded_out)
                     offset += out[:, start:].size(1) - (end - start)
@@ -78,7 +78,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
             if args.dev:
                 print(f"\nCompleted batch {batch_idx}. Total conversations processed: {len_of_batch}")
                 dev_count += 1
-                if dev_count == 25:
+                if dev_count == 5:
                     print("\nDev mode: Stopping after 25 batches")
                     break
 
@@ -87,6 +87,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
         all_metrics = train_utils.evaluate_strings(gt_answers, gen_answers, args.device)
         print("\nMetrics calculated successfully:")
         print(f"BLEU: {all_metrics['BLEU']}")
+        print(f"BLEU (sentence-level effective): {all_metrics['BLEU_sent']}")
         print(f"METEOR: {all_metrics['METEOR']}")
         print(f"ROUGE-L: {all_metrics['ROUGE']['rouge-l']}")
         print(f"BERTScore F1: {np.mean(all_metrics['BERTSCORE']['hf-f1'])}")
@@ -97,6 +98,7 @@ def tester_chat(model, dataloader, tokenizer, args, train_utils):
         print(f"Error message: {e!s}")
         all_metrics = {
             "BLEU": 0,
+            "BLEU_sent": 0,
             "METEOR": 0.0,
             "ROUGE": {"rouge-1": 0.0, "rouge-2": 0.0, "rouge-l": 0.0},
             "BERTSCORE": {"hf-prec": [0.0], "hf-rec": [0.0], "hf-f1": [0.0]},

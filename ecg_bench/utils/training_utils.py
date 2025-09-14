@@ -21,7 +21,7 @@ nltk.download("wordnet", quiet = True)
 import numpy as np
 import yaml
 from evaluate import load
-from nltk.translate.bleu_score import SmoothingFunction, corpus_bleu
+from nltk.translate.bleu_score import SmoothingFunction, corpus_bleu, sentence_bleu
 from nltk.translate.meteor_score import meteor_score
 from rouge import Rouge
 from scipy import stats
@@ -507,6 +507,19 @@ class TrainingUtils:
             "hf-rec": results["recall"],
             "hf-f1": results["f1"],
         }
+        
+    def calculate_bleu_sentence_effective(self, references, hypotheses):
+        sm = SmoothingFunction().method1
+
+        def sent_bleu(r, h):
+            r_tok = r.split(); h_tok = h.split()
+            n = min(4, len(r_tok), len(h_tok))
+            if n == 0:
+                return 0.0
+            weights = tuple([1.0 / n] * n)  # effective order
+            return sentence_bleu([r_tok], h_tok, weights=weights, smoothing_function=sm)
+
+        return float(np.mean([sent_bleu(r, h) for r, h in zip(references, hypotheses)]))
 
     def evaluate_strings(self, references, hypotheses, device):
         if len(references) != len(hypotheses):
@@ -517,6 +530,7 @@ class TrainingUtils:
         if not valid_pairs:
             return {
                 "BLEU": 0,
+                "BLEU_sent": 0,
                 "METEOR": 0.0,
                 "ROUGE": {"rouge-1": 0.0, "rouge-2": 0.0, "rouge-l": 0.0},
                 "BERTSCORE": {"hf-prec": [0.0], "hf-rec": [0.0], "hf-f1": [0.0]},
@@ -527,6 +541,7 @@ class TrainingUtils:
 
         return {
             "BLEU": self.calculate_bleu(valid_refs, valid_hyps),
+            "BLEU_sent": self.calculate_bleu_sentence_effective(valid_refs, valid_hyps),
             "METEOR": self.calculate_meteor(valid_refs, valid_hyps),
             "ROUGE": self.calculate_rouge(valid_refs, valid_hyps),
             "BERTSCORE": self.calculate_bertscore(valid_refs, valid_hyps, device),

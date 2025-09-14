@@ -7,6 +7,9 @@ import json
 import os
 import random
 from operator import itemgetter
+import re
+from typing import Dict, List
+import matplotlib.pyplot as plt
 
 import numpy as np
 import torch.distributed as dist
@@ -239,6 +242,110 @@ def run_inference(model, test_loader, tokenizer, args, train_utils):
 
     with open(f"{args.checkpoint}/{stat_filename}", "w") as f:
         json.dump(statistical_results, f)
+        
+def extract_step(filename: str) -> int:
+    # assumes format like model_0_149999.pth
+    return int(filename.split("_")[2].split(".")[0])
+
+def run_inference_over_steps(model, test_loader, tokenizer, args, train_utils):
+    def extract_step(filename: str) -> int:
+        match = re.search(r"model_0_(\d+)\.pth", filename)
+        return int(match.group(1)) if match else -1
+
+    if args.data == "ecg-qa-mimic-iv-ecg-250-1250":
+        print('here')
+        checkpoints = sorted(
+            [
+                f for f in os.listdir(args.checkpoint) 
+                if f.startswith("model_0") 
+                and f.endswith(".pth")
+                and (extract_step(f) + 1) % 100000 == 0
+            ],
+            key=extract_step,
+        )
+    else:
+        checkpoints = sorted(
+            [f for f in os.listdir(args.checkpoint) if f.startswith("model_0") and f.endswith(".pth")],
+            key=extract_step,
+        )
+    
+    results_over_steps = {}
+
+    # Step 0 (no checkpoint)
+    step_0_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
+    results_over_steps["0"] = {
+        "Bleu-4-sent" : step_0_results["metrics"]["BLEU_sent"],
+        "Bleu-4": step_0_results["metrics"]["BLEU"],
+        "Rouge-L": step_0_results["metrics"]["ROUGE"]["rouge-l"],
+        "Meteor": step_0_results["metrics"]["METEOR"],
+        "BertScore F1": np.mean(step_0_results["metrics"]["BERTSCORE"]["hf-f1"]),
+        "Accuracy": step_0_results["metrics"]["ACC"],
+    }
+    
+    # Loop over checkpoints
+    for ckpt in checkpoints:
+        load_ckpt = torch.load(os.path.join(args.checkpoint, ckpt), map_location=args.device)
+        model.load_state_dict(load_ckpt["model"])
+        print(f"Loaded checkpoint: {ckpt}")
+        step_results = tester_chat(model, test_loader, tokenizer, args, train_utils)
+        step = ckpt.split('_')[2].split('.')[0]
+        results_over_steps[step] = {
+            "Bleu-4-sent" : step_0_results["metrics"]["BLEU_sent"],
+            "Bleu-4": step_results["metrics"]["BLEU"],
+            "Rouge-L": step_results["metrics"]["ROUGE"]["rouge-l"],
+            "Meteor": step_results["metrics"]["METEOR"],
+            "BertScore F1": np.mean(step_results["metrics"]["BERTSCORE"]["hf-f1"]),
+            "Accuracy": step_results["metrics"]["ACC"],
+        }
+
+    # Save to file in args.checkpoint
+    save_path = os.path.join(args.checkpoint, "results_over_steps.json")
+    with open(save_path, "w") as f:
+        json.dump(results_over_steps, f, indent=2)
+    print(f"Saved results to {save_path}")
+
+
+def plot_step_metrics(step_results: Dict[str, Dict[str, float]], out_dir: str) -> None:
+    """
+    step_results: {"0": {"Accuracy": 0.1, ...}, "49999": {...}, ...}
+    out_dir: where to save plots (e.g., args.checkpoint)
+    """
+    # Ensure steps are numeric-sorted (e.g., 0, 49999, ...)
+    steps: List[int] = sorted(int(s) for s in step_results.keys())
+
+    # Collect metric names
+    metric_names = sorted({m for step in step_results.values() for m in step.keys()})
+
+    for metric in metric_names:
+        xs, ys = [], []
+        for s in steps:
+            s_key = str(s)
+            if metric in step_results[s_key]:
+                xs.append(s)
+                ys.append(step_results[s_key][metric])
+
+        # Skip empty series
+        if not xs:
+            continue
+
+        plt.figure()
+        plt.plot(xs, ys, marker="o")
+        plt.xlabel("Steps", fontsize=14)   # bigger x-axis label
+        plt.ylabel(metric, fontsize=14)    # bigger y-axis label
+        plt.title(f"{metric} Over Steps", fontsize=16)  # bigger title
+        plt.xticks(fontsize=12)            # bigger tick labels
+        plt.yticks(fontsize=12)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+        safe_name = (
+            metric.lower()
+            .replace(" ", "_")
+            .replace("/", "_")
+            .replace("-", "_")
+        )
+        plt.savefig(os.path.join(out_dir, f"{safe_name}.png"), dpi=200)
+        plt.close()
 
 def main(rank, world_size):
     args = get_args()
@@ -278,9 +385,10 @@ def main(rank, world_size):
             test_data = load_dataset(f"willxxy/{args.data}", split=f"fold{args.fold}_test").with_transform(fm.decode_batch)
             print(f"Length of Test Data: {len(test_data)}")
 
-        if args.train == "first": data = train_data.select(range(800000))
-        elif args.train in ["second", "end2end"]: data = train_data.select(range(400000))
-        elif args.inference in ["second", "end2end"]: data = test_data.select(range(20000))
+        data = train_data if args.train else test_data.select(range(20000))
+        # if args.train == "first": data = train_data.select(range(800000))
+        # elif args.train in ["second", "end2end"]: data = train_data.select(range(400000))
+        # elif args.inference in ["second", "end2end"]: data = test_data.select(range(20000))
         print("Length of Dataset Considered:", len(data))
 
         if args.train == "first":
@@ -334,7 +442,12 @@ def main(rank, world_size):
                 ref_model = copy.deepcopy(model)
 
                 run_post_train(model, data_loader, tokenizer, args, optimizer, judger, dpo, ref_model, viz)
-            else: run_inference(model, data_loader, tokenizer, args, train_utils)
+            else:
+                if args.model in ["llama-3.2-3b-instruct", "llama-3.1-8b-instruct"]:
+                    print('here')
+                    run_inference(model, data_loader, tokenizer, args, train_utils)
+                else:
+                    run_inference_over_steps(model, data_loader, tokenizer, args, train_utils)
 
     finally:
         if args.dis:
