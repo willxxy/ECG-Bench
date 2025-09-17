@@ -805,9 +805,9 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
 10. **Do ELMs actually understand the signal?** - To test whether ELMs coherently use features from the input ECG, we conducted preliminary experiments. TL;DR: ELMs appear not to meaningfully exploit ECG features.
 We used an encoder-free ELM as the base model. It consists of a linear projection layer that maps the ECG signal to a latent vector, trained jointly with the LLM using an autoregressive loss. We use the `llama-3.2-1b-instruct` checkpoint for the LLM. We trained and evaluated the model under three conditions:
 
-    1) Regular ECG signal as input
-    2) A tensor of the same shape as the ECG, filled with zeros
-    3) No signal at all (only text)
+    1. Regular ECG signal as input
+    2. A tensor of the same shape as the ECG, filled with zeros
+    3. No signal at all (only text)
 
     We report the following results on the `willxxy/ecg-qa-ptbxl-250-1250` dataset. 1., 2., 3., are the corresponding three conditions.
 
