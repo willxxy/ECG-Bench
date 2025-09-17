@@ -802,6 +802,33 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
 9. **ECG-Byte Signal Tokens: Do we train them?** - Marking the newly added ECG tokens in the LLM embedding table as trainable has harmed performance in our tests. 
  Currently, ECG-Byte produces ECG tokens that we concatenate with text tokens; these tokens are added to the tokenizer and initialized in the LLM’s embedding table. In our default setup we apply LoRA and keep the embedding table frozen, so these new token vectors are not updated. We ran preliminary experiments in two settings: 1. full fine-tuning (including the LLM embedding layer with the added ECG tokens), 2. LoRA fine-tuning with only the newly added ECG token rows set as trainable. Both settings performed substantially worse than our baseline (LoRA with the LLM embedding table frozen, including the new ECG tokens). We did not deeply investigate the cause; exploring this is an interesting direction for future work.
 
+10. **Do ELMs actually understand the signal?** - To test whether ELMs coherently use features from the input ECG, we conducted preliminary experiments. TL;DR: ELMs appear not to meaningfully exploit ECG features.
+We used an encoder-free ELM as the base model. It consists of a linear projection layer that maps the ECG signal to a latent vector, trained jointly with the LLM using an autoregressive loss. We use the `llama-3.2-1b-instruct` checkpoint for the LLM. We trained and evaluated the model under three conditions:
+
+    1) Regular ECG signal as input
+    2) A tensor of the same shape as the ECG, filled with zeros
+    3) No signal at all (only text)
+
+    We report the following results on the `willxxy/ecg-qa-ptbxl-250-1250` dataset. 1., 2., 3., are the corresponding three conditions.
+
+    <div align="center">
+    <img src="./assets/trained_1_ecg_acc_comparison.png" alt="Accuracy when trained on 1.">
+    </div>
+
+    <div align="center">
+    <img src="./assets/trained_2_ecg_acc_comparison.png" alt="Accuracy when trained on 1.">
+    </div>
+
+    <div align="center">
+    <img src="./assets/trained_3_ecg_acc_comparison.png" alt="Accuracy when trained on 1.">
+    </div>
+
+    As one can see, we can achieve competitive results with the baseline of training and inferencing with 1 when training with 2. or 3. Although this study is not in depth, we aim to discover why this is happening. If anyone is interested, please feel free to reach out or take the idea!
+
+    
+    
+
+
 ## Contributions <a name="contributions"></a>
 
 We welcome contributions to the repository! Please feel free to open an issue or pull request for any bugs or features you would like to add. We are always looking for new ECG datasets to benchmark our methods on. If you have any recommendations, please let us know! Also, a good place to start is by looking at the [TODO](#todo) section.
