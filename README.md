@@ -841,8 +841,9 @@ This is a list of TODOs for the repository. If you are interested in contributin
 - [x] Add option for data mixing.
 - [x] Adjust feature selection for RAG.
 - [x] Apply normalization to RAG database.
-- [x] Cross Dataset Ablation.
-- [x] Add "Only feature" retrieval option for RAG
+- [ ] Cross Dataset Ablation.
+- [ ] Apply RAG with encoder methods
+- [ ] Add "Only feature" retrieval option for RAG
 - [x] For preprocessing, stratify based on patient, such that no overlapping patients between train and test.
 - [x] Add official splits for benchmarking.
     - [x] Upload to huggingface datasets and use huggingface datasets data loading in main.

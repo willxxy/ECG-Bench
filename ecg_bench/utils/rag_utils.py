@@ -369,8 +369,8 @@ class RAGECGDatabase:
             # Include diagnosis information based on retrieved_information
             if retrieved_information in ["report", "combined"]:
                 output += "Diagnosis Information:\n"
-                output +="--------------------------"
-                # output += f"{res['report']}\n\n"
+                # output +="--------------------------"
+                output += f"{res['report']}\n\n"
         return output
     
     def convert_features_to_structured(self, feature_array):
