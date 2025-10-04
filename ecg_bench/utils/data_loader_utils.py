@@ -341,6 +341,7 @@ class End2EndECGChatDataset(BaseECGDataset):
         try:
             instance = self.json_data_file[idx]
             np_path = instance["ecg_path"]
+            np_path = np_path.replace("./data", "../../ecg_dev/ECG-Bench-v2/ecg_bench/data")
             ecg_path = self.train_utils.fm.open_npy(np_path)
             ecg_signal = ecg_path["ecg"]
             if self.args.perturb:
