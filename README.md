@@ -226,7 +226,7 @@ wget https://physionet.org/static/published-projects/challenge-2020/classificati
 
 1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others!
 
-### Main Methods <a name="methods"></a>
+## Main Methods <a name="methods"></a>
 
 We simplify the categorization of ELMs not by their training procedure but their architecture.
 Simply run with the corresponding flags for the desired ELM (e.g., `--encoder=$ENCODER, --llm=$LLM`) and ECG representation (e.g., `--ecg_signal, --ecg_image, --ecg_stacked_signal, --ecg_token`).
