@@ -87,7 +87,7 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 3. After opening a new terminal, check the Rust installation by running `rustc --version`.
 
-4. Create the conda virtual environment via `conda create -n ecg python=3.10.15`.
+4. Create the conda virtual environment via `conda create -n ecg python=3.10`.
 
 5. Activate the environment `conda activate ecg`
 
