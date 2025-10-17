@@ -1,0 +1,20 @@
+[package]
+name = "ecg_byte"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "ecg_byte"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.24.1", features = ["extension-module"] }
+numpy = "0.24"
+ndarray = { version = "0.15.6", features = ["rayon"] }
+rayon = "1.7"
+num-traits = "0.2"
+indicatif = "0.17.0"
+fxhash = "0.2"
+
+[profile.release]
+debug = true

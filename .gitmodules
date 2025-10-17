@@ -1,6 +1,0 @@
-[submodule "transformers"]
-	path = transformers
-	url = https://github.com/huggingface/transformers.git
-[submodule "ecg-plot"]
-	path = ecg-plot
-	url = https://github.com/willxxy/ecg-plot

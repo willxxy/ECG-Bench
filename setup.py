@@ -1,7 +1,69 @@
 from setuptools import find_packages, setup
 
-with open("./requirements.txt") as f:
-    required = f.read().splitlines()
+INSTALL_REQUIRES = [
+    "ruff",
+    "pre-commit",
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "transformers==4.56.0",
+    "ecg_plot @ git+https://github.com/willxxy/ecg-plot",
+    "accelerate==0.34.2",
+    "einops==0.8.0",
+    "h5py==3.12.1",
+    "joblib==1.4.2",
+    "matplotlib==3.9.2",
+    "maturin==1.7.4",
+    "numpy==1.26.4",
+    "openai==1.51.2",
+    "pandas==2.2.3",
+    "peft==0.13.0",
+    "PyWavelets==1.7.0",
+    "PyYAML==6.0.2",
+    "regex==2024.9.11",
+    "requests==2.32.4",
+    "scikit-learn==1.5.2",
+    "scipy==1.14.1",
+    "tqdm==4.66.5",
+    "wandb==0.18.3",
+    "wfdb==4.1.2",
+    "seaborn==0.13.2",
+    "nltk==3.9.1",
+    "rouge==1.0.1",
+    "sentencepiece==0.2.0",
+    "sacremoses==0.1.1",
+    "captum==0.7.0",
+    "evaluate==0.4.3",
+    "bert_score",
+    "ninja==1.11.1.3",
+    "beautifulsoup4==4.12.2",
+    "imageio==2.27.0",
+    "imgaug==0.4.0",
+    "imutils==0.5.4",
+    "opencv_python==4.6.0.66",
+    "pillow==10.3.0",
+    "scikit-image==0.21.0",
+    "spacy==3.8.4",
+    "validators==0.18.2",
+    "html5lib==1.1",
+    "qrcode==7.4.2",
+    "gradio==5.31.0",
+    "faiss-cpu==1.10.0",
+    "termcolor==3.0.1",
+    "pytest",
+]
+
+EXTRAS_REQUIRE = {
+    "flash": [
+        "flash-attn==2.7.4.post1",
+    ],
+    "judge": [
+        "llm-blender @ git+https://github.com/yuchenlin/LLM-Blender.git",
+        "trl[judges]",
+    ],
+}
+
+# Add "all" as the union of everything
+EXTRAS_REQUIRE["all"] = sorted(set(sum(EXTRAS_REQUIRE.values(), [])))
 
 setup(
     name="ecg_bench",
@@ -12,5 +74,8 @@ setup(
     author="William Jongwon Han",
     author_email="wjhan@andrew.cmu.edu",
     description="Open source code of ECG-Bench",
-    install_requires=required,
+    python_requires=">=3.10",
+    install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRAS_REQUIRE,
+    include_package_data=True,
 )

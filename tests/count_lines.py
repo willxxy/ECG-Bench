@@ -17,11 +17,10 @@ def count_lines(directory):
                     lines = f.readlines()
                     total_lines += len(lines)
 
-                    code_lines += sum(1 for line in lines
-                                    if line.strip() and
-                                    not line.strip().startswith(("#", "//")))
+                    code_lines += sum(1 for line in lines if line.strip() and not line.strip().startswith(("#", "//")))
 
     return total_lines, code_lines
+
 
 if __name__ == "__main__":
     directory = "ecg_bench"

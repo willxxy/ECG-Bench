@@ -1,0 +1,8 @@
+{
+    "files.watcherExclude": {
+        "**/data/**": true,
+        "**/target/**": true,
+        "**/transformers/**": true,
+        "**/wandb/**": true
+    }
+}

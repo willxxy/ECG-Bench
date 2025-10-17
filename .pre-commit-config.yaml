@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff (format)
+        entry: python3 -m ruff format
+        language: system
+        types_or: [python]        # only run on changed .py files
+
+      - id: ruff
+        name: ruff (lint)
+        entry: python3 -m ruff
+        language: system
+        types_or: [python]
+        args: ["check", "--fix", "--show-fixes"]
