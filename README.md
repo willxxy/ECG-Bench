@@ -10,6 +10,7 @@
 
 ## News
 
+- **[October 18, 2025]** We have released [preprocessed ECG files](https://drive.google.com/drive/folders/1HVpLS93Sq_jyRGlcE2Zt-t9f45_ilREd?usp=sharing), such that you do not have to do the preprocessing yourself.
 - **[October 16, 2025]** We have finished the refactor, for new and old users, please refer to the documentation below and the [brief release notes](https://github.com/willxxy/ECG-Bench/releases/tag/0.0.5).
 - **[October 3, 2025]** We are currently going under a big refactor for easier use of the repository. We thank you for your patience and will update once its done!
 - **[October 3, 2025]** We have released our paper [Retrieval-Augmented Generation for Electrocardiogram-Language Models](https://arxiv.org/abs/2510.00261). There is currently a [pull request](https://github.com/willxxy/ECG-Bench/pull/3) for the updated integration of RAG utilized with ELMs in the paper. Feel free to check it out.
@@ -117,6 +118,29 @@ All installations and experiments were completed on Ubuntu 20.04.5 LTS with NVID
 
 ## ECG Datasets <a name="data"></a>
 We also provide preprocessing pipelines for various datasets in this repository.
+**Note that one can skip the entire preprocessing section by downloading our [preprocessed ECG files](https://drive.google.com/drive/folders/1HVpLS93Sq_jyRGlcE2Zt-t9f45_ilREd?usp=sharing) and skip to the main methods section.**
+We provide preprocessed ECGs at 2, 5, and 10 second recordings sampled at 250 Hz.
+The structure in which the `data` folder should be in is the following:
+
+```
+ECG-Bench
+└── ecg_bench
+    └── data
+        ├── csn
+        │   ├── preprocessed_1250_250
+        │   ├── preprocessed_500_250
+        │   └── preprocessed_2500_250
+        ├── cpsc
+        │   └── ...
+        ├── ptb
+        │   └── ...
+        ├── mimic
+        │   └── ...
+        └── code15
+            └── ...
+```
+where ... denotes the same `preprocessed_1250_250`, `preprocessed_500_250`, `preprocessed_2500_250` folders.
+The `.zip` file should unzip the data name folder and the corresponding preprocessed folders already.
 
 **Datasets:**
 

@@ -46,7 +46,7 @@ def get_args(mode: Mode) -> argparse.Namespace:
         parser.add_argument("--rag_k", type=int, default=1, help="RAG k")
         parser.add_argument("--rag_database", type=str, default=None, help="Path to RAG Database Containing Metadata and Indexes")
         parser.add_argument("--rag_query", type=str, default=None, choices=["ecg_signal", "ecg_feature"], help="Rag Query Type")
-        parser.add_argument("--rag_location", type=str, default=None, choices=["system_prompt", "user_query"], help="RAG Location")
+        parser.add_argument("--rag_location", type=str, default="system_prompt", choices=["system_prompt", "user_query"], help="RAG Location")
         parser.add_argument("--rag_content", type=str, default=None, choices=["ecg_feature", "diagnostic_report"], help="RAG Content")
 
         parser.add_argument("--wandb", action="store_true", default=None, help="Enable logging")
