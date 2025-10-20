@@ -1,0 +1,17 @@
+batch_size: 1024
+dev: true
+ecg_tokenizer: ./ecg_bench/configs/ecg_tokenizers/ecg_byte_tokenizer_6000_800000.pkl
+embedding_dim: 128
+epochs: 3
+grad_clip: 1.0
+lr: 0.002
+min_count: 10
+neg_alpha: 0.75
+neg_k: 5
+num_cores: 12
+renorm_every: 0
+sampled_file: ./ecg_bench/configs/ecg_tokenizers/sampled_500000_random.txt
+save_path: ./ecg_bench/configs/signal2vec
+seed: 0
+subsample_t: 1.0e-05
+window_size: 12

@@ -23,7 +23,8 @@ class ECGImageDataset(BaseECGDataset):
         ecg_path = ecg_path.replace("./data", "./ecg_bench/data")  # for my own local
         ecg_np_file = self.fm.open_npy(ecg_path)
         ecg_signal = ecg_np_file["ecg"]
-        self.viz.plot_2d_ecg(ecg_signal, "ecg_signal", "./ecg_signal.png", 250)
+        if self.args.dev and is_main():
+            self.viz.plot_2d_ecg(ecg_signal, "ecg_signal", "./ecg_signal.png", 250)
         diagnostic_report = ecg_np_file["report"]
 
         ### PERTURBATIONS ###

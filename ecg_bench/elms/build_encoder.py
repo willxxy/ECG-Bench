@@ -179,7 +179,7 @@ class BuildEncoder:
         )
 
     def load_encoder_checkpoint(self, encoder_components):
-        encoder_checkpoint = torch.load(self.args.encoder_ckpt, map_location="cpu")
+        encoder_checkpoint = torch.load(self.args.encoder_ckpt, map_location="cpu", weights_only=False)
         encoder_config = VISION_ENCODERS if self.args.encoder in VISION_ENCODERS else ECG_ENCODERS
         strict_loading = encoder_config[self.args.encoder]["strict"]
         encoder_components["encoder"].load_state_dict(encoder_checkpoint["model_state_dict"], strict=strict_loading)

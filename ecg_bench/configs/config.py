@@ -3,13 +3,13 @@ from ecg_bench.configs.constants import Mode
 
 
 def get_args(mode: Mode) -> argparse.Namespace:
-    if mode not in {"train", "eval", "inference", "post_train", "ecg_tokenizer", "preprocess", "rag"}:
+    if mode not in {"train", "eval", "inference", "post_train", "ecg_tokenizer", "preprocess", "rag", "signal2vec"}:
         raise ValueError(f"invalid mode: {mode}")
 
     parser = argparse.ArgumentParser(description=None)
     parser.add_argument("--seed", type=int, default=0, help="Random Seed")
     parser.add_argument("--dev", action="store_true", default=None, help="Development mode")
-    if mode in {"train", "eval", "inference", "post_train", "ecg_tokenizer"}:
+    if mode in {"train", "eval", "inference", "post_train", "ecg_tokenizer", "signal2vec"}:
         parser.add_argument("--ecg_tokenizer", type=str, default=None, help="Path to ECG Tokenizer")
     if mode in {"train", "eval", "inference", "post_train", "preprocess"}:
         parser.add_argument("--segment_len", type=int, default=1250, help="ECG Segment Length")
@@ -75,13 +75,26 @@ def get_args(mode: Mode) -> argparse.Namespace:
     if mode == "post_train":
         parser.add_argument("--dpo_beta", type=float, default=0.5, help="DPO beta")
 
-    if mode in {"ecg_tokenizer", "preprocess"}:
+    if mode in {"ecg_tokenizer", "preprocess", "signal2vec"}:
         parser.add_argument("--num_cores", type=int, default=12, help="Number of cores for parallel processing")
+        parser.add_argument("--sampled_file", type=str, default=None, help="Path to the sampled ECG files for tokenizer training")
+
+    if mode == "signal2vec":
+        parser.add_argument("--embedding_dim", type=int, default=128, help="Embedding dimension for SkipGram")
+        parser.add_argument("--window_size", type=int, default=12, help="Window size for SkipGram")
+        parser.add_argument("--neg_alpha", type=float, default=0.75, help="Negative sampling alpha for SkipGram")
+        parser.add_argument("--subsample_t", type=float, default=1e-5, help="Subsampling threshold for SkipGram")
+        parser.add_argument("--min_count", type=int, default=10, help="Minimum count for SkipGram")
+        parser.add_argument("--grad_clip", type=float, default=1.0, help="Gradient clip for SkipGram")
+        parser.add_argument("--renorm_every", type=int, default=0, help="Renormalization every for SkipGram")
+        parser.add_argument("--neg_k", type=int, default=5, help="Number of negative samples for SkipGram")
+        parser.add_argument("--lr", type=float, default=2e-3, help="Learning rate")
+        parser.add_argument("--batch_size", type=int, default=1024, help="Batch size")
+        parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
 
     if mode == "ecg_tokenizer":
         parser.add_argument("--num_merges", type=int, default=3500, help="Number of merges for BPE")
         parser.add_argument("--num_samples", type=int, default=300000, help="Number of samples for training the tokenizer")
-        parser.add_argument("--sampled_file", type=str, default=None, help="Path to the sampled ECG files for tokenizer training")
         parser.add_argument("--path_to_ecg_npy", type=str, default=None, help="Path to the ECG npy files")
 
     if mode == "preprocess":

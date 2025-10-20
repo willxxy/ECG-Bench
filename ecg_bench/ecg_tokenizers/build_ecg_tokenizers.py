@@ -50,7 +50,7 @@ class BuildECGByte(BuildECGTokenizers):
         self.symbols = list("abcdefghijklmnopqrstuvwxyz")
         self.len_symbols = len(self.symbols)
 
-        if mode in ["train", "eval", "inference", "post_train"]:
+        if mode in ["train", "eval", "inference", "post_train", "signal2vec"]:
             self.build_ecg_byte()
         elif mode == "ecg_tokenizer":
             if self.args.sampled_file and not self.args.ecg_tokenizer:

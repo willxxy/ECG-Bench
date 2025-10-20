@@ -215,3 +215,4 @@ ecg_bench/data/
 ecg_bench/logs/
 wandb/
 scripts/
+*.pt

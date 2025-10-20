@@ -10,12 +10,12 @@ datasets=(
 for data in "${datasets[@]}"
 do
   python -m ecg_bench.train_elm \
-    --ecg_token \
+    --ecg_signal \
     --llm=llama-3.2-1b-instruct \
     --data="$data" \
-    --ecg_tokenizer=./ecg_bench/configs/ecg_tokenizers/ecg_byte_tokenizer_5000_500000.pkl \
     --device=cuda:1 \
     --peft \
+    --encoder=projection \
     --batch_size=2 \
     --attention_type=flash_attention_2 \
     --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \

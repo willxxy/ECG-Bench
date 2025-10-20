@@ -3,11 +3,12 @@ import torch
 import re
 
 # Main arg MODE types
-Mode = Literal["train", "eval", "inference", "post_train", "ecg_tokenizer", "preprocess", "rag"]
+Mode = Literal["train", "eval", "inference", "post_train", "ecg_tokenizer", "preprocess", "rag", "signal2vec"]
 
 # Directories
 RUNS_DIR = "./ecg_bench/runs"
 DATA_DIR = "./ecg_bench/data"
+CONFIG_DIR = "./ecg_bench/configs"
 
 # Datasets
 BASE_DATASETS = ["ptb", "mimic", "code15", "cpsc", "csn"]
