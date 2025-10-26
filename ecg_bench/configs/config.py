@@ -11,6 +11,7 @@ def get_args(mode: Mode) -> argparse.Namespace:
     parser.add_argument("--dev", action="store_true", default=None, help="Development mode")
     if mode in {"train", "eval", "inference", "post_train", "ecg_tokenizer", "signal2vec"}:
         parser.add_argument("--ecg_tokenizer", type=str, default=None, help="Path to ECG Tokenizer")
+        parser.add_argument("--signal2vec_embeddings", type=str, default=None, help="Path to Signal2Vec embeddings file")
     if mode in {"train", "eval", "inference", "post_train", "preprocess"}:
         parser.add_argument("--segment_len", type=int, default=1250, help="ECG Segment Length")
     if mode in {"train", "eval", "inference", "post_train"}:

@@ -187,6 +187,13 @@ ECG_TOKEN_PREFIX = "signal_"
 
 # Encoders
 ECG_ENCODERS = {
+    "signal2vec": {
+        "find_unused_parameters": False,
+        "strict": False,
+        "model_hidden_size": None,
+        "projection_dim": 128,
+        "encoder_input_len": None,
+    },
     "merl": {
         "model": "resnet101",
         "tokenizer": "ncbi/MedCPT-Query-Encoder",

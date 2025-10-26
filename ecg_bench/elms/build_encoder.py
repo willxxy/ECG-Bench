@@ -39,6 +39,8 @@ class BuildEncoder:
     ):
         if self.args.encoder == "projection":
             return self.build_projection()
+        elif self.args.encoder == "signal2vec":
+            return self.build_signal2vec()
         elif self.args.encoder == "merl":
             return self.build_merl()
         elif self.args.encoder == "mtae":
@@ -49,6 +51,20 @@ class BuildEncoder:
             return self.build_st_mem()
         else:
             raise ValueError(f"{self.args.encoder} not supported.")
+
+    def build_signal2vec(
+        self,
+    ):
+        from ecg_bench.elms.ecg_encoder.signal2vec import Signal2Vec
+        from ecg_bench.ecg_tokenizers.build_signal2vec import BuildSignal2Vec
+        from ecg_bench.utils.file_manager import FileManager
+        from ecg_bench.ecg_tokenizers.build_ecg_tokenizers import BuildECGByte
+
+        fm = FileManager()
+        ecg_byte_builder = BuildECGByte(self.args, "signal2vec")
+        signal2vec_builder = BuildSignal2Vec(fm, ecg_byte_builder, self.args)
+        ecg_encoder = Signal2Vec(signal2vec_builder, ECG_ENCODERS[self.args.encoder]["projection_dim"], self.args.llm)
+        return {"encoder": ecg_encoder}
 
     def build_merl(
         self,

@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from sklearn.manifold import TSNE
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
+import random
 
 from ecg_bench.utils.file_manager import FileManager
 from ecg_bench.ecg_tokenizers.build_ecg_tokenizers import BuildECGByte
@@ -45,32 +46,43 @@ class SkipGramNeg(nn.Module):
         return ((self.center.weight + self.context.weight) / 2).detach().clone()
 
 
-def _pairs_from_sequence_dynamic(seq: List[int], win_max: int) -> List[Tuple[int, int]]:
-    pairs = []
-    L = len(seq)
-    for i, c in enumerate(seq):
-        w = np.random.randint(1, win_max + 1)
-        left, right = max(0, i - w), min(L, i + w + 1)
-        for j in range(left, right):
-            if j != i:
-                pairs.append((c, seq[j]))
-    return pairs
-
-
 class SkipGramDataset(Dataset):
     def __init__(self, sequences: List[List[int]], window_max: int, neg_k: int, noise_dist: np.ndarray):
-        self.pairs = []
-        for s in sequences:
-            if len(s) > 1:
-                self.pairs.extend(_pairs_from_sequence_dynamic(s, window_max))
+        self.sequences = [s for s in sequences if len(s) > 1]
+        self.window_max = window_max
         self.neg_k = neg_k
         self.alias_prob, self.alias_idx = self._alias_setup(noise_dist)
 
+        estimated_total = sum(len(s) * window_max for s in self.sequences)
+        self.max_samples = min(10_000_000, estimated_total)
+
+        if hasattr(self, "dev_mode") and self.dev_mode:
+            self.max_samples = min(100_000, self.max_samples)
+
+        print(f"SkipGramDataset: {len(self.sequences)} sequences, ~{estimated_total:,} estimated pairs, using {self.max_samples:,} samples")
+
     def __len__(self):
-        return len(self.pairs)
+        return self.max_samples
 
     def __getitem__(self, idx: int):
-        c, p = self.pairs[idx]
+        # Randomly sample a sequence and generate a pair on-demand
+        seq = random.choice(self.sequences)
+        if len(seq) < 2:
+            # Fallback for very short sequences
+            c = p = seq[0] if seq else 0
+        else:
+            # Generate a random pair from this sequence
+            i = np.random.randint(0, len(seq))
+            c = seq[i]
+            # Sample positive context within window
+            w = np.random.randint(1, self.window_max + 1)
+            left, right = max(0, i - w), min(len(seq), i + w + 1)
+            context_indices = [j for j in range(left, right) if j != i]
+            if context_indices:
+                p = seq[np.random.choice(context_indices)]
+            else:
+                p = seq[np.random.randint(0, len(seq))]
+
         n = self._alias_draw(self.neg_k)
         mask = n == p
         if mask.any():
@@ -110,13 +122,15 @@ class SkipGramDataset(Dataset):
         return out.astype(np.int64)
 
 
-class Signal2Vec:
+class BuildSignal2Vec:
     def __init__(self, fm: FileManager, ecg_byte_builder: BuildECGByte, args: argparse.Namespace):
         self.args = args
         self.fm = fm
         self.ecg_byte_builder = ecg_byte_builder
-        with open(self.args.sampled_file) as f:
-            self.sampled_file_paths = [ln.strip() for ln in f if ln.strip()]
+
+        if hasattr(self.args, "sampled_file") and self.args.sampled_file:
+            with open(self.args.sampled_file) as f:
+                self.sampled_file_paths = [ln.strip() for ln in f if ln.strip()]
 
     def train(self):
         raw_sequences = self._load_token_sequences()
@@ -155,6 +169,9 @@ class Signal2Vec:
             neg_k=int(self.args.neg_k),
             noise_dist=noise_dist,
         )
+        # Add dev mode flag if available
+        if hasattr(self.args, "dev") and self.args.dev:
+            ds.dev_mode = True
         num_workers = int(getattr(self.args, "num_workers", 0))
         dl = DataLoader(
             ds,

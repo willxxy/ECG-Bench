@@ -1,8 +1,8 @@
 batch_size: 1024
-dev: true
+dev: null
 ecg_tokenizer: ./ecg_bench/configs/ecg_tokenizers/ecg_byte_tokenizer_6000_800000.pkl
 embedding_dim: 128
-epochs: 3
+epochs: 10
 grad_clip: 1.0
 lr: 0.002
 min_count: 10
