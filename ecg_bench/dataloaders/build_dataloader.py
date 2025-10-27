@@ -194,7 +194,7 @@ class BuildDataLoader:
 
     def assert_data_model_match(self):
         if self.args.ecg_token:
-            assert self.args.encoder is None, print("ecg_token mode should not specify encoder")
+            assert self.args.encoder is None or self.args.encoder == "signal2vec", print("ecg_token mode should not specify encoder")
         elif self.args.ecg_image or self.args.ecg_stacked_signal:
             assert self.args.encoder in VISION_ENCODERS, print(f"ecg_image/ecg_stacked_signal requires vision encoder, got {self.args.encoder}")
         elif self.args.ecg_signal:
