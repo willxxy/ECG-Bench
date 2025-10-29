@@ -32,12 +32,12 @@ class ECGSignalDataset(BaseECGDataset):
                 text=[diagnostic_report], return_tensors="pt", padding="max_length", max_length=self.max_len, truncation=True
             )
             encoder_tokenizer_out = {
-                "ecg_signal": ecg_signal,
+                "ecg_signal": self.transform_ecg_signal(ecg_signal),
                 "encoder_input_ids": out["input_ids"][0].contiguous(),
                 "encoder_attention_mask": out["attention_mask"][0].contiguous(),
             }
         else:
-            encoder_tokenizer_out = {"ecg_signal": ecg_signal}
+            encoder_tokenizer_out = {"ecg_signal": self.transform_ecg_signal(ecg_signal)}
 
         text = instance["text"]
         if self.args.llm:
@@ -106,3 +106,8 @@ class ECGSignalDataset(BaseECGDataset):
                 return self.pad_input(prompt_tokens)
             truncated_prompt = prompt_tokens[-self.args.llm_input_len :]
             return truncated_prompt
+
+    def transform_ecg_signal(self, ecg_signal):
+        if self.args.encoder == "projection":
+            ecg_signal = ecg_signal.flatten()
+        return ecg_signal

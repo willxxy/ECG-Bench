@@ -12,16 +12,14 @@
 # --dev
 
 
-for encoder in mtae mlae merl st_mem; do
-    python -m ecg_bench.train_encoder \
-    --ecg_signal \
-    --encoder=$encoder \
-    --data=ecg-qa-mimic-iv-ecg-250-1250 \
-    --batch_size=256 \
-    --optimizer=adamw \
-    --lr=2e-4 \
-    --weight_decay=1e-5 \
-    --device=cuda:0 \
-    --wandb \
-    --epochs=50
-done
+python -m ecg_bench.train_encoder \
+--ecg_signal \
+--encoder=merl \
+--data=ecg-qa-mimic-iv-ecg-250-1250 \
+--batch_size=256 \
+--optimizer=adamw \
+--lr=2e-4 \
+--weight_decay=1e-5 \
+--device=cuda:0 \
+--wandb \
+--epochs=50

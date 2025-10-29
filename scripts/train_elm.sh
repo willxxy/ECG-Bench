@@ -13,13 +13,13 @@ do
     --ecg_signal \
     --llm=llama-3.2-1b-instruct \
     --data="$data" \
-    --device=cuda:1 \
+    --device=cuda:2 \
     --peft \
     --encoder=projection \
     --batch_size=2 \
     --attention_type=flash_attention_2 \
     --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \
-    --wandb
+    --dev
     echo "Finished training on $data"
     echo "-----------------------------------"
 done
