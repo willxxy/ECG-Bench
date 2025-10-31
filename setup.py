@@ -5,6 +5,7 @@ INSTALL_REQUIRES = [
     "pre-commit",
     "torch==2.6.0",
     "torchvision==0.21.0",
+    "torchaudio==2.6.0",
     "transformers==4.56.0",
     "ecg_plot @ git+https://github.com/willxxy/ecg-plot",
     "accelerate==0.34.2",

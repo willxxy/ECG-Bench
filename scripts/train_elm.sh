@@ -19,7 +19,7 @@ do
     --batch_size=2 \
     --attention_type=flash_attention_2 \
     --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \
-    --dev
+    --wandb
     echo "Finished training on $data"
     echo "-----------------------------------"
 done
