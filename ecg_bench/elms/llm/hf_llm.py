@@ -11,21 +11,20 @@ class HuggingFaceLLM(nn.Module):
         self.output_hidden_states = output_hidden_states
 
     def forward(self, batch):
+        device = self.llm.device
+        kwargs = {
+            "attention_mask": batch["elm_attention_mask"].to(device),
+            "output_hidden_states": self.output_hidden_states,
+        }
+
         if "elm_inputs_embeds" in batch and batch["elm_inputs_embeds"] is not None:
-            out = self.llm(
-                inputs_embeds=batch["elm_inputs_embeds"].to(self.llm.device),
-                attention_mask=batch["elm_attention_mask"].to(self.llm.device),
-                labels=batch["elm_labels"].to(self.llm.device),
-                output_hidden_states=self.output_hidden_states,
-            )
+            kwargs["inputs_embeds"] = batch["elm_inputs_embeds"].to(device)
         else:
-            out = self.llm(
-                input_ids=batch["elm_input_ids"].to(self.llm.device),
-                attention_mask=batch["elm_attention_mask"].to(self.llm.device),
-                labels=batch["elm_labels"].to(self.llm.device),
-                output_hidden_states=self.output_hidden_states,
-            )
-        return out
+            kwargs["input_ids"] = batch["elm_input_ids"].to(device)
+
+        if "elm_labels" in batch:
+            kwargs["labels"] = batch["elm_labels"].to(device)
+        return self.llm(**kwargs)
 
     def get_llm_embeddings(self, elm_input_ids):
         out = self.llm.get_input_embeddings()(elm_input_ids.to(self.llm.device))
