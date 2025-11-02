@@ -155,7 +155,11 @@ class BaseECGDataset(Dataset):
         prompt = self.chat_template.copy()
         turn_count = 0
 
-        signal_token_placeholders = " ".join([SIGNAL_TOKEN_PLACEHOLDER] * self.args.num_encoder_tokens)
+        if self.args.no_signal:
+            signal_token_placeholders = ""
+        else:
+            signal_token_placeholders = " ".join([SIGNAL_TOKEN_PLACEHOLDER] * self.args.num_encoder_tokens) + "\n"
+
         for turn in formatted_text:
             if self.args.dev and is_main():
                 print("turn", turn)
@@ -165,7 +169,7 @@ class BaseECGDataset(Dataset):
             message_value = self.clean_text(turn["value"])
 
             if is_human and turn_count == 0:
-                message_value = f"{signal_token_placeholders}\n{message_value}"
+                message_value = f"{signal_token_placeholders}{message_value}"
                 turn_count += 1
 
             prompt.append_message(role, message_value)
@@ -176,7 +180,9 @@ class BaseECGDataset(Dataset):
         signal_token_id = self.llm_tokenizer.convert_tokens_to_ids(SIGNAL_TOKEN_PLACEHOLDER)
         indices = [i for i, x in enumerate(input_ids) if x == signal_token_id]
         if not indices:
-            raise ValueError(f"Signal token ID {signal_token_id} not found in input IDs.")
+            if self.args.dev and is_main():
+                print(f"Signal token ID {signal_token_id} not found in input IDs.")
+            return [-1]
         return indices
 
     def split_prompt(self, prompt: str) -> Tuple[str, str]:
