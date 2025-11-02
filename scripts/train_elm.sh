@@ -1,9 +1,9 @@
 # single GPU (works as you had it)
 datasets=(
   # ecg-qa-mimic-iv-ecg-250-1250
-  # ecg-qa-ptbxl-250-1250
+  ecg-qa-ptbxl-250-1250
   # pretrain-mimic-250-1250
-  ecg-instruct-45k-250-1250
+  # ecg-instruct-45k-250-1250
   # ecg-bench-pulse-250-1250
   # ecg-instruct-pulse-250-1250
 )

@@ -39,6 +39,7 @@ def get_args(mode: Mode) -> argparse.Namespace:
         parser.add_argument("--attention_type", type=str, default="sdpa", help="Attention Type")
         parser.add_argument("--num_encoder_tokens", type=int, default=1, help="Number of encoder tokens")
         parser.add_argument("--update_encoder", action="store_true", default=False, help="Update encoder")
+        parser.add_argument("--output_hidden_states", action="store_true", default=False, help="Output hidden states")
 
         parser.add_argument("--system_prompt", type=str, default=None, help="Path to System Prompt")
         parser.add_argument("--fold", type=str, default="1", help="Data Fold Number")

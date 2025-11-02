@@ -21,7 +21,7 @@ class BuildLLM:
             llm = self.build_hf()
         else:
             raise ValueError(f"{self.args.llm} not supported.")
-        llm = HuggingFaceLLM(llm, self.pad_token_id, self.eos_token_id)
+        llm = HuggingFaceLLM(llm, self.pad_token_id, self.eos_token_id, self.args.output_hidden_states)
         if self.args.dev and is_main():
             self.print_llm_dtype(llm)
         key_name = "llm" if self.args.encoder is not None else "elm"
@@ -37,6 +37,7 @@ class BuildLLM:
     ):
         hf_llm = self.build_hf_llm()
         HF_LLMS[self.args.llm]["model_hidden_size"] = hf_llm.config.hidden_size
+        HF_LLMS[self.args.llm]["output_hidden_states"] = self.args.output_hidden_states
         assert HF_LLMS[self.args.llm]["model_hidden_size"] is not None, print("model_hidden_size")
         hf_llm = self.resize_and_report_embeddings(hf_llm)
         if self.args.peft:

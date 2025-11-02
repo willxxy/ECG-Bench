@@ -7,7 +7,7 @@ python -m ecg_bench.evaluate_elm \
 --peft \
 --attention_type=flash_attention_2 \
 --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \
---elm_ckpt=./ecg_bench/runs/training/elm/2/checkpoints/epoch_best.pt
+--elm_ckpt=./ecg_bench/runs/training/elm/0/checkpoints/epoch_best.pt
 
 # python -m ecg_bench.evaluate_elm \
 # --ecg_signal \

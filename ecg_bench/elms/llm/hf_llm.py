@@ -3,11 +3,12 @@ from torch import nn
 
 ### HuggingFace LLM Wrapper
 class HuggingFaceLLM(nn.Module):
-    def __init__(self, llm, pad_token_id, eos_token_id):
+    def __init__(self, llm, pad_token_id, eos_token_id, output_hidden_states=False):
         super(HuggingFaceLLM, self).__init__()
         self.llm = llm
         self.pad_token_id = pad_token_id
         self.eos_token_id = eos_token_id
+        self.output_hidden_states = output_hidden_states
 
     def forward(self, batch):
         if "elm_inputs_embeds" in batch and batch["elm_inputs_embeds"] is not None:
@@ -15,12 +16,14 @@ class HuggingFaceLLM(nn.Module):
                 inputs_embeds=batch["elm_inputs_embeds"].to(self.llm.device),
                 attention_mask=batch["elm_attention_mask"].to(self.llm.device),
                 labels=batch["elm_labels"].to(self.llm.device),
+                output_hidden_states=self.output_hidden_states,
             )
         else:
             out = self.llm(
                 input_ids=batch["elm_input_ids"].to(self.llm.device),
                 attention_mask=batch["elm_attention_mask"].to(self.llm.device),
                 labels=batch["elm_labels"].to(self.llm.device),
+                output_hidden_states=self.output_hidden_states,
             )
         return out
 

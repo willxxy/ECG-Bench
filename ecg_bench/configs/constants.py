@@ -64,6 +64,7 @@ HF_LLMS = {
         },
         "find_unused_parameters": False,
         "model_hidden_size": None,
+        "output_hidden_states": False,
         "system_prompt": True,
         "role": "assistant",
         "watch_tokens": {
@@ -88,6 +89,7 @@ HF_LLMS = {
         },
         "find_unused_parameters": False,
         "model_hidden_size": None,
+        "output_hidden_states": False,
         "system_prompt": True,
         "role": "assistant",
         "watch_tokens": {
@@ -110,6 +112,7 @@ HF_LLMS = {
         "tokens_to_add": {
             "additional_special_tokens": [],
         },
+        "output_hidden_states": False,
         "find_unused_parameters": False,
         "model_hidden_size": None,
         "system_prompt": False,
