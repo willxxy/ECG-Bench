@@ -14,7 +14,6 @@ def main():
     torch.cuda.empty_cache()
     mode = "eval"
     args = get_args(mode)
-    all_metrics = []
     set_seed(args.seed)
     build_dataloader = BuildDataLoader(mode, args)
     dataloader = build_dataloader.build_dataloader()
@@ -24,8 +23,7 @@ def main():
     elm = gpu_setup.setup_gpu(elm_components["elm"], elm_components["find_unused_parameters"])
     if args.dev:
         gpu_setup.print_model_device(elm, f"{args.llm}_{args.encoder}")
-    out = run_plat_rep_hyp(elm, dataloader, args)
-    all_metrics.append(out)
+    run_plat_rep_hyp(elm, dataloader, args)
 
 
 if __name__ == "__main__":

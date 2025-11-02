@@ -334,8 +334,8 @@ if __name__ == "__main__":
     import torch.nn.functional as F
 
     torch.manual_seed(0)
-    feats_A = torch.randn(64, 8192)
-    feats_B = torch.randn(64, 8192)
+    feats_A = torch.randn(1000, 8192)
+    feats_B = torch.randn(1000, 8192)
     feats_A = F.normalize(feats_A, dim=-1)
     feats_B = F.normalize(feats_B, dim=-1)
 
