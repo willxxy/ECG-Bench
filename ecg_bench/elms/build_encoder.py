@@ -42,6 +42,8 @@ class BuildEncoder:
     ):
         if self.args.encoder == "projection":
             return self.build_projection()
+        elif self.args.encoder == "signal2vec":
+            return self.build_signal2vec()
         elif self.args.encoder == "merl":
             return self.build_merl()
         elif self.args.encoder == "mtae":
@@ -64,7 +66,8 @@ class BuildEncoder:
         fm = FileManager()
         ecg_byte_builder = BuildECGByte(self.args, "signal2vec")
         s2v = BuildSignal2Vec(fm, ecg_byte_builder, self.args)
-        ecg_encoder = Signal2Vec(s2v, self.args.projection_dim, self.args.llm)
+        ECG_ENCODERS[self.args.encoder]["model_hidden_size"] = ECG_ENCODERS[self.args.encoder]["projection_dim"]
+        ecg_encoder = Signal2Vec(s2v, ECG_ENCODERS[self.args.encoder]["projection_dim"], self.args.llm)
         return {"encoder": ecg_encoder}
 
     def build_merl(

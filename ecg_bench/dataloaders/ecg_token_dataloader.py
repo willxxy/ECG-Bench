@@ -40,6 +40,7 @@ class ECGTokenDataset(BaseECGDataset):
         ### PREPARE ECG INPUT ###
         symbols, _ = self.ecg_byte_builder.ecg_to_symbol(ecg_signal)
         ecg_tokens = self.ecg_byte_builder.encode(symbols)
+        # print("ecg_tokens", ecg_tokens)
         ecg_tokens = self.llm_tokenizer.convert_tokens_to_ids([f"{ECG_TOKEN_PREFIX}{ids}" for ids in ecg_tokens])
 
         ### PREPARE TEXT INPUTS ###
@@ -71,6 +72,7 @@ class ECGTokenDataset(BaseECGDataset):
         assert len(truncated_padded_input) == len(attention_mask) == len(labels) == self.args.llm_input_len, (
             f"Length mismatch: {len(truncated_padded_input)} != {len(attention_mask)} != {len(labels)} != {self.args.llm_input_len}"
         )
+        # print("truncated_padded_ecg_tokens", truncated_padded_ecg_tokens)
         return {
             "elm_input_ids": torch.tensor(truncated_padded_input, dtype=torch.int64),
             "elm_labels": torch.tensor(labels, dtype=torch.int64),
@@ -99,16 +101,16 @@ class ECGTokenDataset(BaseECGDataset):
     def trunc_pad_input(self, ecg_tokens: np.ndarray, prompt: str):
         before, after = self.split_prompt(prompt)
         if self.mode in ["eval", "inference"]:
-            return before + ecg_tokens + after, ecg_tokens
+            return before + ecg_tokens + after, self.convert_ecg_tokens(ecg_tokens)
         else:
             min_ecg_token_len = int(self.args.min_ecg_tokens_len)
 
             before_len, after_len, ecg_token_len = len(before), len(after), len(ecg_tokens)
 
             if before_len + after_len + ecg_token_len == self.args.llm_input_len:
-                return before + ecg_tokens + after, ecg_tokens
+                return before + ecg_tokens + after, self.convert_ecg_tokens(ecg_tokens)
             elif before_len + after_len + ecg_token_len < self.args.llm_input_len:
-                return self.pad_input(before + ecg_tokens + after), ecg_tokens
+                return self.pad_input(before + ecg_tokens + after), self.convert_ecg_tokens(ecg_tokens)
 
             if before_len + min_ecg_token_len > self.args.llm_input_len:
                 raise ValueError("before + min_ecg exceeds llm_input_len; lower min_ecg_tokens_len.")
@@ -119,7 +121,7 @@ class ECGTokenDataset(BaseECGDataset):
             remaining_after = self.args.llm_input_len - before_len - len(ecg_tokens)
             after = after[: max(remaining_after, 0)]
 
-            return before + ecg_tokens + after, ecg_tokens
+            return before + ecg_tokens + after, self.convert_ecg_tokens(ecg_tokens)
 
     def find_ecg_token_indices(self, input_ids: list[int]) -> list[int]:
         ecg_token_indices = [i for i, tid in enumerate(input_ids) if tid in self.ecg_token_ids]
@@ -128,3 +130,8 @@ class ECGTokenDataset(BaseECGDataset):
                 print("No ECG tokens found in input_ids.")
             return [-1]
         return ecg_token_indices
+
+    def convert_ecg_tokens(self, ecg_tokens):
+        ecg_tokens = self.llm_tokenizer.convert_ids_to_tokens(ecg_tokens)
+        ecg_tokens = [int(tok.replace(ECG_TOKEN_PREFIX, "")) for tok in ecg_tokens]
+        return ecg_tokens
