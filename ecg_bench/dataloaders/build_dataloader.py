@@ -83,6 +83,21 @@ class BuildDataLoader:
                 "ecg_signal": torch.tensor([], dtype=torch.float32),
                 "truncated_padded_ecg_tokens": torch.tensor([], dtype=torch.int64),
             }
+
+        pad_id = -2
+        pad_fields = ["truncated_padded_ecg_tokens", "ecg_token_indices"]
+
+        for field in pad_fields:
+            if all(field in item for item in batch):
+                max_len = max(len(item[field]) for item in batch)
+                for item in batch:
+                    tensor = item[field]
+                    pad_len = max_len - len(tensor)
+                    if pad_len > 0:
+                        item[field] = torch.cat([tensor, torch.full((pad_len,), pad_id, dtype=torch.int64)])
+                    elif pad_len < 0:
+                        item[field] = tensor[:max_len]
+
         return torch.utils.data.dataloader.default_collate(batch)
 
     ### TORCH DATASET FUNCTIONS ###
