@@ -63,7 +63,7 @@ class ECGTokenDataset(BaseECGDataset):
         truncated_padded_input, truncated_padded_ecg_tokens = self.trunc_pad_input(ecg_tokens, prompt)
         attention_mask = self.create_attention_mask(truncated_padded_input)
         labels = self.create_labels(truncated_padded_input)
-        ecg_token_indices = self.find_ecg_token_indices(truncated_padded_input)
+        signal_id_indices = self.find_ecg_token_indices(truncated_padded_input)
         if self.args.dev and is_main():
             self.decode_and_print_mapping(truncated_padded_input)
             self.check_labels(labels)
@@ -72,12 +72,13 @@ class ECGTokenDataset(BaseECGDataset):
         assert len(truncated_padded_input) == len(attention_mask) == len(labels) == self.args.llm_input_len, (
             f"Length mismatch: {len(truncated_padded_input)} != {len(attention_mask)} != {len(labels)} != {self.args.llm_input_len}"
         )
-        # print("truncated_padded_ecg_tokens", truncated_padded_ecg_tokens)
+        print("truncated_padded_ecg_tokens", truncated_padded_ecg_tokens)
+        print("signal_id_indices", signal_id_indices)
         return {
             "elm_input_ids": torch.tensor(truncated_padded_input, dtype=torch.int64),
             "elm_labels": torch.tensor(labels, dtype=torch.int64),
             "elm_attention_mask": torch.tensor(attention_mask, dtype=torch.float32),
-            "ecg_token_indices": torch.tensor(ecg_token_indices, dtype=torch.int64),
+            "signal_id_indices": torch.tensor(signal_id_indices, dtype=torch.int64),
             "truncated_padded_ecg_tokens": torch.tensor(truncated_padded_ecg_tokens, dtype=torch.int64),
         }
 
@@ -88,12 +89,12 @@ class ECGTokenDataset(BaseECGDataset):
     ):
         truncated_padded_input, truncated_padded_ecg_tokens = self.trunc_pad_input(ecg_tokens, prompt)
         attention_mask = self.create_attention_mask(truncated_padded_input)
-        ecg_token_indices = self.find_ecg_token_indices(truncated_padded_input)
+        signal_id_indices = self.find_ecg_token_indices(truncated_padded_input)
         assert len(truncated_padded_input) == len(attention_mask), f"Length mismatch: {len(truncated_padded_input)} != {len(attention_mask)}"
         return {
             "elm_input_ids": torch.tensor(truncated_padded_input, dtype=torch.int64),
             "elm_attention_mask": torch.tensor(attention_mask, dtype=torch.float32),
-            "ecg_token_indices": torch.tensor(ecg_token_indices, dtype=torch.int64),
+            "signal_id_indices": torch.tensor(signal_id_indices, dtype=torch.int64),
             "truncated_padded_ecg_tokens": torch.tensor(truncated_padded_ecg_tokens, dtype=torch.int64),
         }
 

@@ -16,5 +16,6 @@ class Signal2Vec(nn.Module):
 
     @torch.no_grad()
     def get_encoder_embeddings(self, batch):
-        # elm_input_ids = batch["elm_input_ids"]
-        pass
+        ecg_tokens = batch["truncated_padded_ecg_tokens"]
+        print("ecg_tokens2", ecg_tokens.detach().cpu().numpy().tolist())
+        print("ecg_tokens2 shape", ecg_tokens.shape)
