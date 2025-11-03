@@ -9,20 +9,23 @@ class Fuyu(nn.Module):
         self.llm = llm
 
     def forward(self, batch):
-        encoder_out = self.encoder(batch)
+        projected_embeds = self.get_projections(batch)
         llm_embeddings = self.llm.get_llm_embeddings(batch["elm_input_ids"])
-        llm_embeddings = self.inject_projected_embeds(llm_embeddings, encoder_out, batch["signal_id_indices"])
+        llm_embeddings = self.inject_projected_embeds(llm_embeddings, projected_embeds, batch["signal_id_indices"])
         batch["elm_inputs_embeds"] = llm_embeddings
         out = self.llm(batch)
         return out
 
     def generate(self, batch):
-        encoder_out = self.encoder(batch)
+        projected_embeds = self.get_projections(batch)
         llm_embeddings = self.llm.get_llm_embeddings(batch["elm_input_ids"])
-        llm_embeddings = self.inject_projected_embeds(llm_embeddings, encoder_out, batch["signal_id_indices"])
+        llm_embeddings = self.inject_projected_embeds(llm_embeddings, projected_embeds, batch["signal_id_indices"])
         batch["elm_inputs_embeds"] = llm_embeddings
         out = self.llm.generate(batch)
         return out
+
+    def get_projections(self, batch):
+        return self.encoder(batch)
 
     def inject_projected_embeds(self, llm_embeddings: torch.Tensor, projected_embeds: torch.Tensor, signal_id_indices: torch.Tensor) -> torch.Tensor:
         assert llm_embeddings.ndim == 3

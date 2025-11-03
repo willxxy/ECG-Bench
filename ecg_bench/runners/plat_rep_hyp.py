@@ -93,7 +93,7 @@ def run_plat_rep_hyp_sep(elm, dataloader, args):
 
     for step, batch in enumerate(progress):
         batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
-        signal_feat = elm.encoder(batch)
+        signal_feat = elm.get_projections(batch)
         text_feat = elm.llm.get_llm_embeddings(batch["elm_input_ids"])
         text_feat = text_feat.mean(dim=1)
         text_feats.append(text_feat.detach().cpu().float())
