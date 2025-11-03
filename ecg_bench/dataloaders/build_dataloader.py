@@ -79,6 +79,7 @@ class BuildDataLoader:
                 "elm_input_ids": torch.tensor([], dtype=torch.int64),
                 "elm_labels": torch.tensor([], dtype=torch.int64),
                 "elm_attention_mask": torch.tensor([], dtype=torch.float32),
+                "ecg_token_indices": torch.tensor([], dtype=torch.int64),
                 "ecg_signal": torch.tensor([], dtype=torch.float32),
             }
         return torch.utils.data.dataloader.default_collate(batch)

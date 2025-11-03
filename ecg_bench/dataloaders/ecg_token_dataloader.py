@@ -23,6 +23,9 @@ class ECGTokenDataset(BaseECGDataset):
             print("Length of new tokens", len(new_vocab))
         self.llm_tokenizer.add_tokens(new_vocab)
 
+        if self.args.encoder == "signal2vec":
+            self.ecg_token_ids = set(self.llm_tokenizer.convert_tokens_to_ids(new_vocab))
+
     def __getitem__(self, index):
         instance = self.data[index]
         ecg_path = instance["ecg_path"].replace("./data", "./ecg_bench/data")
@@ -59,6 +62,7 @@ class ECGTokenDataset(BaseECGDataset):
         truncated_padded_input = self.trunc_pad_input(ecg_tokens, prompt)
         attention_mask = self.create_attention_mask(truncated_padded_input)
         labels = self.create_labels(truncated_padded_input)
+        ecg_token_indices = self.find_ecg_token_indices(truncated_padded_input)
         if self.args.dev and is_main():
             self.decode_and_print_mapping(truncated_padded_input)
             self.check_labels(labels)
@@ -71,6 +75,7 @@ class ECGTokenDataset(BaseECGDataset):
             "elm_input_ids": torch.tensor(truncated_padded_input, dtype=torch.int64),
             "elm_labels": torch.tensor(labels, dtype=torch.int64),
             "elm_attention_mask": torch.tensor(attention_mask, dtype=torch.float32),
+            "ecg_token_indices": torch.tensor(ecg_token_indices, dtype=torch.int64),
         }
 
     def prepare_eval_inference_set(
@@ -80,10 +85,12 @@ class ECGTokenDataset(BaseECGDataset):
     ):
         truncated_padded_input = self.trunc_pad_input(ecg_tokens, prompt)
         attention_mask = self.create_attention_mask(truncated_padded_input)
+        ecg_token_indices = self.find_ecg_token_indices(truncated_padded_input)
         assert len(truncated_padded_input) == len(attention_mask), f"Length mismatch: {len(truncated_padded_input)} != {len(attention_mask)}"
         return {
             "elm_input_ids": torch.tensor(truncated_padded_input, dtype=torch.int64),
             "elm_attention_mask": torch.tensor(attention_mask, dtype=torch.float32),
+            "ecg_token_indices": torch.tensor(ecg_token_indices, dtype=torch.int64),
         }
 
     ### PADDING/TRUNCATION FUNCTIONS ###
@@ -111,3 +118,11 @@ class ECGTokenDataset(BaseECGDataset):
             after = after[: max(remaining_after, 0)]
 
             return before + ecg_tokens + after
+
+    def find_ecg_token_indices(self, input_ids: list[int]) -> list[int]:
+        ecg_token_indices = [i for i, tid in enumerate(input_ids) if tid in self.ecg_token_ids]
+        if not ecg_token_indices or self.args.encoder != "signal2vec":
+            if self.args.dev and is_main():
+                print("No ECG tokens found in input_ids.")
+            return [-1]
+        return ecg_token_indices
