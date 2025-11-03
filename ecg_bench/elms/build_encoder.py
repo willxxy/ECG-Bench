@@ -53,6 +53,20 @@ class BuildEncoder:
         else:
             raise ValueError(f"{self.args.encoder} not supported.")
 
+    def build_signal2vec(
+        self,
+    ):
+        from ecg_bench.elms.ecg_encoder.signal2vec import Signal2Vec
+        from ecg_bench.utils.file_manager import FileManager
+        from ecg_bench.ecg_tokenizers.build_ecg_tokenizers import BuildECGByte
+        from ecg_bench.ecg_tokenizers.build_signal2vec import BuildSignal2Vec
+
+        fm = FileManager()
+        ecg_byte_builder = BuildECGByte(self.args, "signal2vec")
+        s2v = BuildSignal2Vec(fm, ecg_byte_builder, self.args)
+        ecg_encoder = Signal2Vec(s2v, self.args.projection_dim, self.args.llm)
+        return {"encoder": ecg_encoder}
+
     def build_merl(
         self,
     ):

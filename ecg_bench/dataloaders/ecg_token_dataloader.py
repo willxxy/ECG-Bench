@@ -59,7 +59,7 @@ class ECGTokenDataset(BaseECGDataset):
         ecg_tokens: np.array,
         prompt: str,
     ):
-        truncated_padded_input = self.trunc_pad_input(ecg_tokens, prompt)
+        truncated_padded_input, truncated_padded_ecg_tokens = self.trunc_pad_input(ecg_tokens, prompt)
         attention_mask = self.create_attention_mask(truncated_padded_input)
         labels = self.create_labels(truncated_padded_input)
         ecg_token_indices = self.find_ecg_token_indices(truncated_padded_input)
@@ -76,6 +76,7 @@ class ECGTokenDataset(BaseECGDataset):
             "elm_labels": torch.tensor(labels, dtype=torch.int64),
             "elm_attention_mask": torch.tensor(attention_mask, dtype=torch.float32),
             "ecg_token_indices": torch.tensor(ecg_token_indices, dtype=torch.int64),
+            "truncated_padded_ecg_tokens": torch.tensor(truncated_padded_ecg_tokens, dtype=torch.int64),
         }
 
     def prepare_eval_inference_set(
@@ -83,7 +84,7 @@ class ECGTokenDataset(BaseECGDataset):
         ecg_tokens: np.array,
         prompt: str,
     ):
-        truncated_padded_input = self.trunc_pad_input(ecg_tokens, prompt)
+        truncated_padded_input, truncated_padded_ecg_tokens = self.trunc_pad_input(ecg_tokens, prompt)
         attention_mask = self.create_attention_mask(truncated_padded_input)
         ecg_token_indices = self.find_ecg_token_indices(truncated_padded_input)
         assert len(truncated_padded_input) == len(attention_mask), f"Length mismatch: {len(truncated_padded_input)} != {len(attention_mask)}"
@@ -91,22 +92,23 @@ class ECGTokenDataset(BaseECGDataset):
             "elm_input_ids": torch.tensor(truncated_padded_input, dtype=torch.int64),
             "elm_attention_mask": torch.tensor(attention_mask, dtype=torch.float32),
             "ecg_token_indices": torch.tensor(ecg_token_indices, dtype=torch.int64),
+            "truncated_padded_ecg_tokens": torch.tensor(truncated_padded_ecg_tokens, dtype=torch.int64),
         }
 
     ### PADDING/TRUNCATION FUNCTIONS ###
     def trunc_pad_input(self, ecg_tokens: np.ndarray, prompt: str):
         before, after = self.split_prompt(prompt)
         if self.mode in ["eval", "inference"]:
-            return before + ecg_tokens + after
+            return before + ecg_tokens + after, ecg_tokens
         else:
             min_ecg_token_len = int(self.args.min_ecg_tokens_len)
 
             before_len, after_len, ecg_token_len = len(before), len(after), len(ecg_tokens)
 
             if before_len + after_len + ecg_token_len == self.args.llm_input_len:
-                return before + ecg_tokens + after
+                return before + ecg_tokens + after, ecg_tokens
             elif before_len + after_len + ecg_token_len < self.args.llm_input_len:
-                return self.pad_input(before + ecg_tokens + after)
+                return self.pad_input(before + ecg_tokens + after), ecg_tokens
 
             if before_len + min_ecg_token_len > self.args.llm_input_len:
                 raise ValueError("before + min_ecg exceeds llm_input_len; lower min_ecg_tokens_len.")
@@ -117,7 +119,7 @@ class ECGTokenDataset(BaseECGDataset):
             remaining_after = self.args.llm_input_len - before_len - len(ecg_tokens)
             after = after[: max(remaining_after, 0)]
 
-            return before + ecg_tokens + after
+            return before + ecg_tokens + after, ecg_tokens
 
     def find_ecg_token_indices(self, input_ids: list[int]) -> list[int]:
         ecg_token_indices = [i for i, tid in enumerate(input_ids) if tid in self.ecg_token_ids]

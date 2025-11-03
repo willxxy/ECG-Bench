@@ -14,6 +14,7 @@ class Signal2Vec(nn.Module):
             self.embedding.weight.copy_(w)
         self.embedding.weight.requires_grad_(False)
 
+    @torch.no_grad()
     def get_encoder_embeddings(self, batch):
         # elm_input_ids = batch["elm_input_ids"]
         pass
