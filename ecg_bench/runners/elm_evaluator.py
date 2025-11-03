@@ -161,7 +161,7 @@ def evaluate(elm, dataloader, args):
                     full_encoder_tokenizer_out = {
                         k: (v[b].unsqueeze(0) if isinstance(v[b], torch.Tensor) and v[b].ndim > 0 else v[b])
                         for k, v in batch.items()
-                        if k.startswith("encoder_") or k in {"ecg_signal", "signal_id_indices"}
+                        if k.startswith("encoder_") or k in {"ecg_signal", "signal_id_indices", "truncated_padded_ecg_tokens"}
                     }
                 ranges = dataset.get_response_ranges(full_ids)
                 gt_texts = dataset.get_ground_truth_responses(full_ids, ranges)
