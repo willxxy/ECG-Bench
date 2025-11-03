@@ -17,5 +17,9 @@ class Signal2Vec(nn.Module):
     @torch.no_grad()
     def get_encoder_embeddings(self, batch):
         ecg_tokens = batch["truncated_padded_ecg_tokens"]
-        print("ecg_tokens2", ecg_tokens.detach().cpu().numpy().tolist())
-        print("ecg_tokens2 shape", ecg_tokens.shape)
+        mask = ecg_tokens != -2
+        ecg_tokens_safe = ecg_tokens.clone()
+        ecg_tokens_safe[~mask] = 0
+        embeddings = self.embedding(ecg_tokens_safe)
+        embeddings = embeddings * mask.unsqueeze(-1)
+        return embeddings

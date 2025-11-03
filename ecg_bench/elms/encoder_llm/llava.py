@@ -55,17 +55,30 @@ class LLaVA(nn.Module):
 
             assert projected_embeds.shape[:2] == signal_id_indices.shape
             assert projected_embeds.shape[0] == B and projected_embeds.shape[2] == H
-            assert (signal_id_indices >= 0).all() and (signal_id_indices < T).all()
+            embedding_mask = (projected_embeds != 0).any(dim=-1)
+            indices_mask = signal_id_indices != -2
+            valid_mask = embedding_mask & indices_mask
+
+            if valid_mask.any():
+                valid_indices = signal_id_indices[valid_mask]
+                assert (valid_indices >= 0).all() and (valid_indices < T).all(), (
+                    f"Valid indices must be in [0, {T}), got min={valid_indices.min()}, max={valid_indices.max()}"
+                )
 
             N = signal_id_indices.shape[1]
             dev = llm_embeddings.device
             batch_idx = torch.arange(B, device=dev).unsqueeze(1).expand(B, N)
 
             out = llm_embeddings.clone()
-            out[batch_idx.reshape(-1), signal_id_indices.reshape(-1)] = projected_embeds.reshape(B * N, H)
+            if valid_mask.any():
+                valid_batch_idx = batch_idx[valid_mask]
+                valid_signal_idx = signal_id_indices[valid_mask]
+                valid_projected = projected_embeds[valid_mask]
 
-            injected = out[batch_idx, signal_id_indices]
-            assert torch.allclose(injected, projected_embeds, atol=1e-6), "Injection failed: projected embeddings not correctly written."
+                out[valid_batch_idx, valid_signal_idx] = valid_projected
+
+                injected = out[valid_batch_idx, valid_signal_idx]
+                assert torch.allclose(injected, valid_projected, atol=1e-6), "Injection failed: projected embeddings not correctly written."
 
             return out
 
