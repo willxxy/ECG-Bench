@@ -49,7 +49,9 @@ class BuildEncoderLLM:
         else:
             projection_dim = ECG_ENCODERS[self.args.encoder]["projection_dim"]
         projection_layer = Projection(projection_dim, self.args.llm)
-        encoder_llm = LLaVA(self.llm_components["llm"], self.encoder_components["encoder"], projection_layer, self.args.update_encoder)
+        encoder_llm = LLaVA(
+            self.llm_components["llm"], self.encoder_components["encoder"], projection_layer, self.args.update_encoder, self.args.no_signal
+        )
         return {"elm": encoder_llm}
 
     def build_fuyu(
@@ -57,5 +59,5 @@ class BuildEncoderLLM:
     ):
         from ecg_bench.elms.encoder_llm.fuyu import Fuyu
 
-        encoder_llm = Fuyu(self.llm_components["llm"], self.encoder_components["encoder"])
+        encoder_llm = Fuyu(self.llm_components["llm"], self.encoder_components["encoder"], self.args.no_signal)
         return {"elm": encoder_llm}

@@ -12,7 +12,7 @@ from ecg_bench.runners.plat_rep_hyp import run_plat_rep_hyp_sep, run_plat_rep_hy
 def main():
     gc.collect()
     torch.cuda.empty_cache()
-    mode = "eval"
+    mode = "train"
     args = get_args(mode)
     set_seed(args.seed)
     build_dataloader = BuildDataLoader(mode, args)

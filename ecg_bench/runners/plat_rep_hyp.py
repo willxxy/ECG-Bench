@@ -10,6 +10,7 @@ from ecg_bench.utils.plat_rep_metrics import AlignmentMetrics
 from ecg_bench.utils.gpu_setup import is_main
 
 
+@torch.no_grad()
 def run_plat_rep_hyp_comb(elm, dataloader, args):
     show_progress = is_main()
     elm.eval()
@@ -35,7 +36,10 @@ def run_plat_rep_hyp_comb(elm, dataloader, args):
         mask = torch.ones(feats_mean.size(1), dtype=torch.bool)
         mask[signal_idx] = False
         text_feat = feats_mean[:, mask, :]
-        text_feat = text_feat.mean(dim=1)
+        attn_mask = batch["elm_attention_mask"].detach().cpu().float().unsqueeze(-1)
+        attn_mask = attn_mask[:, mask]
+        valid_counts = attn_mask.sum(dim=1, keepdim=False).clamp(min=1.0)
+        text_feat = (text_feat * attn_mask).sum(dim=1) / valid_counts
 
         text_feats.append(text_feat)
         signal_feats.append(signal_feat)
@@ -66,7 +70,8 @@ def run_plat_rep_hyp_comb(elm, dataloader, args):
             if "nn" in metric:
                 kwargs["topk"] = 10
             if "cca" in metric:
-                kwargs["cca_dim"] = 10
+                cca_cap = min(normalized_text_feats.size(1), normalized_signal_feats.size(1))
+                kwargs["cca_dim"] = min(10, cca_cap)
             if "kernel" in metric:
                 kwargs["dist"] = "sample"
 
@@ -77,6 +82,7 @@ def run_plat_rep_hyp_comb(elm, dataloader, args):
     print(f"Total time: {time.time() - t0:.2f}s")
 
 
+@torch.no_grad()
 def run_plat_rep_hyp_sep(elm, dataloader, args):
     show_progress = is_main()
     elm.eval()
@@ -92,19 +98,29 @@ def run_plat_rep_hyp_sep(elm, dataloader, args):
     signal_feats = []
 
     for step, batch in enumerate(progress):
-        batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+        batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
         signal_feat = elm.get_projections(batch)
-        text_feat = elm.llm.get_llm_embeddings(batch["elm_input_ids"])
-        text_feat = text_feat.mean(dim=1)
+        out = elm(batch)
+        feats = torch.stack(out.hidden_states).permute(1, 0, 2, 3)
+        text_feat = feats.mean(dim=1)
+        mask = batch["elm_attention_mask"].float().unsqueeze(-1)
+        valid_counts = mask.sum(dim=1, keepdim=False).clamp(min=1.0)
+        text_feat = (text_feat * mask).sum(dim=1) / valid_counts
+        # print("text_feat", text_feat.shape)
+        # print("signal_feat", signal_feat.shape)
+
         text_feats.append(text_feat.detach().cpu().float())
         signal_feats.append(signal_feat.detach().cpu().float())
-        if step > 10 and args.dev and is_main():
+
+        if args.dev and is_main() and step > 10:
             break
-        elif step > 5000:
+        if step > 5000:
             break
 
     text_feats = torch.cat(text_feats, dim=0)
     signal_feats = torch.cat(signal_feats, dim=0)
+    assert text_feats.size(0) == signal_feats.size(0), "Sample counts must match for metrics."
+
     normalized_text_feats = F.normalize(text_feats, dim=-1)
     normalized_signal_feats = F.normalize(signal_feats, dim=-1)
 
@@ -112,17 +128,16 @@ def run_plat_rep_hyp_sep(elm, dataloader, args):
     t0 = time.time()
     for metric in AlignmentMetrics.SUPPORTED_METRICS:
         scores, times = [], []
-        for t in range(trials):
+        for _ in range(trials):
             t_st = time.time()
-
             kwargs = {}
             if "nn" in metric:
                 kwargs["topk"] = 10
             if "cca" in metric:
-                kwargs["cca_dim"] = 10
+                cca_cap = min(normalized_text_feats.size(1), normalized_signal_feats.size(1))
+                kwargs["cca_dim"] = min(10, cca_cap)
             if "kernel" in metric:
                 kwargs["dist"] = "sample"
-
             score = AlignmentMetrics.measure(metric, normalized_text_feats, normalized_signal_feats, **kwargs)
             scores.append(score)
             times.append(time.time() - t_st)
