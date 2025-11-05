@@ -1,4 +1,7 @@
 # main.py
+import torch
+
+torch.set_num_threads(6)
 from ecg_bench.ecg_tokenizers.build_signal2vec import BuildSignal2Vec
 from ecg_bench.configs.config import get_args
 from ecg_bench.utils.file_manager import FileManager

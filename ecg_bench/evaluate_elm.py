@@ -3,6 +3,7 @@ import json
 import os
 import torch
 
+torch.set_num_threads(6)
 from ecg_bench.configs.config import get_args
 from ecg_bench.utils.gpu_setup import GPUSetup
 from ecg_bench.utils.set_seed import set_seed
