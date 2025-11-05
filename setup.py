@@ -51,6 +51,9 @@ INSTALL_REQUIRES = [
     "faiss-cpu==1.10.0",
     "termcolor==3.0.1",
     "pytest",
+    "einops-exts==0.0.4",
+    "open-clip-torch==3.2.0",
+    "timm==1.0.22",
 ]
 
 EXTRAS_REQUIRE = {
