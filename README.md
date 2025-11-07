@@ -10,6 +10,9 @@
 
 ## News
 
+- **[November 7, 2025]** We have created a new baseline using the [OpenTSLM](https://github.com/StanfordBDHG/OpenTSLM) model on our splits of the [ECG-QA PTB-XL and MIMIC-IV-ECG](https://github.com/Jwoo5/ecg-qa) dataset in `tests/test_opentslm.py`. First git clone the OpenTSLM repo inside of the `tests/` folder and run `python -m tests.test_opentslm` from the root dir of `ECG-Bench`!
+- **[November 7, 2025]** We have developed a naive analysis of the [Platonic Representation Hypothesis](https://github.com/minyoungg/platonic-rep/) for ELMs. Please see `scripts/run_plat_rep.sh` for running the analysis.
+- **[November 7, 2025]** We have implemented [Signal2Vec](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.researchgate.net/publication/333086784_Signal2Vec_Time_Series_Embedding_Representation&ved=2ahUKEwjmz731pd-QAxWrE1kFHc57GFgQFnoECAoQAQ&usg=AOvVaw1g90YxqnAOHQyk77oq-tZG), to create embeddings for [ECG-Byte](https://arxiv.org/abs/2412.14373), and implemented the corresponding ELM architecture utilizing the learned embeddings! Check out the `scripts/train_signal2vec.sh` script for training the Signal2Vec embeddings for your ECG-Byte tokenizer. To train an ELM with Signal2Vec, specify the `--encoder=signal2vec` and `--signal2vec_embeddings=$PATH_TO_PT_FILE`.
 - **[October 18, 2025]** We have released [preprocessed ECG files](https://drive.google.com/drive/folders/1HVpLS93Sq_jyRGlcE2Zt-t9f45_ilREd?usp=sharing), such that you do not have to do the preprocessing yourself.
 - **[October 16, 2025]** We have finished the refactor, for new and old users, please refer to the documentation below and the [brief release notes](https://github.com/willxxy/ECG-Bench/releases/tag/0.0.5).
 - **[October 3, 2025]** We are currently going under a big refactor for easier use of the repository. We thank you for your patience and will update once its done!
