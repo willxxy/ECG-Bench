@@ -14,12 +14,18 @@
 - **[November 7, 2025]** We have developed a naive analysis of the [Platonic Representation Hypothesis](https://github.com/minyoungg/platonic-rep/) for ELMs. Please see `scripts/run_plat_rep.sh` for running the analysis.
 - **[November 7, 2025]** We have implemented [Signal2Vec](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.researchgate.net/publication/333086784_Signal2Vec_Time_Series_Embedding_Representation&ved=2ahUKEwjmz731pd-QAxWrE1kFHc57GFgQFnoECAoQAQ&usg=AOvVaw1g90YxqnAOHQyk77oq-tZG), to create embeddings for [ECG-Byte](https://arxiv.org/abs/2412.14373), and implemented the corresponding ELM architecture utilizing the learned embeddings! Check out the `scripts/train_signal2vec.sh` script for training the Signal2Vec embeddings for your ECG-Byte tokenizer. To train an ELM with Signal2Vec, specify the `--encoder=signal2vec` and `--signal2vec_embeddings=$PATH_TO_PT_FILE`.
 - **[October 18, 2025]** We have released [preprocessed ECG files](https://drive.google.com/drive/folders/1HVpLS93Sq_jyRGlcE2Zt-t9f45_ilREd?usp=sharing), such that you do not have to do the preprocessing yourself.
+
+
+<details>
+  <summary><strong>Show older news</strong></summary>
+
 - **[October 16, 2025]** We have finished the refactor, for new and old users, please refer to the documentation below and the [brief release notes](https://github.com/willxxy/ECG-Bench/releases/tag/0.0.5).
 - **[October 3, 2025]** We are currently going under a big refactor for easier use of the repository. We thank you for your patience and will update once its done!
 - **[October 3, 2025]** We have released our paper [Retrieval-Augmented Generation for Electrocardiogram-Language Models](https://arxiv.org/abs/2510.00261). There is currently a [pull request](https://github.com/willxxy/ECG-Bench/pull/3) for the updated integration of RAG utilized with ELMs in the paper. Feel free to check it out.
 - **[August 5, 2025]** We released official splits of ELM datasets on Hugging Face. Feel free to check them out [here](#hugging-face-dataset-5-fold-stratified-splits)!
 - **[May 24, 2025]** We release our paper ["Signal, Image, or Symbolic: Exploring the Best Input Representation for Electrocardiogram-Language Models Through a Unified Framework"](https://arxiv.org/abs/2505.18847) with some interesting results when comparing input representations and training paradigms for ELMs! Check it out.
 - **[April 5, 2025]** We open source ECG-Bench for training and evaluating ELMs!
+</details>
 
 ## Table of Contents
 1. [Overview](#overview)
