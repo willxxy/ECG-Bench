@@ -1,0 +1,11 @@
+base_data: null
+dev: null
+map_data: ecg-qa_ptbxl
+mix_data: null
+num_cores: 12
+preprocess: false
+sampled_file: null
+seed: 0
+segment_len: 1250
+target_sf: 250
+toy: null

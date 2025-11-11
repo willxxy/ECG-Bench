@@ -22,6 +22,7 @@ MAPPED_DATASETS = [
     "ecg_grounding_pulse",
     "ecg_grounding",
     "ecg_grounding_test",
+    "ecg_qa_cot"
 ]
 
 # Hugging Face
