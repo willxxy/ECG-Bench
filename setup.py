@@ -15,7 +15,7 @@ INSTALL_REQUIRES = [
     "matplotlib==3.9.2",
     "maturin==1.7.4",
     "numpy==1.26.4",
-    "openai==1.51.2",
+    "openai==2.3.0",
     "pandas==2.2.3",
     "peft==0.13.0",
     "PyWavelets==1.7.0",

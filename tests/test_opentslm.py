@@ -70,7 +70,7 @@ except Exception as e:
     print(f"\n❌ An error occurred: {e}")
 
 test_configs = [
-    {"max_new_tokens": 512, "name": "512 tokens"},
+    {"max_new_tokens": 256, "name": "256 tokens"},
 ]
 
 
