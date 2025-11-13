@@ -27,20 +27,12 @@ def build_messages(question: str, base64_png: str | None):
     system_prompt = """
     You are an expert multimodal assistant with advanced knowledge in **clinical cardiac electrophysiology**.
 
-**Input Identification**
-- Detect whether the input is **text**, **ECG signals (time-series data)**, or **both**.
-
 **ECG Signal Analysis**
-- Treat ECG as cardiac time-series data.
-- Provide expert interpretation of **heart rate, rhythm, conduction, arrhythmias, and other electrophysiologic abnormalities**.
-
-**Multimodal Reasoning**
-- When both text and ECG are given, integrate them into a unified, **cardiac electrophysiologist-level assessment**.
+- Given the ECG signal plot and question, provide a concise answer to the question.
 
 **Response Style**
-- Deliver responses that are **precise, concise, and clinically authoritative**, grounded in electrophysiology and natural language reasoning.
-- For general, non-ECG questions, respond as a capable **general assistant**.
-- Make sure to provide only the answer, no other text.
+- Deliver responses that are **precise and concise**.
+- Make sure to provide only the answer, no other text or explanations. For example, if the answer is "Yes", just simply respond with "Yes".
     """
     content = [{"type": "input_text", "text": question}]
     if base64_png:
@@ -60,7 +52,7 @@ print("TESTING SIMPLE GENERATION")
 print("=" * 60)
 
 client = OpenAI()
-model = "gpt-5"
+model = "gpt-5-mini"
 
 output_img = False
 lead_names = [
@@ -103,10 +95,23 @@ for step, data in enumerate(tqdm(dataset)):
     print("--------------------------------")
     print("Output:\n", output.output_text)
     print("################################")
-    all_refs.append(answer)
-    all_hyps.append(output)
+    all_refs.append(answer.lower())
+    all_hyps.append(output.output_text.lower())
     if step > 20000:
         break
 
 results = evaluate_strings(all_refs, all_hyps, device=device)
-print(results)
+print("\n=== N-Turn Evaluation (generated vs. gold response only) ===")
+print(f"Pairs: {len(all_refs)}")
+print(f"ACC: {results['ACC']:.4f}")
+print(f"BLEU (corpus): {results['BLEU']:.4f}")
+print(f"BLEU_sent (effective): {results['BLEU_sent']:.4f}")
+print(f"METEOR: {results['METEOR']:.4f}")
+r = results["ROUGE"]
+print(f"ROUGE-1/2/L (F): {r['rouge-1']:.4f} / {r['rouge-2']:.4f} / {r['rouge-l']:.4f}")
+print(
+    f"BERTScore (mean) P/R/F1: "
+    f"{float(np.mean(results['BERTSCORE']['hf-prec'])):.4f} / "
+    f"{float(np.mean(results['BERTSCORE']['hf-rec'])):.4f} / "
+    f"{float(np.mean(results['BERTSCORE']['hf-f1'])):.4f}"
+)

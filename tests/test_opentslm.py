@@ -153,4 +153,17 @@ Make sure that your last word is the answer. You MUST end your response with "An
         break
 
 results = evaluate_strings(all_refs, all_hyps, device=device)
-print(results)
+print("\n=== N-Turn Evaluation (generated vs. gold response only) ===")
+print(f"Pairs: {len(all_refs)}")
+print(f"ACC: {results['ACC']:.4f}")
+print(f"BLEU (corpus): {results['BLEU']:.4f}")
+print(f"BLEU_sent (effective): {results['BLEU_sent']:.4f}")
+print(f"METEOR: {results['METEOR']:.4f}")
+r = results["ROUGE"]
+print(f"ROUGE-1/2/L (F): {r['rouge-1']:.4f} / {r['rouge-2']:.4f} / {r['rouge-l']:.4f}")
+print(
+    f"BERTScore (mean) P/R/F1: "
+    f"{float(np.mean(results['BERTSCORE']['hf-prec'])):.4f} / "
+    f"{float(np.mean(results['BERTSCORE']['hf-rec'])):.4f} / "
+    f"{float(np.mean(results['BERTSCORE']['hf-f1'])):.4f}"
+)
