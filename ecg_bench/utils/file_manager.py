@@ -32,6 +32,8 @@ class FileManager:
     @staticmethod
     def save_config(save_path: Union[str, Path], args: argparse.Namespace):
         args_dict = {k: v for k, v in vars(args).items() if not k.startswith("_")}
+        # Create directory if it doesn't exist
+        Path(save_path).mkdir(parents=True, exist_ok=True)
         with open(f"{save_path}/config.yaml", "w") as f:
             yaml.dump(args_dict, f, default_flow_style=False)
 

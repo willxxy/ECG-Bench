@@ -256,6 +256,19 @@ wget https://physionet.org/static/published-projects/challenge-2020/classificati
 
 3. Unzip the file and inside of `data/cpsc/classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2/training` move the `cpsc_2018` and `cpsc_2018_extra` folders into the `data/cpsc` directory. Then delete the `classification-of-12-lead-ecgs-the-physionetcomputing-in-cardiology-challenge-2020-1.0.2` folder.
 
+#### ECG-QA-COT
+
+1. Create a `ecg-qa-cot` folder inside the `data` directory.
+
+2. Inside `data/ecg-qa-cot` execute the following command in the terminal:
+```
+wget "https://polybox.ethz.ch/index.php/s/D5QaJSEw4dXkzXm/download/ecg_qa_cot_final.zip" -O ecg_qa_cot_final.zip
+```
+3. Unzip the file using 
+```
+unzip ecg_qa_cot_final.zip
+```
+
 ### Preprocessing
 
 1. Execute the preprocessing script by `bash scripts/preprocess.sh`. We have provided default configurations for all the datasets used in our study but feel free to experiment with others!

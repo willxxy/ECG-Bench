@@ -4,6 +4,7 @@ import glob
 from pathlib import Path
 from datasets import load_dataset
 import argparse
+import csv
 
 from ecg_bench.configs.constants import MAPPED_DATASETS
 from ecg_bench.utils.file_manager import FileManager
@@ -32,6 +33,8 @@ class MapECG:
             data = self._prepare_ecg_qa_ptb()
         elif self.args.map_data == "ecg-qa_mimic-iv-ecg":
             data = self._prepare_ecg_qa_mimic()
+        elif self.args.map_data == "ecg_qa_cot":
+            data = self._prepare_ecg_qa_cot()
         elif self.args.map_data in ["ecg_grounding_pulse", "ecg_grounding", "ecg_grounding_test"]:
             data = self._prepare_ecg_grounding()
 
@@ -52,7 +55,7 @@ class MapECG:
         print(f"Total instances for {self.args.map_data}: {len(data)}")
         print(f"Length of available ecgs: {len(self.available_ecgs)}")
         print(f"Valid instances: {len(valid_instances)}")
-        self.fm.save_json(valid_instances, f"./data/{self.args.map_data}_mapped_{self.args.segment_len}.json")
+        self.fm.save_json(valid_instances, f"./ecg_bench/data/{self.args.map_data}_mapped_{self.args.segment_len}.json")
 
     def _process_mapping_instance(self, instance):
         name = instance.get("name", "")
@@ -60,7 +63,7 @@ class MapECG:
         if self.args.map_data in ["ecg_instruct_45k", "pretrain_mimic"]:
             text = instance["conversations"]
             ecg_path = "_".join(instance["ecg"].split("/"))
-            preprocessed_dir = f"./data/mimic/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
+            preprocessed_dir = f"./ecg_bench/data/mimic/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
 
         elif self.args.map_data == "ecg_instruct_pulse":
             text = instance["conversations"]
@@ -70,9 +73,9 @@ class MapECG:
             text = [instance["question_type"], instance["question"], instance["answer"]]
             ecg_path = "_".join(instance["ecg_path"][0].split("/")[2:])
             if self.args.map_data == "ecg-qa_ptbxl":
-                preprocessed_dir = f"./data/ptb/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
+                preprocessed_dir = f"./ecg_bench/data/ptb/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
             else:
-                preprocessed_dir = f"./data/mimic/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
+                preprocessed_dir = f"./ecg_bench/data/mimic/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
 
         elif self.args.map_data == "ecg_bench_pulse":
             text = instance["conversations"]
@@ -84,6 +87,20 @@ class MapECG:
             text = instance["conversations"]
             file_name = instance["ecg"]
             ecg_path, preprocessed_dir = self._get_ecg_grounding_path(file_name)
+
+        elif self.args.map_data == "ecg_qa_cot":
+            text = [
+                instance["question_type"],
+                instance["question"],
+                instance["answer"],
+                instance.get("rationale", "")
+            ]
+            # Parse ecg_id from format "[13625]" to "13625"
+            ecg_id = instance["ecg_id"].strip("[]")
+            # PTB-XL path structure: records500/{subfolder}/{ecg_id}_hr
+            subfolder = ecg_id[:2] + "000"
+            ecg_path = f"records500_{subfolder}_{ecg_id}_hr"
+            preprocessed_dir = f"./ecg_bench/data/ptb/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
 
         return ecg_path, text, name, preprocessed_dir
 
@@ -123,11 +140,11 @@ class MapECG:
         return data
 
     def _prepare_ecg_qa_ptb(self):
-        preprocessed_dir = f"./data/ptb/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
+        preprocessed_dir = f"./ecg_bench/data/ptb/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
         self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob("*"))
         dataset_name = self.args.map_data.split("_")[1]
-        paraphrased_jsons = glob.glob(f"./data/ecg-qa/output/{dataset_name}/paraphrased/*/*.json")
-        template_jsons = glob.glob(f"./data/ecg-qa/output/{dataset_name}/template/*/*.json")
+        paraphrased_jsons = glob.glob(f"./ecg_bench/data/ecg-qa/output/{dataset_name}/paraphrased/*/*.json")
+        template_jsons = glob.glob(f"./ecg_bench/data/ecg-qa/output/{dataset_name}/template/*/*.json")
         path_to_all_jsons = paraphrased_jsons + template_jsons
         data = self.setup_ecg_qa(path_to_all_jsons)
         return data
@@ -152,6 +169,13 @@ class MapECG:
         preprocessed_dir = f"./data/mimic/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
         self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob("*"))
         data = self.fm.open_json(f"./data/{self.args.map_data}/{self.args.map_data}.json")
+        return data
+
+    def _prepare_ecg_qa_cot(self):
+        """Prepare ECG-QA dataset with Chain-of-Thought rationale from CSV files"""
+        preprocessed_dir = f"./ecg_bench/data/ptb/preprocessed_{self.args.segment_len}_{self.args.target_sf}"
+        self.available_ecgs.update(f.stem for f in Path(preprocessed_dir).glob("*"))
+        data = self.setup_ecg_qa_cot()
         return data
 
     def _setup_ecg_bench_pulse(self, json_path):
@@ -247,4 +271,25 @@ class MapECG:
             loaded_file = self.fm.open_json(fname)
             filtered_list = [item for item in loaded_file if item["question_type"] in question_types]
             data.extend(filtered_list)
+        return data
+
+    def setup_ecg_qa_cot(self):
+        """Load ECG-QA CoT data from CSV files (train, val, test combined)"""
+        data = []
+        splits = {
+            "train": "./ecg_bench/data/ecg-qa-cot/ecg_qa_cot/ecg_qa_cot_train.csv",
+            "val": "./ecg_bench/data/ecg-qa-cot/ecg_qa_cot/ecg_qa_cot_val.csv",
+            "test": "./ecg_bench/data/ecg-qa-cot/ecg_qa_cot/ecg_qa_cot_test.csv"
+        }
+
+        for split_name, csv_file in splits.items():
+            if os.path.exists(csv_file):
+                with open(csv_file, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        data.append(row)
+                print(f"Loaded {split_name} split from {csv_file}")
+            else:
+                print(f"Warning: {csv_file} not found, skipping...")
+
         return data
