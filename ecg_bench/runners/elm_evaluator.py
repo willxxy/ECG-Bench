@@ -191,6 +191,8 @@ def evaluate(elm, dataloader, args):
                         all_hyps.append(gen_txt)
             if train_dev_break(getattr(args, "dev", False), batch, 0):
                 break
+            if batch_idx == 20000:
+                break
     results = evaluate_strings(all_refs, all_hyps, device=device)
     print("\n=== N-Turn Evaluation (generated vs. gold response only) ===")
     print(f"Pairs: {len(all_refs)}")
