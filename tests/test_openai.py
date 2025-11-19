@@ -81,6 +81,7 @@ for step, data in enumerate(tqdm(dataset)):
     question_type, question, answer = data["text"]
     if isinstance(answer, list):
         answer = " ".join(answer)
+    ecg_signal = ecg_signal * 0  # blackout the signal
     ecg_image_path = plot_2d_ecg(ecg_signal, f"ecg_signal_{step}", "./pngs/", 250)
     base64_png = encode_image_to_base64(ecg_image_path)
     messages = build_messages(question, base64_png)

@@ -54,6 +54,31 @@ HF_DATASETS = [
 ]
 
 HF_LLMS = {
+    "llama-3.2-3b-instruct": {
+        "model": "meta-llama/Llama-3.2-3B-Instruct",
+        "tokenizer": "meta-llama/Llama-3.2-3B-Instruct",
+        "chat_template": "llama-3",
+        "native_dtype": torch.bfloat16,
+        "tokens_to_add": {
+            "additional_special_tokens": [],
+        },
+        "find_unused_parameters": False,
+        "model_hidden_size": None,
+        "output_hidden_states": False,
+        "system_prompt": True,
+        "role": "assistant",
+        "watch_tokens": {
+            "bos_token": {128000: "<|begin_of_text|>"},
+            "eos_token": {128009: "<|eot_id|>"},
+            "response_start": {
+                "order": [128006, 78191, 128007, 271],
+                128006: "<|start_header_id|>",
+                78191: "assistant",
+                128007: "<|end_header_id|>",
+                271: "ĊĊ",
+            },
+        },
+    },
     "llama-3.2-1b-instruct": {
         "model": "meta-llama/Llama-3.2-1B-Instruct",
         "tokenizer": "meta-llama/Llama-3.2-1B-Instruct",

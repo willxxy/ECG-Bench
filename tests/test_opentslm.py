@@ -3,6 +3,8 @@ import sys
 import os
 import re
 import torch
+
+torch.set_num_threads(6)
 from tqdm import tqdm
 import numpy as np
 from huggingface_hub import hf_hub_download
@@ -108,6 +110,7 @@ for step, data in enumerate(tqdm(dataset)):
             normalized_signal = (ecg_signal[i] - mean_val) / std_val
         else:
             normalized_signal = ecg_signal[i] - mean_val
+        normalized_signal = normalized_signal * 0  # blackout the signal
         text = f"ECG Lead {lead_names[i]}"
         text += f" - sampled at ~250Hz, normalized (mean={mean_val:.3f}, std={std_val:.3f})"
         ts_prompt_list.append(TextTimeSeriesPrompt(text, normalized_signal.tolist()))
