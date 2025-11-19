@@ -219,3 +219,4 @@ scripts_copy/
 *.pt
 tests/OpenTSLM
 pngs/
+ecg_bench/test.py
