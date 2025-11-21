@@ -214,8 +214,6 @@ ecg_bench/runs/
 ecg_bench/data/
 ecg_bench/logs/
 wandb/
-scripts/
-scripts_copy/
 *.pt
 tests/OpenTSLM
 pngs/
