@@ -307,15 +307,7 @@ We used an encoder-free ELM as the base model. It consists of a linear projectio
     We report the following results on the `willxxy/ecg-qa-ptbxl-250-1250` dataset. 1., 2., 3., are the corresponding three conditions.
 
     <div align="center">
-    <img src="./assets/trained_1_ecg_acc_comparison.png" alt="Accuracy when trained on 1.">
-    </div>
-
-    <div align="center">
-    <img src="./assets/trained_2_ecg_acc_comparison.png" alt="Accuracy when trained on 1.">
-    </div>
-
-    <div align="center">
-    <img src="./assets/trained_3_ecg_acc_comparison.png" alt="Accuracy when trained on 1.">
+    <img src="./assets/acc_heatmap.png" alt="Heatmap">
     </div>
 
     As one can see, we can achieve competitive results with the baseline of training and inferencing with 1 when training with 2. or 3. Although this study is not in depth, we aim to discover why this is happening. If anyone is interested, please feel free to reach out or take the idea!
