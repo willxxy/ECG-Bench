@@ -11,15 +11,14 @@ for data in "${datasets[@]}"
 do
   python -m ecg_bench.train_elm \
     --ecg_signal \
-    --llm=llama-3.2-1b-instruct \
+    --llm=qwen2.5-7b-instruct \
     --data="$data" \
-    --device=cuda:2 \
+    --device=cuda:5 \
     --peft \
-    --encoder=merl \
+    --encoder=projection \
     --batch_size=2 \
     --attention_type=flash_attention_2 \
     --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \
-    --encoder_ckpt=./ecg_bench/runs/training/encoder/0/checkpoints/epoch_best.pt \
     --wandb
     echo "Finished training on $data"
     echo "-----------------------------------"

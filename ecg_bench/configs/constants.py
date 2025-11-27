@@ -104,6 +104,31 @@ HF_LLMS = {
             },
         },
     },
+    "qwen2.5-7b-instruct": {
+        "model": "Qwen/Qwen2.5-7B-Instruct",
+        "tokenizer": "Qwen/Qwen2.5-7B-Instruct",
+        "chat_template": "qwen-7b-chat",
+        "native_dtype": torch.bfloat16,
+        "tokens_to_add": {
+            "additional_special_tokens": [],
+        },
+        "find_unused_parameters": False,
+        "model_hidden_size": None,
+        "output_hidden_states": False,
+        "system_prompt": True,
+        "role": "assistant",
+        "watch_tokens": {
+            "bos_token": {151644: "<|im_start|>"},
+            "eos_token": {151645: "<|im_end|>"},
+            "response_start": {
+                "order": [151645, 198, 151644, 77091, 198],
+                151645: "<|im_end|>",
+                198: "Ċ",
+                151644: "<|im_start|>",
+                77091: "assistant",
+            },
+        },
+    },
     "qwen2.5-1.5b-instruct": {
         "model": "Qwen/Qwen2.5-1.5B-Instruct",
         "tokenizer": "Qwen/Qwen2.5-1.5B-Instruct",
