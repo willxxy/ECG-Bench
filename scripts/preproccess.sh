@@ -19,3 +19,6 @@ for base_data in "${BASE_DATA_VALUES[@]}"; do
     fi
   done
 done
+
+python preprocess_ecg.py \
+--map_data="ecg-qa_ptbxl"
