@@ -42,10 +42,10 @@ class FileManager:
             return json.load(f)
 
     @staticmethod
-    def save_json(data: dict, path: Union[str, Path]):
+    def save_json(data: dict, path: Union[str, Path], indent: int = 2):
         """Save a dictionary to a JSON file."""
         with open(path, "w") as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=indent)
 
     @staticmethod
     def open_npy(path: Union[str, Path]) -> np.ndarray:

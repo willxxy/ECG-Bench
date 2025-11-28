@@ -218,18 +218,17 @@ print(f"Using device: {device}")
 
 prompt_format = create_user_prompt("EXAMPLE_DIAGNOSIS")
 
-output_data = {
-    "prompts": {
-        "system_prompt": SYSTEM_PROMPT,
-        "prompt_format": prompt_format,
-    },
-    "results": [],
-}
-
 dataset = load_dataset(f"willxxy/{DATASETS[0]}", split="fold1_train").with_transform(FILE_MANAGER.decode_batch)
 max_instances = 100
 
 for model in models:
+    output_data = {
+        "prompts": {
+            "system_prompt": SYSTEM_PROMPT,
+            "prompt_format": prompt_format,
+        },
+        "results": [],
+    }
     for step, data in enumerate(tqdm(dataset)):
         if step >= max_instances:
             break
