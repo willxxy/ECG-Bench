@@ -23,14 +23,14 @@
 
 python -m ecg_bench.evaluate_elm \
 --ecg_signal \
---llm=llama-3.2-3b-instruct \
+--llm=qwen2.5-7b-instruct \
 --encoder=projection \
---data=ecg-qa-ptbxl-250-1250 \
---device=cuda:0 \
+--data=ecg-instruct-45k-250-1250 \
+--device=cuda:5 \
 --peft \
 --attention_type=flash_attention_2 \
 --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \
---elm_ckpt=./ecg_bench/runs/training/elm/9/checkpoints/epoch_best.pt
+--elm_ckpt=./ecg_bench/runs/training/elm/12/checkpoints/step_epoch_0_step_31530.pt
 
 # python -m ecg_bench.evaluate_elm \
 # --ecg_signal \

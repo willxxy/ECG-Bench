@@ -12,14 +12,14 @@
 
 python -m ecg_bench.evaluate_elm \
 --ecg_signal \
---llm=llama-3.2-3b-instruct \
+--llm=qwen2.5-7b-instruct \
 --encoder=projection \
 --data=ecg-instruct-45k-250-1250 \
 --device=cuda:5 \
 --peft \
 --attention_type=flash_attention_2 \
 --system_prompt=./ecg_bench/configs/system_prompt/system_prompt.txt \
---elm_ckpt=./ecg_bench/runs/training/elm/10/checkpoints/epoch_best.pt
+--elm_ckpt=./ecg_bench/runs/training/elm/12/checkpoints/epoch_best.pt
 
 # python -m ecg_bench.evaluate_elm \
 # --ecg_signal \

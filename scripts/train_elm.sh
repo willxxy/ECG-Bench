@@ -13,7 +13,7 @@ do
     --ecg_signal \
     --llm=qwen2.5-7b-instruct \
     --data="$data" \
-    --device=cuda:5 \
+    --device=cuda:0 \
     --peft \
     --encoder=projection \
     --batch_size=2 \
