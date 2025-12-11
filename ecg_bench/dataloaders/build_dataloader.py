@@ -123,19 +123,28 @@ class BuildDataLoader:
         return torch_dataset
 
     ### HF DATASET FUNCTIONS ###
-    def load_dataset(
-        self,
-    ):
+    def load_dataset(self):
         if self.mode in ["train", "post_train"]:
-            data = load_dataset(f"willxxy/{self.args.data}", split=f"fold{self.args.fold}_train", cache_dir=HF_CACHE_DIR).with_transform(
-                self.decode_batch
-            )
+            data = load_dataset(
+                f"willxxy/{self.args.data}",
+                split=f"fold{self.args.fold}_train",
+                cache_dir=HF_CACHE_DIR,
+            ).with_transform(self.decode_batch)
+
         elif self.mode in ["eval", "inference"]:
-            data = load_dataset(f"willxxy/{self.args.data}", split=f"fold{self.args.fold}_test", cache_dir=HF_CACHE_DIR).with_transform(
-                self.decode_batch
-            )
+            data = load_dataset(
+                f"willxxy/{self.args.data}",
+                split=f"fold{self.args.fold}_test",
+                cache_dir=HF_CACHE_DIR,
+            ).with_transform(self.decode_batch)
+
+        if self.args.data_subset is not None and 0 < self.args.data_subset < 1:
+            n = int(len(data) * self.args.data_subset)
+            data = data.shuffle(seed=self.args.seed).select(range(n))
+
         if is_main():
             print("Length of Dataset Considered:", len(data))
+
         return data
 
     def decode_batch(self, batch: dict) -> dict:

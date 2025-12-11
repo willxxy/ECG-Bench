@@ -42,7 +42,7 @@
 
 
 ## Overview <a name="overview"></a>
-This repository is a unified framework for training and evaluating electrocardiogram-language models (ELMs). The audience for this repository is mainly for researchers who are interested in developing ELMs, with a particular focus on ECG representations and training paradigms. The code is designed to be modular and flexible, allowing researchers to easily extend the framework to their own needs and quickly iterate on their ELM designs. Due to the intended audience and purpose of the repository, we try to provide the most basic and flexible code without many abstractions that can be easily extended. However, this goal is yet to be fully realized and we are continuously working to improve the codebase. Please note that as the codebase gets updated, performances may change.
+This repository provides a unified framework for training and evaluating electrocardiogram–language models (ELMs). It is intended for researchers developing ELMs, with an emphasis on ECG representations and training paradigms. We aim to have the codebase be modular and extensible, enabling rapid experimentation and easy integration of new ideas. While the framework is still quite beta, we are actively improving its design and stability. Please note that performance may vary as the codebase continues to change.
 
 We hope to continuously update the repository to support more features, ELMs, and datasets. Please feel free to contribute to the repository!
 If there are any questions or bugs, please do not hesitate to reach out to wjhan{@}andrew{dot}cmu{edu} or submit an issue with corresponding details.
