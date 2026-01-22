@@ -54,5 +54,5 @@ class CheckpointManager:
         if len(self.epoch_losses) < self.args.patience + 1:
             return False
         best_loss = min(self.epoch_losses[: -self.args.patience])
-        current_loss = self.epoch_losses[-1]
-        return current_loss > best_loss + self.args.patience_delta
+        current_loss = min(self.epoch_losses[-self.args.patience :])
+        return current_loss > best_loss - self.args.patience_delta
