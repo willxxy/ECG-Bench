@@ -97,7 +97,7 @@ for step, data in enumerate(tqdm(dataset)):
     ecg_path = data["ecg_path"]
     ecg_path = ecg_path.replace("./data", "./ecg_bench/data")
     ecg_np_file = FILE_MANAGER.open_npy(ecg_path)
-    ecg_signal = ecg_np_file["ecg"]
+    ecg_signal = ecg_np_file["ecg"]  # THIS IS JUST a 2D NUMPY ARRAY (12, 2500)
     question_type, question, answer = data["text"]
     if isinstance(answer, list):
         answer = " ".join(answer)
@@ -110,7 +110,7 @@ for step, data in enumerate(tqdm(dataset)):
             normalized_signal = (ecg_signal[i] - mean_val) / std_val
         else:
             normalized_signal = ecg_signal[i] - mean_val
-        normalized_signal = normalized_signal * 0  # blackout the signal
+        # normalized_signal = normalized_signal * 0  # blackout the signal
         text = f"ECG Lead {lead_names[i]}"
         text += f" - sampled at ~250Hz, normalized (mean={mean_val:.3f}, std={std_val:.3f})"
         ts_prompt_list.append(TextTimeSeriesPrompt(text, normalized_signal.tolist()))
