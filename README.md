@@ -9,7 +9,6 @@
 </div>
 
 ## News
-
 - **[November 13, 2025]** We have created a new baselines using variants of the GPT model through the OpenAI API on our splits of the [ECG-QA PTB-XL and MIMIC-IV-ECG](https://github.com/Jwoo5/ecg-qa) dataset in `tests/test_openai.py`. Feel free to run the baseline by executing `python -m tests.test_openai` from the root dir of `ECG-Bench`!
 - **[November 7, 2025]** We have created a new baseline using the [OpenTSLM](https://github.com/StanfordBDHG/OpenTSLM) model on our splits of the [ECG-QA PTB-XL and MIMIC-IV-ECG](https://github.com/Jwoo5/ecg-qa) dataset in `tests/test_opentslm.py`. First git clone the OpenTSLM repo inside of the `tests/` folder and run `python -m tests.test_opentslm` from the root dir of `ECG-Bench`!
 - **[November 7, 2025]** We have developed a naive analysis of the [Platonic Representation Hypothesis](https://github.com/minyoungg/platonic-rep/) for ELMs. Please see `scripts/run_plat_rep.sh` for running the analysis.
@@ -294,23 +293,6 @@ We encountered some issues during development of ECG-Bench (mostly taken from [E
 
 5. **ECG-Byte Signal Tokens: Do we train them?** - Marking the newly added ECG tokens in the LLM embedding table as trainable has harmed performance in our tests. 
  Currently, ECG-Byte produces ECG tokens that we concatenate with text tokens; these tokens are added to the tokenizer and initialized in the LLM’s embedding table. In our default setup we apply LoRA and keep the embedding table frozen, so these new token vectors are not updated. We ran preliminary experiments in two settings: 1. full fine-tuning (including the LLM embedding layer with the added ECG tokens), 2. LoRA fine-tuning with only the newly added ECG token rows set as trainable. Both settings performed substantially worse than our baseline (LoRA with the LLM embedding table frozen, including the new ECG tokens). We did not deeply investigate the cause; exploring this is an interesting direction for future work.
-
-6. **Do ELMs actually understand the signal?** - To test whether ELMs coherently use features from the input ECG, we conducted preliminary experiments. TL;DR: ELMs appear not to meaningfully exploit ECG features.
-We used an encoder-free ELM as the base model. It consists of a linear projection layer that maps the ECG signal to a latent vector, trained jointly with the LLM using an autoregressive loss. We use the `llama-3.2-1b-instruct` checkpoint for the LLM. We trained and evaluated the model under three conditions:
-
-    <ol type="1">
-    <li>Regular ECG signal as input</li>
-    <li>A tensor of the same shape as the ECG, filled with zeros</li>
-    <li>No signal at all (only text)</li>
-    </ol>
-
-    We report the following results on the `willxxy/ecg-qa-ptbxl-250-1250` dataset. 1., 2., 3., are the corresponding three conditions.
-
-    <div align="center">
-    <img src="./assets/acc_heatmap.png" alt="Heatmap">
-    </div>
-
-    As one can see, we can achieve competitive results with the baseline of training and inferencing with 1 when training with 2. or 3. Although this study is not in depth, we aim to discover why this is happening. If anyone is interested, please feel free to reach out or take the idea!
 
 ## Contributions <a name="contributions"></a>
 
