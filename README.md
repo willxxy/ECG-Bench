@@ -9,6 +9,7 @@
 </div>
 
 ## News
+- **[February 17, 2026]** We are currently going under another refactor for easier use of the repository. We thank you for your patience and will update once its done!
 - **[November 13, 2025]** We have created a new baselines using variants of the GPT model through the OpenAI API on our splits of the [ECG-QA PTB-XL and MIMIC-IV-ECG](https://github.com/Jwoo5/ecg-qa) dataset in `tests/test_openai.py`. Feel free to run the baseline by executing `python -m tests.test_openai` from the root dir of `ECG-Bench`!
 - **[November 7, 2025]** We have created a new baseline using the [OpenTSLM](https://github.com/StanfordBDHG/OpenTSLM) model on our splits of the [ECG-QA PTB-XL and MIMIC-IV-ECG](https://github.com/Jwoo5/ecg-qa) dataset in `tests/test_opentslm.py`. First git clone the OpenTSLM repo inside of the `tests/` folder and run `python -m tests.test_opentslm` from the root dir of `ECG-Bench`!
 - **[November 7, 2025]** We have developed a naive analysis of the [Platonic Representation Hypothesis](https://github.com/minyoungg/platonic-rep/) for ELMs. Please see `scripts/run_plat_rep.sh` for running the analysis.
