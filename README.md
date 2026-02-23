@@ -9,6 +9,7 @@
 </div>
 
 ## News
+- **[February 23, 2026]** We have migrated and refactored the repository permanently to [https://github.com/ELM-Research/ELM](https://github.com/ELM-Research/ELM). [https://github.com/willxxy/ECG-Bench](https://github.com/willxxy/ECG-Bench) will be archived.
 - **[February 19, 2026]** We will change this repository to be exclusively for training ELMs and remove ECG encoder pretraining. We have created a separate [repository for ECG encoder pretraining](https://github.com/ELM-Research/ecg_nn). Feel free to check it out!
 - **[February 17, 2026]** We are currently going under another refactor for easier use of the repository. We thank you for your patience and will update once its done!
 - **[November 13, 2025]** We have created a new baselines using variants of the GPT model through the OpenAI API on our splits of the [ECG-QA PTB-XL and MIMIC-IV-ECG](https://github.com/Jwoo5/ecg-qa) dataset in `tests/test_openai.py`. Feel free to run the baseline by executing `python -m tests.test_openai` from the root dir of `ECG-Bench`!
